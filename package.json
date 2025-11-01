@@ -1,0 +1,22 @@
+{
+  "name": "his-project",
+  "version": "1.0.0",
+  "description": "High Integrity Systems - Full Stack Application",
+  "scripts": {
+    "start": "node scripts/start.js",
+    "start:frontend": "cd frontend && npm run dev",
+    "start:backend": "cd backend && venv\\Scripts\\activate && uvicorn main:app --reload --host 0.0.0.0 --port 8000",
+    "install:frontend": "cd frontend && npm install",
+    "install:backend": "cd backend && python -m venv venv && venv\\Scripts\\activate && pip install -r requirements.txt",
+    "install:all": "npm run install:frontend && npm run install:backend",
+    "build:frontend": "cd frontend && npm run build"
+  },
+  "keywords": [
+    "high-integrity",
+    "systems",
+    "fastapi",
+    "react"
+  ],
+  "author": "",
+  "license": "ISC"
+}

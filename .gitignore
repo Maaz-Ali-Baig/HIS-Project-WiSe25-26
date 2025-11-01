@@ -1,0 +1,4 @@
+.claude/
+.backend/venv/
+.backend/dist/
+.frontend/node_modules/

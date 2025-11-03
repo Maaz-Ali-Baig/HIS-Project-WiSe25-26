@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from datetime import datetime
+from database.db import init_db
+from auth.routes import router as auth_router
 
 app = FastAPI(
     title="HIS Project API",
@@ -9,13 +11,21 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Initialize database on startup
+@app.on_event("startup")
+async def startup_event():
+    init_db()
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "http://localhost:5176"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include auth router
+app.include_router(auth_router)
 
 class HealthResponse(BaseModel):
     status: str

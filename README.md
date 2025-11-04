@@ -27,11 +27,13 @@ npm run install:all
 #### Option 2: Install Separately
 
 **Frontend:**
+
 ```bash
 npm run install:frontend
 ```
 
 **Backend:**
+
 ```bash
 npm run install:backend
 ```
@@ -39,22 +41,26 @@ npm run install:backend
 ### Starting the Application
 
 #### Windows:
+
 ```bash
 # Double-click start.bat or run:
 start.bat
 ```
 
 #### Linux/Mac:
+
 ```bash
 ./start.sh
 ```
 
 #### Using npm:
+
 ```bash
 npm start
 ```
 
 This will start both servers:
+
 - **Frontend**: http://localhost:5173
 - **Backend**: http://localhost:8000
 - **API Docs**: http://localhost:8000/docs
@@ -64,11 +70,13 @@ This will start both servers:
 ### Start Services Individually
 
 **Frontend only:**
+
 ```bash
 npm run start:frontend
 ```
 
 **Backend only:**
+
 ```bash
 npm run start:backend
 ```
@@ -76,6 +84,7 @@ npm run start:backend
 ### Frontend Development
 
 The frontend uses:
+
 - React 19.2
 - Vite (fast build tool)
 - React Compiler (automatic optimization)
@@ -85,6 +94,7 @@ Navigate to `frontend/` for more details.
 ### Backend Development
 
 The backend uses:
+
 - FastAPI (modern Python web framework)
 - Uvicorn (ASGI server)
 - Pydantic (data validation)
@@ -145,12 +155,14 @@ npm install
 ### Port Already in Use
 
 If ports 5173 or 8000 are already in use:
+
 - Frontend: Change in `frontend/vite.config.js`
 - Backend: Add `--port XXXX` flag in start scripts
 
 ## Technologies
 
 ### Frontend
+
 - React 19.2
 - Vite 7.x
 - React Compiler
@@ -158,30 +170,11 @@ If ports 5173 or 8000 are already in use:
 - Modern ES6+ JavaScript
 
 ### Backend
+
 - FastAPI 0.115+
 - Uvicorn
 - Pydantic
 - Python 3.8+
-
-## Claude Code Integration
-
-### MCP Servers
-
-This project includes MCP (Model Context Protocol) server configuration for enhanced development with Claude Code.
-
-**shadcn MCP Server**: Provides intelligent component integration and management for shadcn/ui components.
-
-Configuration file: [.claude/mcp.json](.claude/mcp.json)
-
-**Usage with Claude Code:**
-- Component installation: Ask Claude to add shadcn components (e.g., "add shadcn button component")
-- Component customization: Request component variants and modifications
-- Theme management: Configure and customize shadcn themes
-
-**Manual Configuration** (if needed):
-1. Ensure the MCP configuration is recognized by Claude Code
-2. Restart Claude Code if the shadcn MCP server doesn't appear
-3. The server runs in the `frontend/` directory context
 
 ## License
 

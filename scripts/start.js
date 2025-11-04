@@ -8,7 +8,7 @@ console.log('========================================\n');
 
 const isWindows = process.platform === 'win32';
 const backendDir = path.join(__dirname, '..', 'backend');
-const frontendDir = path.join(__dirname, '..', 'frontend');
+const frontendDir = path.join(__dirname, '..', 'frontend', 'vite-project');
 
 // Check if backend venv exists
 const venvPath = path.join(backendDir, 'venv');

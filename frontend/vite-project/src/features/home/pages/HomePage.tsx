@@ -1,22 +1,25 @@
 import { useNavigate, useParams } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/auth';
+import { useFileStore } from '../../../store/fileStore';
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '../../../components/ui/alert';
 import { DataTable } from '../../../components/DataTable';
-import { uploadFile, getFileData } from '../api/uploads';
+import { uploadFile, getFileData, updateFileData } from '../api/uploads';
 import { toast } from 'sonner';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, Save, X } from 'lucide-react';
 
 export function HomePage() {
   const navigate = useNavigate();
   const { fileId } = useParams<{ fileId?: string }>();
   const { user, logout } = useAuthStore();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  const { setFile, pendingEdits, status, discardEdits, setSaving, markSaved } = useFileStore();
 
   // Fetch file data when fileId is present
   const {
@@ -35,6 +38,13 @@ export function HomePage() {
     retry: 1,
   });
 
+  // Hydrate file store when data loads
+  useEffect(() => {
+    if (fileData && fileId && user?.id) {
+      setFile(fileId, user.id, fileData.columns, fileData.rows, fileData.updated_at);
+    }
+  }, [fileData, fileId, user?.id, setFile]);
+
   const uploadMutation = useMutation({
     mutationFn: uploadFile,
     onSuccess: (data) => {
@@ -48,6 +58,18 @@ export function HomePage() {
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to upload file');
+    },
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: updateFileData,
+    onSuccess: (data) => {
+      toast.success('Changes saved successfully!');
+      markSaved(data.rows, data.updated_at);
+      refetchData();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to save changes');
     },
   });
 
@@ -81,6 +103,29 @@ export function HomePage() {
       file: selectedFile,
     });
   };
+
+  const handleSaveChanges = () => {
+    if (!user?.id || !fileId || pendingEdits.size === 0) return;
+
+    setSaving();
+    const edits = Array.from(pendingEdits.entries()).map(([rowId, changes]) => ({
+      rowId,
+      changes,
+    }));
+
+    saveMutation.mutate({
+      userId: user.id,
+      fileId,
+      edits,
+    });
+  };
+
+  const handleDiscardChanges = () => {
+    discardEdits();
+    toast.info('Changes discarded');
+  };
+
+  const hasPendingEdits = pendingEdits.size > 0;
 
   if (!user) {
     return null;
@@ -168,7 +213,43 @@ export function HomePage() {
               )}
 
               {fileData && !isLoadingData && !dataError && (
-                <DataTable columns={fileData.columns} rows={fileData.rows} />
+                <div className="space-y-4">
+                  {hasPendingEdits && (
+                    <Alert>
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Unsaved changes</AlertTitle>
+                      <AlertDescription className="flex items-center gap-2 mt-2">
+                        <Button
+                          onClick={handleSaveChanges}
+                          disabled={status === 'saving'}
+                          size="sm"
+                        >
+                          {status === 'saving' ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="mr-2 h-4 w-4" />
+                              Save Changes
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          onClick={handleDiscardChanges}
+                          disabled={status === 'saving'}
+                          variant="outline"
+                          size="sm"
+                        >
+                          <X className="mr-2 h-4 w-4" />
+                          Discard
+                        </Button>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+                  <DataTable columns={fileData.columns} rows={fileData.rows} />
+                </div>
               )}
             </CardContent>
           </Card>

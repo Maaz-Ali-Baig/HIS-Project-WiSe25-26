@@ -1,4 +1,4 @@
-import { useRef, useMemo } from "react";
+import { useMemo, useState, useLayoutEffect, useCallback, useRef } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -11,48 +11,221 @@ import {
 } from "@tanstack/react-table";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
-import { useState } from "react";
 import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { useFileStore } from "../store/fileStore";
 
 interface DataTableProps {
   columns: string[];
   rows: Array<Record<string, string>>;
 }
 
+interface ActiveCell {
+  rowId: string;
+  column: string;
+}
+
 export function DataTable({ columns, rows }: DataTableProps) {
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const [activeCell, setActiveCell] = useState<ActiveCell | null>(null);
+  const [editValue, setEditValue] = useState<string>("");
+  const cellInputRefs = useRef<Map<string, HTMLInputElement>>(new Map());
+
+  const { applyEdit, pendingEdits, startEditing } = useFileStore();
+
+  // Save current edit before opening a new one
+  const saveCurrentEdit = useCallback(() => {
+    if (activeCell && editValue !== undefined) {
+      console.log('💾 Saving edit:', { ...activeCell, editValue });
+      applyEdit(activeCell.rowId, activeCell.column, editValue);
+    }
+  }, [activeCell, editValue, applyEdit]);
+
+  const handleCellDoubleClick = useCallback((rowId: string, column: string, currentValue: string) => {
+    // Ignore double-clicks on the id column
+    if (column === 'id') {
+      console.log('🚫 Cannot edit id column');
+      return;
+    }
+
+    console.log('🖱️ Double click:', { rowId, column, currentValue });
+
+    // Save current edit if any
+    if (activeCell) {
+      saveCurrentEdit();
+    }
+
+    // Start editing the new cell
+    setActiveCell({ rowId, column });
+    setEditValue(currentValue);
+    startEditing(rowId, column, currentValue);
+  }, [activeCell, saveCurrentEdit, startEditing]);
+
+  // Select text when input is mounted (autoFocus handles initial focus)
+  useLayoutEffect(() => {
+    if (activeCell) {
+      const cellKey = `${activeCell.rowId}:${activeCell.column}`;
+      const inputElement = cellInputRefs.current.get(cellKey);
+
+      if (inputElement) {
+        // Select all text on mount
+        const len = inputElement.value.length;
+        inputElement.setSelectionRange(0, len);
+        // Move caret to end after selection
+        setTimeout(() => {
+          if (document.activeElement === inputElement) {
+            inputElement.setSelectionRange(len, len);
+          }
+        }, 0);
+      }
+    }
+  }, [activeCell]); // Only run when activeCell changes, not on every editValue change
+
+  const saveEdit = useCallback(() => {
+    if (activeCell) {
+      console.log('💾 Finalizing edit:', { ...activeCell, editValue });
+      applyEdit(activeCell.rowId, activeCell.column, editValue);
+      setActiveCell(null);
+      setEditValue("");
+    }
+  }, [activeCell, editValue, applyEdit]);
+
+  const cancelEdit = useCallback(() => {
+    console.log('❌ Canceling edit');
+    setActiveCell(null);
+    setEditValue("");
+  }, []);
+
+  const handleCellKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      saveEdit(); // Save but don't advance to another cell
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      cancelEdit();
+    }
+  }, [saveEdit, cancelEdit]);
+
+  // Callback ref to store input element references
+  const setInputRef = useCallback((element: HTMLInputElement | null, cellKey: string) => {
+    if (element) {
+      cellInputRefs.current.set(cellKey, element);
+    } else {
+      cellInputRefs.current.delete(cellKey);
+    }
+  }, []);
+
+  const getCellValue = (row: Record<string, string>, column: string): string => {
+    const rowId = row.id || "";
+    const pendingChange = pendingEdits.get(rowId)?.[column];
+    return pendingChange !== undefined ? pendingChange : (row[column] || "");
+  };
+
+  // Helper function to check if a string is numeric
+  const isNumericColumn = useCallback((columnName: string, sampleRows: Array<Record<string, string>>) => {
+    // Always treat 'id' column as numeric
+    if (columnName === 'id') return true;
+
+    // Check first few non-empty values to determine if column is numeric
+    const sampleValues = sampleRows
+      .slice(0, 10)
+      .map(row => row[columnName])
+      .filter(val => val && val.trim() !== '');
+
+    if (sampleValues.length === 0) return false;
+
+    // If more than 80% of values are numeric, treat as numeric column
+    const numericCount = sampleValues.filter(val => !isNaN(Number(val))).length;
+    return numericCount / sampleValues.length > 0.8;
+  }, []);
 
   // Convert columns to TanStack Table ColumnDef format
   const columnDefs = useMemo<ColumnDef<Record<string, string>>[]>(
     () =>
-      columns.map((col) => ({
-        accessorKey: col,
-        header: ({ column }) => {
+      columns.map((col) => {
+        const isNumeric = isNumericColumn(col, rows);
+
+        return {
+          accessorKey: col,
+          header: ({ column }) => {
+            return (
+              <Button
+                variant="ghost"
+                onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                className="h-8 px-2 lg:px-3"
+              >
+                {col}
+                {column.getIsSorted() === "asc" ? (
+                  <ArrowUp className="ml-2 h-4 w-4" />
+                ) : column.getIsSorted() === "desc" ? (
+                  <ArrowDown className="ml-2 h-4 w-4" />
+                ) : (
+                  <ArrowUpDown className="ml-2 h-4 w-4" />
+                )}
+              </Button>
+            );
+          },
+          sortingFn: isNumeric ? (rowA, rowB, columnId) => {
+            // Custom numeric sorting
+            const aVal = rowA.getValue(columnId) as string;
+            const bVal = rowB.getValue(columnId) as string;
+            const aNum = Number(aVal);
+            const bNum = Number(bVal);
+
+            // Handle NaN values (put them at the end)
+            if (isNaN(aNum) && isNaN(bNum)) return 0;
+            if (isNaN(aNum)) return 1;
+            if (isNaN(bNum)) return -1;
+
+            return aNum - bNum;
+          } : 'alphanumeric', // Use default string sorting for non-numeric columns
+          cell: (info) => {
+          const row = info.row.original;
+          const rowId = row.id || "";
+          const column = info.column.id;
+          const value = getCellValue(row, column);
+          const cellKey = `${rowId}:${column}`;
+          const isEditing = activeCell?.rowId === rowId && activeCell?.column === column;
+          const hasEdit = pendingEdits.get(rowId)?.[column] !== undefined;
+          const isIdColumn = column === 'id';
+
+          if (isEditing && !isIdColumn) {
+            return (
+              <Input
+                key={cellKey}
+                ref={(el) => setInputRef(el, cellKey)}
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onBlur={saveEdit}
+                onKeyDown={handleCellKeyDown}
+                className="h-8 w-full"
+                autoFocus
+              />
+            );
+          }
+
           return (
-            <Button
-              variant="ghost"
-              onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-              className="h-8 px-2 lg:px-3"
+            <div
+              onDoubleClick={() => !isIdColumn && handleCellDoubleClick(rowId, column, value)}
+              className={`w-full h-full flex items-center p-4 ${
+                !isIdColumn ? "cursor-pointer hover:bg-muted/50" : "cursor-default"
+              } ${hasEdit ? "bg-yellow-50 dark:bg-yellow-900/20" : ""} ${
+                isIdColumn ? "opacity-60" : ""
+              }`}
+              title={isIdColumn ? "ID column (read-only)" : "Double-click to edit"}
             >
-              {col}
-              {column.getIsSorted() === "asc" ? (
-                <ArrowUp className="ml-2 h-4 w-4" />
-              ) : column.getIsSorted() === "desc" ? (
-                <ArrowDown className="ml-2 h-4 w-4" />
-              ) : (
-                <ArrowUpDown className="ml-2 h-4 w-4" />
-              )}
-            </Button>
+              {value}
+            </div>
           );
         },
-        cell: (info) => info.getValue() as string,
-        size: 150,
-        enableSorting: true,
-        enableColumnFilter: true,
-      })),
-    [columns]
+          size: 150,
+          enableSorting: true,
+          enableColumnFilter: true,
+        };
+      }),
+    [columns, rows, activeCell, editValue, pendingEdits, handleCellDoubleClick, saveEdit, handleCellKeyDown, setInputRef, isNumericColumn]
   );
 
   // Initialize table
@@ -169,7 +342,7 @@ export function DataTable({ columns, rows }: DataTableProps) {
                     return (
                       <div
                         key={virtualColumn.key}
-                        className="p-4 align-middle flex items-center border-r"
+                        className="align-middle flex items-center border-r"
                         style={{
                           width: `${virtualColumn.size}px`,
                         }}

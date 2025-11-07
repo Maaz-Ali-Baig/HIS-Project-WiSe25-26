@@ -31,6 +31,20 @@ def init_db():
         )
     """)
 
+    # Create files table for CSV metadata
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS files (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            file_id TEXT NOT NULL,
+            columns TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            UNIQUE(user_id, file_id),
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+    """)
+
     conn.commit()
     conn.close()
     print(f"Database initialized at {DATABASE_PATH}")
@@ -114,3 +128,76 @@ def get_user_by_id(user_id: str) -> Optional[dict]:
             "created_at": row["created_at"]
         }
     return None
+
+
+def upsert_file_metadata(user_id: str, file_id: str, columns: list[str]) -> dict:
+    """Insert or update file metadata."""
+    import json
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    now = datetime.utcnow().isoformat()
+    columns_json = json.dumps(columns)
+
+    try:
+        # Try to update existing record
+        cursor.execute(
+            """UPDATE files SET columns = ?, updated_at = ?
+               WHERE user_id = ? AND file_id = ?""",
+            (columns_json, now, user_id, file_id)
+        )
+
+        # If no rows updated, insert new record
+        if cursor.rowcount == 0:
+            cursor.execute(
+                """INSERT INTO files (user_id, file_id, columns, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (user_id, file_id, columns_json, now, now)
+            )
+
+        conn.commit()
+        return {
+            "user_id": user_id,
+            "file_id": file_id,
+            "columns": columns,
+            "updated_at": now
+        }
+    finally:
+        conn.close()
+
+
+def get_file_metadata(user_id: str, file_id: str) -> Optional[dict]:
+    """Get file metadata by user_id and file_id."""
+    import json
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT columns, created_at, updated_at FROM files WHERE user_id = ? AND file_id = ?",
+        (user_id, file_id)
+    )
+    row = cursor.fetchone()
+    conn.close()
+
+    if row:
+        return {
+            "columns": json.loads(row["columns"]),
+            "created_at": row["created_at"],
+            "updated_at": row["updated_at"]
+        }
+    return None
+
+
+def update_file_timestamp(user_id: str, file_id: str) -> None:
+    """Update the updated_at timestamp for a file."""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    now = datetime.utcnow().isoformat()
+    cursor.execute(
+        "UPDATE files SET updated_at = ? WHERE user_id = ? AND file_id = ?",
+        (now, user_id, file_id)
+    )
+
+    conn.commit()
+    conn.close()

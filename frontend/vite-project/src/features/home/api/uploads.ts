@@ -16,11 +16,23 @@ export interface UploadFileParams {
 export interface FileDataResponse {
   columns: string[];
   rows: Array<Record<string, string>>;
+  updated_at: string;
 }
 
 export interface GetFileDataParams {
   userId: string;
   fileId: string;
+}
+
+export interface FileEdit {
+  rowId: string;
+  changes: Record<string, string>;
+}
+
+export interface UpdateFileDataParams {
+  userId: string;
+  fileId: string;
+  edits: FileEdit[];
 }
 
 export async function uploadFile({
@@ -48,4 +60,15 @@ export async function getFileData({
   return apiFetch<FileDataResponse>(
     `/api/files/data?userId=${encodeURIComponent(userId)}&fileId=${encodeURIComponent(fileId)}`
   );
+}
+
+export async function updateFileData({
+  userId,
+  fileId,
+  edits,
+}: UpdateFileDataParams): Promise<FileDataResponse> {
+  return apiFetch<FileDataResponse>('/api/files/data', {
+    method: 'PUT',
+    body: JSON.stringify({ userId, fileId, edits }),
+  });
 }

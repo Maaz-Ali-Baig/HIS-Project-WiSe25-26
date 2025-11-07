@@ -1,19 +1,39 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../../store/auth';
 import { Button } from '../../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
-import { uploadFile } from '../api/uploads';
+import { Alert, AlertDescription, AlertTitle } from '../../../components/ui/alert';
+import { DataTable } from '../../../components/DataTable';
+import { uploadFile, getFileData } from '../api/uploads';
 import { toast } from 'sonner';
+import { Loader2, AlertCircle } from 'lucide-react';
 
 export function HomePage() {
   const navigate = useNavigate();
   const { fileId } = useParams<{ fileId?: string }>();
   const { user, logout } = useAuthStore();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  // Fetch file data when fileId is present
+  const {
+    data: fileData,
+    isLoading: isLoadingData,
+    error: dataError,
+    refetch: refetchData,
+  } = useQuery({
+    queryKey: ['fileData', user?.id, fileId],
+    queryFn: () =>
+      getFileData({
+        userId: user!.id,
+        fileId: fileId!,
+      }),
+    enabled: Boolean(user?.id && fileId),
+    retry: 1,
+  });
 
   const uploadMutation = useMutation({
     mutationFn: uploadFile,
@@ -68,7 +88,7 @@ export function HomePage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-8">
-      <div className="w-full max-w-2xl space-y-6">
+      <div className="w-full max-w-6xl space-y-6">
         {/* Welcome Card */}
         <Card>
           <CardHeader>
@@ -91,7 +111,7 @@ export function HomePage() {
 
             {fileId && (
               <div className="rounded-lg bg-blue-50 border border-blue-200 p-4">
-                <p className="text-sm font-medium text-blue-700">Last uploaded file:</p>
+                <p className="text-sm font-medium text-blue-700">Current file:</p>
                 <p className="text-sm text-blue-600 mt-1 font-mono">{fileId}</p>
                 <a
                   href={`http://localhost:8000/file/${user.id}/${fileId}.csv`}
@@ -109,6 +129,50 @@ export function HomePage() {
             </Button>
           </CardContent>
         </Card>
+
+        {/* File Preview Card - shown when fileId is present */}
+        {fileId && (
+          <Card>
+            <CardHeader>
+              <CardTitle>File Preview</CardTitle>
+              <CardDescription>
+                {fileData
+                  ? `Displaying ${fileData.rows.length} rows and ${fileData.columns.length} columns`
+                  : 'Loading file data...'}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingData && (
+                <div className="flex items-center justify-center h-64">
+                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                  <span className="ml-2 text-muted-foreground">Loading data...</span>
+                </div>
+              )}
+
+              {dataError && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Error loading file</AlertTitle>
+                  <AlertDescription className="space-y-2">
+                    <p>{(dataError as Error).message}</p>
+                    <div className="flex gap-2">
+                      <Button onClick={() => refetchData()} variant="outline" size="sm">
+                        Retry
+                      </Button>
+                      <Button onClick={() => navigate('/')} variant="outline" size="sm">
+                        Back to Home
+                      </Button>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {fileData && !isLoadingData && !dataError && (
+                <DataTable columns={fileData.columns} rows={fileData.rows} />
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Upload CSV Card */}
         <Card>

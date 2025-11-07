@@ -13,6 +13,16 @@ export interface UploadFileParams {
   file: File;
 }
 
+export interface FileDataResponse {
+  columns: string[];
+  rows: Array<Record<string, string>>;
+}
+
+export interface GetFileDataParams {
+  userId: string;
+  fileId: string;
+}
+
 export async function uploadFile({
   userId,
   username,
@@ -29,4 +39,13 @@ export async function uploadFile({
     method: 'POST',
     body: formData,
   });
+}
+
+export async function getFileData({
+  userId,
+  fileId,
+}: GetFileDataParams): Promise<FileDataResponse> {
+  return apiFetch<FileDataResponse>(
+    `/api/files/data?userId=${encodeURIComponent(userId)}&fileId=${encodeURIComponent(fileId)}`
+  );
 }

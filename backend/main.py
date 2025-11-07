@@ -1,9 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from datetime import datetime
 from database.db import init_db
 from auth.routes import router as auth_router
+from files.routes import router as files_router, ensure_files_directory
+from pathlib import Path
 
 app = FastAPI(
     title="HIS Project API",
@@ -11,10 +14,11 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Initialize database on startup
+# Initialize database and files directory on startup
 @app.on_event("startup")
 async def startup_event():
     init_db()
+    ensure_files_directory()
 
 app.add_middleware(
     CORSMiddleware,
@@ -24,8 +28,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include auth router
+# Include routers
 app.include_router(auth_router)
+app.include_router(files_router)
+
+# Mount static files directory for serving uploaded CSV files
+FILES_DIR = Path(__file__).parent / "files"
+app.mount("/file", StaticFiles(directory=str(FILES_DIR)), name="files")
 
 class HealthResponse(BaseModel):
     status: str

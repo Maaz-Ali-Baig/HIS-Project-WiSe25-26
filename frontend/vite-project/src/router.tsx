@@ -22,6 +22,14 @@ export const router = createBrowserRouter([
     ),
   },
   {
+    path: '/:fileId',
+    element: (
+      <ProtectedRoute>
+        <HomePage />
+      </ProtectedRoute>
+    ),
+  },
+  {
     path: '*',
     element: <Navigate to="/" replace />,
   },

@@ -10,12 +10,21 @@ export async function apiFetch<T = any>(
 ): Promise<T> {
   const url = `${baseURL}${path}`;
 
+  // Detect if body is FormData and skip Content-Type header (browser sets it automatically with boundary)
+  const isFormData = options?.body instanceof FormData;
+
+  const headers: Record<string, string> = {
+    ...(options?.headers || {}),
+  };
+
+  // Only add Content-Type for non-FormData requests
+  if (!isFormData) {
+    headers['Content-Type'] = 'application/json';
+  }
+
   const response = await fetch(url, {
     credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(options?.headers || {}),
-    },
+    headers,
     ...options,
   });
 

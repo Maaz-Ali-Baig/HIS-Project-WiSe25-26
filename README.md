@@ -1,17 +1,33 @@
 # HIS Project - High Integrity Systems
 
-Full-stack High Integrity Systems application with React 19.2 frontend and FastAPI backend.
+Full-stack CSV data management application with secure authentication, file upload capabilities, and interactive data editing.
 
 ## Project Structure
 
 ```
 HIS-Project-WiSe25-26/
-├── frontend/          # React 19.2 + Vite + React Compiler
-├── backend/           # FastAPI + Python
-├── scripts/           # Helper scripts
-├── start.bat          # Windows startup script
-├── start.sh           # Linux/Mac startup script
-└── package.json       # Project configuration
+├── frontend/
+│   └── vite-project/           # React 19 + Vite + TypeScript
+│       ├── src/
+│       │   ├── components/     # Reusable UI components (DataTable, shadcn/ui)
+│       │   ├── features/       # Feature modules (auth, home)
+│       │   ├── lib/            # Utilities (http, cookies, utils)
+│       │   ├── store/          # Zustand state management (auth, fileStore)
+│       │   ├── providers/      # React Query provider
+│       │   └── router.tsx      # React Router configuration
+│       └── package.json
+├── backend/
+│   ├── main.py                 # FastAPI application
+│   ├── auth/                   # Authentication module (JWT + Argon2)
+│   ├── database/               # SQLite database & Pydantic models
+│   ├── files/                  # File upload/edit endpoints
+│   ├── files/                  # Uploaded CSV storage directory
+│   ├── auth.db                 # SQLite database
+│   └── requirements.txt
+├── scripts/                    # Helper scripts
+├── start.bat                   # Windows startup script
+├── start.sh                    # Linux/Mac startup script
+└── package.json                # Root package configuration
 ```
 
 ## Quick Start
@@ -85,26 +101,71 @@ npm run start:backend
 
 The frontend uses:
 
-- React 19.2
-- Vite (fast build tool)
-- React Compiler (automatic optimization)
+- **React 19.1.1** with TypeScript
+- **Vite 7.1.7** (fast build tool)
+- **React Compiler** (automatic optimization)
+- **Zustand** (state management)
+- **TanStack React Query** (server state)
+- **TanStack React Table** with virtualization (performance for large datasets)
+- **shadcn/ui** (Radix UI components)
+- **Tailwind CSS 4.0**
+- **React Router 7.9.5**
 
-Navigate to `frontend/` for more details.
+Navigate to [frontend/vite-project](frontend/vite-project) for more details.
 
 ### Backend Development
 
 The backend uses:
 
-- FastAPI (modern Python web framework)
-- Uvicorn (ASGI server)
-- Pydantic (data validation)
+- **FastAPI 0.115.6** (modern async Python web framework)
+- **Uvicorn 0.34.0** (ASGI server)
+- **Pydantic 2.10.5** (data validation)
+- **SQLite3** (database)
+- **Argon2** (password hashing)
+- **PyJWT 2.9.0** (JWT authentication)
+- **aiofiles** (async file operations)
 
-Navigate to `backend/` for more details.
+Navigate to [backend](backend) for more details.
+
+## Features
+
+### Authentication System
+- **User Registration** with validation (3-20 char username, 8+ char password)
+- **Secure Login** with JWT tokens and Argon2 password hashing
+- **Remember Me** functionality (7-day cookie persistence)
+- **Protected Routes** requiring authentication
+- Automatic token hydration on app load
+
+### CSV File Management
+- **Upload CSV files** with automatic validation
+- **Interactive Data Table** with virtualized rows/columns (handles large datasets)
+- **Double-click editing** for cells
+- **Pending edits tracking** with save/discard options
+- **File download** capability
+- **User-isolated storage** (files/{user_id}/{file_id}.csv)
+
+### Data Table Features
+- Virtual scrolling for optimal performance
+- Sortable columns (numeric & string aware)
+- Inline cell editing
+- Real-time edit visualization (yellow highlight)
+- Keyboard shortcuts (Enter to save, Escape to cancel)
+- Responsive design
 
 ## Available Endpoints
 
-### Backend API
+### Authentication API
+- `POST /api/auth/register` - Create new user account
+- `POST /api/auth/login` - Authenticate and receive JWT token
+- `POST /api/auth/logout` - Clear authentication
 
+### File Management API
+- `POST /api/files/upload` - Upload CSV file (max 10MB client-side)
+- `GET /api/files/data?userId=X&fileId=Y` - Retrieve file data as JSON
+- `PUT /api/files/data` - Update CSV with edited cells
+- `GET /file/{user_id}/{file_id}.csv` - Download CSV file
+
+### System API
 - `GET /` - Root endpoint with API information
 - `GET /health` - Health check endpoint
 - `GET /docs` - Interactive API documentation (Swagger UI)
@@ -118,6 +179,32 @@ Navigate to `backend/` for more details.
   "timestamp": "2025-10-28T12:00:00.000000",
   "message": "API is running successfully"
 }
+```
+
+## Database Schema
+
+### Users Table
+```sql
+CREATE TABLE users (
+    id TEXT PRIMARY KEY,
+    username TEXT UNIQUE NOT NULL,
+    hashed_password TEXT NOT NULL,
+    created_at TEXT NOT NULL
+)
+```
+
+### Files Table
+```sql
+CREATE TABLE files (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    file_id TEXT NOT NULL,
+    columns TEXT NOT NULL,  -- JSON array
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    UNIQUE(user_id, file_id),
+    FOREIGN KEY(user_id) REFERENCES users(id)
+)
 ```
 
 ## Building for Production
@@ -156,25 +243,60 @@ npm install
 
 If ports 5173 or 8000 are already in use:
 
-- Frontend: Change in `frontend/vite.config.js`
-- Backend: Add `--port XXXX` flag in start scripts
+- **Frontend**: Change in [frontend/vite-project/vite.config.ts](frontend/vite-project/vite.config.ts)
+- **Backend**: Add `--port XXXX` flag in start scripts or modify uvicorn command in [backend/main.py](backend/main.py)
+
+## Security Considerations
+
+### For Production Deployment
+
+⚠️ **Important**: Before deploying to production:
+
+1. **Change JWT Secret**: Replace hardcoded JWT secret in [backend/auth/utils.py](backend/auth/utils.py:11)
+   - Use environment variable: `os.getenv("JWT_SECRET_KEY")`
+   - Generate strong secret: `openssl rand -hex 32`
+
+2. **Add JWT Token Expiry**: Configure token expiration in JWT payload
+
+3. **File Upload Validation**: Add server-side file size limits and type validation
+
+4. **Rate Limiting**: Implement rate limiting for file uploads and authentication endpoints
+
+5. **HTTPS**: Use HTTPS in production for secure token transmission
+
+6. **Database Migrations**: Implement proper database migration system for schema changes
+
+7. **Input Sanitization**: Add additional validation for CSV content and user inputs
 
 ## Technologies
 
-### Frontend
+### Frontend Stack
 
-- React 19.2
-- Vite 7.x
-- React Compiler
-- shadcn/ui (component library)
-- Modern ES6+ JavaScript
+- **React 19.1.1** (UI library)
+- **TypeScript 5.9.3** (type safety)
+- **Vite 7.1.7** (build tool)
+- **React Compiler** (optimization)
+- **Zustand 5.0.8** (state management)
+- **TanStack React Query 5.90.6** (server state)
+- **TanStack React Table 8.20.6** (data tables)
+- **TanStack React Virtual 3.11.3** (virtualization)
+- **shadcn/ui** (component library based on Radix UI)
+- **Tailwind CSS 4.0** (styling)
+- **React Router 7.9.5** (routing)
+- **React Hook Form 7.66.0** (form handling)
+- **Zod 4.1.12** (schema validation)
 
-### Backend
+### Backend Stack
 
-- FastAPI 0.115+
-- Uvicorn
-- Pydantic
-- Python 3.8+
+- **FastAPI 0.115.6** (web framework)
+- **Uvicorn 0.34.0** (ASGI server)
+- **Pydantic 2.10.5** (data validation)
+- **SQLite3** (database)
+- **Argon2-cffi 23.1.0** (password hashing)
+- **PyJWT 2.9.0** (JWT authentication)
+- **aiofiles 24.1.0** (async file I/O)
+- **python-multipart 0.0.12** (form parsing)
+- **Python 3.8+** (runtime)
 
 ## License
 

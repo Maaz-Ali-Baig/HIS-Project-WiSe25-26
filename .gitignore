@@ -3,5 +3,4 @@
 .backend/dist/
 .frontend/node_modules/
 .frontend/vite-project/node_modules/
-backend/files/
 backend/auth.db

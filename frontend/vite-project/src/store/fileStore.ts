@@ -14,14 +14,17 @@ export interface FileState {
   status: 'clean' | 'dirty' | 'loading' | 'saving';
   updatedAt: string;
   editingCell: { rowId: string; column: string } | null;
+  selectionRanges: Array<{ start: number; end: number }>;
+  totalColumns: number;
 }
 
 interface FileActions {
-  setFile: (fileId: string, userId: string, columns: string[], rows: Array<Record<string, string>>, updatedAt: string) => void;
+  setFile: (fileId: string, userId: string, columns: string[], rows: Array<Record<string, string>>, updatedAt: string, selectionRanges?: Array<{ start: number; end: number }>, totalColumns?: number) => void;
   startEditing: (rowId: string, column: string, initialValue: string) => void;
   applyEdit: (rowId: string, column: string, value: string) => void;
   discardEdits: () => void;
   markSaved: (rows: Array<Record<string, string>>, updatedAt: string) => void;
+  updateColumnSelection: (columns: string[], rows: Array<Record<string, string>>, updatedAt: string, selectionRanges: Array<{ start: number; end: number }>, totalColumns: number) => void;
   setLoading: () => void;
   setSaving: () => void;
   reset: () => void;
@@ -38,12 +41,14 @@ const initialState: FileState = {
   status: 'clean',
   updatedAt: '',
   editingCell: null,
+  selectionRanges: [],
+  totalColumns: 0,
 };
 
 export const useFileStore = create<FileStore>((set, get) => ({
   ...initialState,
 
-  setFile: (fileId, userId, columns, rows, updatedAt) => {
+  setFile: (fileId, userId, columns, rows, updatedAt, selectionRanges = [], totalColumns = 0) => {
     set({
       fileId,
       userId,
@@ -53,6 +58,8 @@ export const useFileStore = create<FileStore>((set, get) => ({
       status: 'clean',
       updatedAt,
       editingCell: null,
+      selectionRanges,
+      totalColumns: totalColumns || columns.length,
     });
   },
 
@@ -120,6 +127,19 @@ export const useFileStore = create<FileStore>((set, get) => ({
 
   setSaving: () => {
     set({ status: 'saving' });
+  },
+
+  updateColumnSelection: (columns, rows, updatedAt, selectionRanges, totalColumns) => {
+    set({
+      columns,
+      rows,
+      selectionRanges,
+      totalColumns,
+      updatedAt,
+      pendingEdits: new Map(),
+      status: 'clean',
+      editingCell: null,
+    });
   },
 
   reset: () => {

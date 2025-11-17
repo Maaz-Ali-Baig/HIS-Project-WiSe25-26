@@ -9,9 +9,10 @@ import { Input } from '../../../components/ui/input';
 import { Label } from '../../../components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '../../../components/ui/alert';
 import { DataTable } from '../../../components/DataTable';
-import { uploadFile, getFileData, updateFileData } from '../api/uploads';
+import { uploadFile, getFileData, updateFileData, updateColumnSelection } from '../api/uploads';
 import { toast } from 'sonner';
 import { Loader2, AlertCircle, Save, X } from 'lucide-react';
+import { ColumnSelectionPanel } from '../../../components/ColumnSelectionPanel';
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -19,7 +20,17 @@ export function HomePage() {
   const { user, logout } = useAuthStore();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
-  const { setFile, pendingEdits, status, discardEdits, setSaving, markSaved } = useFileStore();
+  const {
+    setFile,
+    pendingEdits,
+    status,
+    discardEdits,
+    setSaving,
+    markSaved,
+    updateColumnSelection: updateStoreColumnSelection,
+    selectionRanges,
+    totalColumns,
+  } = useFileStore();
 
   // Fetch file data when fileId is present
   const {
@@ -41,7 +52,15 @@ export function HomePage() {
   // Hydrate file store when data loads
   useEffect(() => {
     if (fileData && fileId && user?.id) {
-      setFile(fileId, user.id, fileData.columns, fileData.rows, fileData.updated_at);
+      setFile(
+        fileId,
+        user.id,
+        fileData.columns,
+        fileData.rows,
+        fileData.updated_at,
+        fileData.selectionRanges || [],
+        fileData.totalColumns || fileData.columns.length
+      );
     }
   }, [fileData, fileId, user?.id, setFile]);
 
@@ -70,6 +89,24 @@ export function HomePage() {
     },
     onError: (error: Error) => {
       toast.error(error.message || 'Failed to save changes');
+    },
+  });
+
+  const columnSelectionMutation = useMutation({
+    mutationFn: updateColumnSelection,
+    onSuccess: (data) => {
+      toast.success('Column selection updated successfully!');
+      updateStoreColumnSelection(
+        data.columns,
+        data.rows,
+        data.updated_at,
+        data.selectionRanges,
+        data.totalColumns
+      );
+      refetchData();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update column selection');
     },
   });
 
@@ -125,6 +162,44 @@ export function HomePage() {
     toast.info('Changes discarded');
   };
 
+  const handleApplyColumnSelection = (ranges: Array<{ start: number; end: number }>) => {
+    if (!user?.id || !fileId) return;
+
+    // Warn if there are pending edits
+    if (pendingEdits.size > 0) {
+      const confirmed = window.confirm(
+        'You have unsaved edits. Changing column selection will discard these edits. Continue?'
+      );
+      if (!confirmed) return;
+      discardEdits();
+    }
+
+    columnSelectionMutation.mutate({
+      userId: user.id,
+      fileId,
+      ranges,
+    });
+  };
+
+  const handleResetColumnSelection = () => {
+    if (!user?.id || !fileId) return;
+
+    // Warn if there are pending edits
+    if (pendingEdits.size > 0) {
+      const confirmed = window.confirm(
+        'You have unsaved edits. Resetting column selection will discard these edits. Continue?'
+      );
+      if (!confirmed) return;
+      discardEdits();
+    }
+
+    columnSelectionMutation.mutate({
+      userId: user.id,
+      fileId,
+      ranges: [], // Empty array means "select all"
+    });
+  };
+
   const hasPendingEdits = pendingEdits.size > 0;
 
   if (!user) {
@@ -174,6 +249,17 @@ export function HomePage() {
             </Button>
           </CardContent>
         </Card>
+
+        {/* Column Selection Panel - shown when fileId is present */}
+        {fileId && fileData && totalColumns > 0 && (
+          <ColumnSelectionPanel
+            totalColumns={totalColumns}
+            currentRanges={selectionRanges}
+            onApply={handleApplyColumnSelection}
+            onReset={handleResetColumnSelection}
+            isLoading={columnSelectionMutation.isPending}
+          />
+        )}
 
         {/* File Preview Card - shown when fileId is present */}
         {fileId && (

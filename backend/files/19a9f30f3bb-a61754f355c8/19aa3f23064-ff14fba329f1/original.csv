@@ -1,0 +1,4 @@
+id,Participant ID,Code,Description,Quotation from transcript
+1,P1,Prompt refinement,Student clarifies prompts to steer the model.,Help me solve this in python
+2,P1,Manual patching,Student edits generated code by hand.,Help me solve this in python
+3,P1,Performance optimization,Student requests speed-ups to avoid timeouts.,Help me solve this in python

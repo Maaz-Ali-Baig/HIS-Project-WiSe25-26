@@ -38,12 +38,23 @@ def init_db():
             user_id TEXT NOT NULL,
             file_id TEXT NOT NULL,
             columns TEXT NOT NULL,
+            selected_columns TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             UNIQUE(user_id, file_id),
             FOREIGN KEY(user_id) REFERENCES users(id)
         )
     """)
+
+    # Migration: Add selected_columns column if it doesn't exist (for existing databases)
+    try:
+        cursor.execute("SELECT selected_columns FROM files LIMIT 1")
+    except sqlite3.OperationalError:
+        # Column doesn't exist, add it
+        print("Migrating database: Adding selected_columns column to files table")
+        cursor.execute("ALTER TABLE files ADD COLUMN selected_columns TEXT")
+        conn.commit()
+        print("Migration complete: selected_columns column added")
 
     conn.commit()
     conn.close()
@@ -130,7 +141,7 @@ def get_user_by_id(user_id: str) -> Optional[dict]:
     return None
 
 
-def upsert_file_metadata(user_id: str, file_id: str, columns: list[str]) -> dict:
+def upsert_file_metadata(user_id: str, file_id: str, columns: list[str], selected_columns: Optional[list[dict]] = None) -> dict:
     """Insert or update file metadata."""
     import json
     conn = get_db_connection()
@@ -138,21 +149,22 @@ def upsert_file_metadata(user_id: str, file_id: str, columns: list[str]) -> dict
 
     now = datetime.utcnow().isoformat()
     columns_json = json.dumps(columns)
+    selected_columns_json = json.dumps(selected_columns) if selected_columns is not None else None
 
     try:
         # Try to update existing record
         cursor.execute(
-            """UPDATE files SET columns = ?, updated_at = ?
+            """UPDATE files SET columns = ?, selected_columns = ?, updated_at = ?
                WHERE user_id = ? AND file_id = ?""",
-            (columns_json, now, user_id, file_id)
+            (columns_json, selected_columns_json, now, user_id, file_id)
         )
 
         # If no rows updated, insert new record
         if cursor.rowcount == 0:
             cursor.execute(
-                """INSERT INTO files (user_id, file_id, columns, created_at, updated_at)
-                   VALUES (?, ?, ?, ?, ?)""",
-                (user_id, file_id, columns_json, now, now)
+                """INSERT INTO files (user_id, file_id, columns, selected_columns, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (user_id, file_id, columns_json, selected_columns_json, now, now)
             )
 
         conn.commit()
@@ -160,6 +172,7 @@ def upsert_file_metadata(user_id: str, file_id: str, columns: list[str]) -> dict
             "user_id": user_id,
             "file_id": file_id,
             "columns": columns,
+            "selected_columns": selected_columns,
             "updated_at": now
         }
     finally:
@@ -173,7 +186,7 @@ def get_file_metadata(user_id: str, file_id: str) -> Optional[dict]:
     cursor = conn.cursor()
 
     cursor.execute(
-        "SELECT columns, created_at, updated_at FROM files WHERE user_id = ? AND file_id = ?",
+        "SELECT columns, selected_columns, created_at, updated_at FROM files WHERE user_id = ? AND file_id = ?",
         (user_id, file_id)
     )
     row = cursor.fetchone()
@@ -182,6 +195,7 @@ def get_file_metadata(user_id: str, file_id: str) -> Optional[dict]:
     if row:
         return {
             "columns": json.loads(row["columns"]),
+            "selected_columns": json.loads(row["selected_columns"]) if row["selected_columns"] else None,
             "created_at": row["created_at"],
             "updated_at": row["updated_at"]
         }
@@ -201,3 +215,55 @@ def update_file_timestamp(user_id: str, file_id: str) -> None:
 
     conn.commit()
     conn.close()
+
+
+def validate_column_ranges(ranges: list[dict], total_columns: int) -> tuple[bool, Optional[str]]:
+    """
+    Validate column selection ranges.
+
+    Args:
+        ranges: List of range objects with 'start' and 'end' keys (zero-based, inclusive)
+        total_columns: Total number of columns in the file
+
+    Returns:
+        Tuple of (is_valid, error_message)
+    """
+    # Empty ranges means "select all"
+    if not ranges or len(ranges) == 0:
+        return True, None
+
+    # Validate each range
+    for idx, range_obj in enumerate(ranges):
+        if not isinstance(range_obj, dict):
+            return False, f"Range {idx} must be an object"
+
+        if 'start' not in range_obj or 'end' not in range_obj:
+            return False, f"Range {idx} must have 'start' and 'end' keys"
+
+        start = range_obj['start']
+        end = range_obj['end']
+
+        if not isinstance(start, int) or not isinstance(end, int):
+            return False, f"Range {idx} start and end must be integers"
+
+        if start < 0 or end < 0:
+            return False, f"Range {idx} indices must be non-negative"
+
+        if start >= total_columns or end >= total_columns:
+            return False, f"Range {idx} indices must be less than {total_columns}"
+
+        if start > end:
+            return False, f"Range {idx} start must be <= end"
+
+    # Sort ranges by start for overlap check
+    sorted_ranges = sorted(ranges, key=lambda r: r['start'])
+
+    # Check for overlaps
+    for i in range(len(sorted_ranges) - 1):
+        current_end = sorted_ranges[i]['end']
+        next_start = sorted_ranges[i + 1]['start']
+
+        if current_end >= next_start:
+            return False, f"Ranges overlap: [{sorted_ranges[i]['start']}-{current_end}] and [{next_start}-{sorted_ranges[i+1]['end']}]"
+
+    return True, None

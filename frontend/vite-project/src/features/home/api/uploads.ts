@@ -17,6 +17,8 @@ export interface FileDataResponse {
   columns: string[];
   rows: Array<Record<string, string>>;
   updated_at: string;
+  selectionRanges: Array<{ start: number; end: number }>;
+  totalColumns: number;
 }
 
 export interface GetFileDataParams {
@@ -70,5 +72,22 @@ export async function updateFileData({
   return apiFetch<FileDataResponse>('/api/files/data', {
     method: 'PUT',
     body: JSON.stringify({ userId, fileId, edits }),
+  });
+}
+
+export interface UpdateColumnSelectionParams {
+  userId: string;
+  fileId: string;
+  ranges: Array<{ start: number; end: number }>;
+}
+
+export async function updateColumnSelection({
+  userId,
+  fileId,
+  ranges,
+}: UpdateColumnSelectionParams): Promise<FileDataResponse> {
+  return apiFetch<FileDataResponse>('/api/files/selection', {
+    method: 'POST',
+    body: JSON.stringify({ userId, fileId, ranges }),
   });
 }

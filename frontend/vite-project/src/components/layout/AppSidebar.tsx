@@ -23,10 +23,11 @@ import {
   LogOut,
   User,
 } from "lucide-react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuthStore } from "@/store/auth";
 import { Button } from "@/components/ui/button";
+import { UploadSurface } from "@/components/upload/UploadSurface";
 
 const items = [
   {
@@ -58,6 +59,7 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
 export function AppSidebar({ mode = "default", ...props }: AppSidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { fileId } = useParams<{ fileId?: string }>();
   const { state } = useSidebar();
   const { user, logout } = useAuthStore();
 
@@ -74,6 +76,11 @@ export function AppSidebar({ mode = "default", ...props }: AppSidebarProps) {
       .toUpperCase()
       .slice(0, 2);
   };
+
+  // Show compact upload when:
+  // 1. Sidebar is expanded
+  // 2. User is on a file route (fileId exists)
+  const showCompactUpload = state === "expanded" && Boolean(fileId);
 
   if (mode === "auth") {
     return (
@@ -150,6 +157,21 @@ export function AppSidebar({ mode = "default", ...props }: AppSidebarProps) {
       {user && (
         <SidebarFooter className="mt-auto border-t border-white/10 p-2">
           <SidebarMenu>
+            {/* Compact upload section - only shown when expanded and on file route */}
+            {showCompactUpload && (
+              <>
+                <SidebarMenuItem>
+                  <div className="px-1 py-2">
+                    <UploadSurface
+                      variant="compact"
+                      requiresConfirmation={true}
+                    />
+                  </div>
+                </SidebarMenuItem>
+                <SidebarSeparator className="bg-white/10" />
+              </>
+            )}
+
             <SidebarMenuItem>
               {state === "expanded" ? (
                 <div className="flex items-center gap-2 px-2 py-1.5">

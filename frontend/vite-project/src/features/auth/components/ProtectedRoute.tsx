@@ -1,7 +1,7 @@
-import { ReactNode } from 'react';
-import { Navigate } from 'react-router-dom';
-import { useAuthStore } from '../../../store/auth';
-import { getToken } from '../../../lib/cookies';
+import { ReactNode } from "react";
+import { Navigate } from "react-router-dom";
+import { useAuthStore } from "../../../store/auth";
+import { getToken } from "../../../lib/cookies";
 
 interface ProtectedRouteProps {
   children: ReactNode;

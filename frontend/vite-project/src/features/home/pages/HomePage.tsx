@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "../../../store/auth";
 import { useFileStore } from "../../../store/fileStore";
@@ -11,7 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from "../../../components/ui/card";
-import { Input } from "../../../components/ui/input";
 import {
   Alert,
   AlertDescription,
@@ -19,29 +18,19 @@ import {
 } from "../../../components/ui/alert";
 import { DataTable } from "../../../components/DataTable";
 import {
-  uploadFile,
   getFileData,
   updateFileData,
   updateColumnSelection,
 } from "../api/uploads";
 import { toast } from "sonner";
-import {
-  Loader2,
-  AlertCircle,
-  Save,
-  X,
-  Upload as UploadIcon,
-  FileSpreadsheet,
-  CheckCircle2,
-} from "lucide-react";
+import { Loader2, AlertCircle, Save, X } from "lucide-react";
 import { ColumnSelectionPanel } from "../../../components/ColumnSelectionPanel";
+import { UploadSurface } from "../../../components/upload/UploadSurface";
 
 export function HomePage() {
   const navigate = useNavigate();
   const { fileId } = useParams<{ fileId?: string }>();
   const { user } = useAuthStore();
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
 
   const {
     setFile,
@@ -87,24 +76,6 @@ export function HomePage() {
     }
   }, [fileData, fileId, user?.id, setFile]);
 
-  const uploadMutation = useMutation({
-    mutationFn: uploadFile,
-    onSuccess: (data) => {
-      toast.success("File uploaded successfully!");
-      setSelectedFile(null);
-      // Reset file input
-      const fileInput = document.getElementById(
-        "csv-file-input",
-      ) as HTMLInputElement;
-      if (fileInput) fileInput.value = "";
-      // Navigate to the file ID route
-      navigate(`/${data.fileId}`);
-    },
-    onError: (error: Error) => {
-      toast.error(error.message || "Failed to upload file");
-    },
-  });
-
   const saveMutation = useMutation({
     mutationFn: updateFileData,
     onSuccess: (data) => {
@@ -134,72 +105,6 @@ export function HomePage() {
       toast.error(error.message || "Failed to update column selection");
     },
   });
-
-  const validateAndSetFile = (file: File | null) => {
-    if (file) {
-      if (!file.name.toLowerCase().endsWith(".csv")) {
-        toast.error("Please select a CSV file");
-        return false;
-      }
-      if (file.size > 10 * 1024 * 1024) {
-        toast.error("File size must be less than 10MB");
-        return false;
-      }
-      setSelectedFile(file);
-      return true;
-    }
-    return false;
-  };
-
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!validateAndSetFile(file || null)) {
-      event.target.value = "";
-    }
-  };
-
-  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    setIsDragging(false);
-
-    const file = event.dataTransfer.files?.[0];
-    validateAndSetFile(file || null);
-  };
-
-  const handleFileInputClick = () => {
-    document.getElementById("csv-file-input")?.click();
-  };
-
-  const handleUpload = () => {
-    if (!selectedFile || !user?.id) {
-      toast.error("Please select a file to upload");
-      return;
-    }
-
-    uploadMutation.mutate({
-      userId: user.id,
-      username: user.username,
-      file: selectedFile,
-    });
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
-  };
 
   const handleSaveChanges = () => {
     if (!user?.id || !fileId || pendingEdits.size === 0) return;
@@ -276,91 +181,7 @@ export function HomePage() {
       {!fileId && (
         <Card className="border-0 shadow-lg">
           <CardContent className="p-8 md:p-12">
-            <div
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
-              onClick={handleFileInputClick}
-              className={`
-                cursor-pointer rounded-xl border-2 border-dashed p-12 md:p-16 text-center transition-all
-                ${
-                  isDragging
-                    ? "border-[#3b5f9e] bg-blue-50"
-                    : "border-gray-300 hover:border-[#3b5f9e] hover:bg-gray-50"
-                }
-              `}
-            >
-              <Input
-                id="csv-file-input"
-                type="file"
-                accept=".csv"
-                onChange={handleFileChange}
-                disabled={uploadMutation.isPending}
-                className="hidden"
-              />
-
-              <div className="flex flex-col items-center gap-6 max-w-lg mx-auto">
-                <div
-                  className={`
-                    p-6 rounded-full transition-colors
-                    ${isDragging ? "bg-blue-100" : "bg-gray-100"}
-                  `}
-                >
-                  <FileSpreadsheet
-                    className={`
-                      h-16 w-16 transition-colors
-                      ${isDragging ? "text-[#3b5f9e]" : "text-gray-400"}
-                    `}
-                  />
-                </div>
-
-                {selectedFile ? (
-                  <div className="w-full space-y-4">
-                    <div>
-                      <p className="text-lg font-semibold text-gray-700 mb-1">
-                        {selectedFile.name}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {formatFileSize(selectedFile.size)}
-                      </p>
-                    </div>
-                    <Button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleUpload();
-                      }}
-                      disabled={uploadMutation.isPending}
-                      size="lg"
-                      className="w-full max-w-xs mx-auto bg-[#3b5f9e] hover:bg-[#345ca8]"
-                    >
-                      {uploadMutation.isPending ? (
-                        <>
-                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          Uploading...
-                        </>
-                      ) : (
-                        <>
-                          <UploadIcon className="mr-2 h-5 w-5" />
-                          Upload File
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <p className="text-2xl font-semibold text-gray-700">
-                      Drop your CSV file here
-                    </p>
-                    <p className="text-base text-gray-500">
-                      or click to browse
-                    </p>
-                    <p className="text-sm text-gray-400 pt-2">
-                      CSV files only • Max 10MB
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
+            <UploadSurface variant="hero" />
           </CardContent>
         </Card>
       )}

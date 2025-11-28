@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Button } from './ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Slider } from './ui/slider';
-import { X, Plus, RotateCcw } from 'lucide-react';
-import { Alert, AlertDescription } from './ui/alert';
+import { useState, useEffect } from "react";
+import { Button } from "./ui/button";
+import { Slider } from "./ui/slider";
+import { X, Plus, RotateCcw } from "lucide-react";
+import { Alert, AlertDescription } from "./ui/alert";
 
 interface ColumnRange {
   id: string;
@@ -37,13 +36,13 @@ export function ColumnSelectionPanel({
           id: `range-${idx}`,
           start: r.start,
           end: r.end,
-        }))
+        })),
       );
     } else {
       // Default: single range covering all columns
       setRanges([
         {
-          id: 'range-0',
+          id: "range-0",
           start: 0,
           end: totalColumns - 1,
         },
@@ -63,15 +62,23 @@ export function ColumnSelectionPanel({
     // Check for overlaps
     for (let i = 0; i < sorted.length - 1; i++) {
       if (sorted[i].end >= sorted[i + 1].start) {
-        setValidationError(`Ranges overlap: columns ${sorted[i].start + 1}-${sorted[i].end + 1} and ${sorted[i + 1].start + 1}-${sorted[i + 1].end + 1}`);
+        setValidationError(
+          `Ranges overlap: columns ${sorted[i].start + 1}-${sorted[i].end + 1} and ${sorted[i + 1].start + 1}-${sorted[i + 1].end + 1}`,
+        );
         return false;
       }
     }
 
     // Check bounds
     for (const range of rangesToValidate) {
-      if (range.start < 0 || range.end >= totalColumns || range.start > range.end) {
-        setValidationError(`Invalid range: ${range.start + 1}-${range.end + 1}`);
+      if (
+        range.start < 0 ||
+        range.end >= totalColumns ||
+        range.start > range.end
+      ) {
+        setValidationError(
+          `Invalid range: ${range.start + 1}-${range.end + 1}`,
+        );
         return false;
       }
     }
@@ -82,7 +89,7 @@ export function ColumnSelectionPanel({
 
   const handleRangeChange = (rangeId: string, values: number[]) => {
     const newRanges = ranges.map((r) =>
-      r.id === rangeId ? { ...r, start: values[0], end: values[1] } : r
+      r.id === rangeId ? { ...r, start: values[0], end: values[1] } : r,
     );
     setRanges(newRanges);
     validateRanges(newRanges);
@@ -90,7 +97,9 @@ export function ColumnSelectionPanel({
 
   const handleAddRange = () => {
     const lastRange = ranges[ranges.length - 1];
-    const newStart = lastRange ? Math.min(lastRange.end + 1, totalColumns - 1) : 0;
+    const newStart = lastRange
+      ? Math.min(lastRange.end + 1, totalColumns - 1)
+      : 0;
     const newEnd = totalColumns - 1;
 
     const newRange: ColumnRange = {
@@ -132,88 +141,84 @@ export function ColumnSelectionPanel({
   const isValid = validationError === null;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Column Selection</CardTitle>
-        <CardDescription>
-          Select column ranges to display in the table. Ranges are shown in 1-based column numbers.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {validationError && (
-          <Alert variant="destructive">
-            <AlertDescription>{validationError}</AlertDescription>
-          </Alert>
-        )}
+    <div className="space-y-4">
+      {validationError && (
+        <Alert variant="destructive">
+          <AlertDescription>{validationError}</AlertDescription>
+        </Alert>
+      )}
 
-        <div className="space-y-4">
-          {ranges.map((range, idx) => (
-            <div key={range.id} className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">
-                  Range {idx + 1}: Columns {range.start + 1} - {range.end + 1}
-                </span>
-                {ranges.length > 1 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleRemoveRange(range.id)}
-                    disabled={isLoading}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-              <Slider
-                min={0}
-                max={totalColumns - 1}
-                step={1}
-                value={[range.start, range.end]}
-                onValueChange={(values) => handleRangeChange(range.id, values)}
-                disabled={isLoading}
-                className="w-full"
-                minStepsBetweenThumbs={0}
-              />
+      <div className="space-y-3">
+        {ranges.map((range, idx) => (
+          <div key={range.id} className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-medium">
+                Range {idx + 1}: Col {range.start + 1}-{range.end + 1}
+              </span>
+              {ranges.length > 1 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleRemoveRange(range.id)}
+                  disabled={isLoading}
+                  className="h-6 w-6 p-0"
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              )}
             </div>
-          ))}
-        </div>
+            <Slider
+              min={0}
+              max={totalColumns - 1}
+              step={1}
+              value={[range.start, range.end]}
+              onValueChange={(values) => handleRangeChange(range.id, values)}
+              disabled={isLoading}
+              className="w-full"
+              minStepsBetweenThumbs={0}
+            />
+          </div>
+        ))}
+      </div>
 
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleAddRange}
-            disabled={!canAddRange || isLoading}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add Range
-          </Button>
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleAddRange}
+          disabled={!canAddRange || isLoading}
+          className="flex-1 text-xs h-8"
+        >
+          <Plus className="mr-1.5 h-3.5 w-3.5" />
+          Add
+        </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleReset}
-            disabled={isLoading}
-          >
-            <RotateCcw className="mr-2 h-4 w-4" />
-            Reset to All
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleReset}
+          disabled={isLoading}
+          className="flex-1 text-xs h-8"
+        >
+          <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+          Reset
+        </Button>
+      </div>
 
-        <div className="flex gap-2 pt-2 border-t">
-          <Button
-            onClick={handleApply}
-            disabled={!isValid || isLoading}
-            className="w-full"
-          >
-            {isLoading ? 'Applying...' : 'Apply Selection'}
-          </Button>
-        </div>
+      <div className="flex gap-2 pt-2 border-t">
+        <Button
+          onClick={handleApply}
+          disabled={!isValid || isLoading}
+          className="w-full text-xs h-8"
+        >
+          {isLoading ? "Applying..." : "Apply"}
+        </Button>
+      </div>
 
-        <p className="text-xs text-muted-foreground">
-          Total columns: {totalColumns} | Selected ranges: {ranges.length}
-        </p>
-      </CardContent>
-    </Card>
+      <p className="text-[10px] text-muted-foreground leading-tight">
+        {totalColumns} cols • {ranges.length} range
+        {ranges.length !== 1 ? "s" : ""}
+      </p>
+    </div>
   );
 }

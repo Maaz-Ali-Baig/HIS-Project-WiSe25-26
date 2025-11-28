@@ -51,8 +51,8 @@ export function UploadSurface({
       if (onSuccess) {
         onSuccess(data.fileId);
       } else {
-        // Navigate to the file ID route
-        navigate(`/${data.fileId}`);
+        // Navigate to the load-data route
+        navigate(`/${data.fileId}/load-data`);
       }
     },
     onError: (error: Error) => {
@@ -210,12 +210,16 @@ export function UploadSurface({
           </div>
         </div>
 
-        <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialog
+          open={showConfirmDialog}
+          onOpenChange={setShowConfirmDialog}
+        >
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Upload new file?</AlertDialogTitle>
               <AlertDialogDescription>
-                Uploading a new file will override current changes. This action cannot be undone. Continue?
+                Uploading a new file will override current changes. This action
+                cannot be undone. Continue?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

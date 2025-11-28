@@ -38,30 +38,33 @@ export function DataTable({ columns, rows }: DataTableProps) {
   // Save current edit before opening a new one
   const saveCurrentEdit = useCallback(() => {
     if (activeCell && editValue !== undefined) {
-      console.log('💾 Saving edit:', { ...activeCell, editValue });
+      console.log("💾 Saving edit:", { ...activeCell, editValue });
       applyEdit(activeCell.rowId, activeCell.column, editValue);
     }
   }, [activeCell, editValue, applyEdit]);
 
-  const handleCellDoubleClick = useCallback((rowId: string, column: string, currentValue: string) => {
-    // Ignore double-clicks on the id column
-    if (column === 'id') {
-      console.log('🚫 Cannot edit id column');
-      return;
-    }
+  const handleCellDoubleClick = useCallback(
+    (rowId: string, column: string, currentValue: string) => {
+      // Ignore double-clicks on the id column
+      if (column === "id") {
+        console.log("🚫 Cannot edit id column");
+        return;
+      }
 
-    console.log('🖱️ Double click:', { rowId, column, currentValue });
+      console.log("🖱️ Double click:", { rowId, column, currentValue });
 
-    // Save current edit if any
-    if (activeCell) {
-      saveCurrentEdit();
-    }
+      // Save current edit if any
+      if (activeCell) {
+        saveCurrentEdit();
+      }
 
-    // Start editing the new cell
-    setActiveCell({ rowId, column });
-    setEditValue(currentValue);
-    startEditing(rowId, column, currentValue);
-  }, [activeCell, saveCurrentEdit, startEditing]);
+      // Start editing the new cell
+      setActiveCell({ rowId, column });
+      setEditValue(currentValue);
+      startEditing(rowId, column, currentValue);
+    },
+    [activeCell, saveCurrentEdit, startEditing],
+  );
 
   // Select text when input is mounted (autoFocus handles initial focus)
   useLayoutEffect(() => {
@@ -85,7 +88,7 @@ export function DataTable({ columns, rows }: DataTableProps) {
 
   const saveEdit = useCallback(() => {
     if (activeCell) {
-      console.log('💾 Finalizing edit:', { ...activeCell, editValue });
+      console.log("💾 Finalizing edit:", { ...activeCell, editValue });
       applyEdit(activeCell.rowId, activeCell.column, editValue);
       setActiveCell(null);
       setEditValue("");
@@ -93,53 +96,67 @@ export function DataTable({ columns, rows }: DataTableProps) {
   }, [activeCell, editValue, applyEdit]);
 
   const cancelEdit = useCallback(() => {
-    console.log('❌ Canceling edit');
+    console.log("❌ Canceling edit");
     setActiveCell(null);
     setEditValue("");
   }, []);
 
-  const handleCellKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      saveEdit(); // Save but don't advance to another cell
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      cancelEdit();
-    }
-  }, [saveEdit, cancelEdit]);
+  const handleCellKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        saveEdit(); // Save but don't advance to another cell
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        cancelEdit();
+      }
+    },
+    [saveEdit, cancelEdit],
+  );
 
   // Callback ref to store input element references
-  const setInputRef = useCallback((element: HTMLInputElement | null, cellKey: string) => {
-    if (element) {
-      cellInputRefs.current.set(cellKey, element);
-    } else {
-      cellInputRefs.current.delete(cellKey);
-    }
-  }, []);
+  const setInputRef = useCallback(
+    (element: HTMLInputElement | null, cellKey: string) => {
+      if (element) {
+        cellInputRefs.current.set(cellKey, element);
+      } else {
+        cellInputRefs.current.delete(cellKey);
+      }
+    },
+    [],
+  );
 
-  const getCellValue = (row: Record<string, string>, column: string): string => {
+  const getCellValue = (
+    row: Record<string, string>,
+    column: string,
+  ): string => {
     const rowId = row.id || "";
     const pendingChange = pendingEdits.get(rowId)?.[column];
-    return pendingChange !== undefined ? pendingChange : (row[column] || "");
+    return pendingChange !== undefined ? pendingChange : row[column] || "";
   };
 
   // Helper function to check if a string is numeric
-  const isNumericColumn = useCallback((columnName: string, sampleRows: Array<Record<string, string>>) => {
-    // Always treat 'id' column as numeric
-    if (columnName === 'id') return true;
+  const isNumericColumn = useCallback(
+    (columnName: string, sampleRows: Array<Record<string, string>>) => {
+      // Always treat 'id' column as numeric
+      if (columnName === "id") return true;
 
-    // Check first few non-empty values to determine if column is numeric
-    const sampleValues = sampleRows
-      .slice(0, 10)
-      .map(row => row[columnName])
-      .filter(val => val && val.trim() !== '');
+      // Check first few non-empty values to determine if column is numeric
+      const sampleValues = sampleRows
+        .slice(0, 10)
+        .map((row) => row[columnName])
+        .filter((val) => val && val.trim() !== "");
 
-    if (sampleValues.length === 0) return false;
+      if (sampleValues.length === 0) return false;
 
-    // If more than 80% of values are numeric, treat as numeric column
-    const numericCount = sampleValues.filter(val => !isNaN(Number(val))).length;
-    return numericCount / sampleValues.length > 0.8;
-  }, []);
+      // If more than 80% of values are numeric, treat as numeric column
+      const numericCount = sampleValues.filter(
+        (val) => !isNaN(Number(val)),
+      ).length;
+      return numericCount / sampleValues.length > 0.8;
+    },
+    [],
+  );
 
   // Convert columns to TanStack Table ColumnDef format
   const columnDefs = useMemo<ColumnDef<Record<string, string>>[]>(
@@ -153,7 +170,9 @@ export function DataTable({ columns, rows }: DataTableProps) {
             return (
               <Button
                 variant="ghost"
-                onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                onClick={() =>
+                  column.toggleSorting(column.getIsSorted() === "asc")
+                }
                 className="h-8 px-2 lg:px-3"
               >
                 {col}
@@ -167,65 +186,85 @@ export function DataTable({ columns, rows }: DataTableProps) {
               </Button>
             );
           },
-          sortingFn: isNumeric ? (rowA, rowB, columnId) => {
-            // Custom numeric sorting
-            const aVal = rowA.getValue(columnId) as string;
-            const bVal = rowB.getValue(columnId) as string;
-            const aNum = Number(aVal);
-            const bNum = Number(bVal);
+          sortingFn: isNumeric
+            ? (rowA, rowB, columnId) => {
+                // Custom numeric sorting
+                const aVal = rowA.getValue(columnId) as string;
+                const bVal = rowB.getValue(columnId) as string;
+                const aNum = Number(aVal);
+                const bNum = Number(bVal);
 
-            // Handle NaN values (put them at the end)
-            if (isNaN(aNum) && isNaN(bNum)) return 0;
-            if (isNaN(aNum)) return 1;
-            if (isNaN(bNum)) return -1;
+                // Handle NaN values (put them at the end)
+                if (isNaN(aNum) && isNaN(bNum)) return 0;
+                if (isNaN(aNum)) return 1;
+                if (isNaN(bNum)) return -1;
 
-            return aNum - bNum;
-          } : 'alphanumeric', // Use default string sorting for non-numeric columns
+                return aNum - bNum;
+              }
+            : "alphanumeric", // Use default string sorting for non-numeric columns
           cell: (info) => {
-          const row = info.row.original;
-          const rowId = row.id || "";
-          const column = info.column.id;
-          const value = getCellValue(row, column);
-          const cellKey = `${rowId}:${column}`;
-          const isEditing = activeCell?.rowId === rowId && activeCell?.column === column;
-          const hasEdit = pendingEdits.get(rowId)?.[column] !== undefined;
-          const isIdColumn = column === 'id';
+            const row = info.row.original;
+            const rowId = row.id || "";
+            const column = info.column.id;
+            const value = getCellValue(row, column);
+            const cellKey = `${rowId}:${column}`;
+            const isEditing =
+              activeCell?.rowId === rowId && activeCell?.column === column;
+            const hasEdit = pendingEdits.get(rowId)?.[column] !== undefined;
+            const isIdColumn = column === "id";
 
-          if (isEditing && !isIdColumn) {
+            if (isEditing && !isIdColumn) {
+              return (
+                <Input
+                  key={cellKey}
+                  ref={(el) => setInputRef(el, cellKey)}
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  onBlur={saveEdit}
+                  onKeyDown={handleCellKeyDown}
+                  className="h-8 w-full"
+                  autoFocus
+                />
+              );
+            }
+
             return (
-              <Input
-                key={cellKey}
-                ref={(el) => setInputRef(el, cellKey)}
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                onBlur={saveEdit}
-                onKeyDown={handleCellKeyDown}
-                className="h-8 w-full"
-                autoFocus
-              />
+              <div
+                onDoubleClick={() =>
+                  !isIdColumn && handleCellDoubleClick(rowId, column, value)
+                }
+                className={`w-full h-full flex items-center p-4 ${
+                  !isIdColumn
+                    ? "cursor-pointer hover:bg-muted/50"
+                    : "cursor-default"
+                } ${hasEdit ? "bg-yellow-50 dark:bg-yellow-900/20" : ""} ${
+                  isIdColumn ? "opacity-60" : ""
+                }`}
+                title={
+                  isIdColumn ? "ID column (read-only)" : "Double-click to edit"
+                }
+              >
+                {value}
+              </div>
             );
-          }
-
-          return (
-            <div
-              onDoubleClick={() => !isIdColumn && handleCellDoubleClick(rowId, column, value)}
-              className={`w-full h-full flex items-center p-4 ${
-                !isIdColumn ? "cursor-pointer hover:bg-muted/50" : "cursor-default"
-              } ${hasEdit ? "bg-yellow-50 dark:bg-yellow-900/20" : ""} ${
-                isIdColumn ? "opacity-60" : ""
-              }`}
-              title={isIdColumn ? "ID column (read-only)" : "Double-click to edit"}
-            >
-              {value}
-            </div>
-          );
-        },
+          },
           size: 150,
           enableSorting: true,
           enableColumnFilter: true,
         };
       }),
-    [columns, rows, activeCell, editValue, pendingEdits, handleCellDoubleClick, saveEdit, handleCellKeyDown, setInputRef, isNumericColumn]
+    [
+      columns,
+      rows,
+      activeCell,
+      editValue,
+      pendingEdits,
+      handleCellDoubleClick,
+      saveEdit,
+      handleCellKeyDown,
+      setInputRef,
+      isNumericColumn,
+    ],
   );
 
   // Initialize table
@@ -273,7 +312,8 @@ export function DataTable({ columns, rows }: DataTableProps) {
     virtualRows.length > 0
       ? totalRowSize - (virtualRows[virtualRows.length - 1]?.end || 0)
       : 0;
-  const paddingLeft = virtualColumns.length > 0 ? virtualColumns[0]?.start || 0 : 0;
+  const paddingLeft =
+    virtualColumns.length > 0 ? virtualColumns[0]?.start || 0 : 0;
   const paddingRight =
     virtualColumns.length > 0
       ? totalColumnSize - (virtualColumns[virtualColumns.length - 1]?.end || 0)
@@ -290,13 +330,12 @@ export function DataTable({ columns, rows }: DataTableProps) {
   }
 
   return (
-    <div className="rounded-md border">
-      <div
-        ref={tableContainerRef}
-        className="h-[600px] overflow-auto relative"
-      >
+    <div className="rounded-md border h-full flex flex-col">
+      <div ref={tableContainerRef} className="flex-1 overflow-auto relative">
         {/* Table container with fixed total size */}
-        <div style={{ height: `${totalRowSize}px`, width: `${totalColumnSize}px` }}>
+        <div
+          style={{ height: `${totalRowSize}px`, width: `${totalColumnSize}px` }}
+        >
           {/* Sticky header */}
           <div
             className="sticky top-0 z-20 bg-background border-b"
@@ -304,7 +343,8 @@ export function DataTable({ columns, rows }: DataTableProps) {
           >
             {paddingLeft > 0 && <div style={{ width: `${paddingLeft}px` }} />}
             {virtualColumns.map((virtualColumn) => {
-              const header = table.getHeaderGroups()[0]?.headers[virtualColumn.index];
+              const header =
+                table.getHeaderGroups()[0]?.headers[virtualColumn.index];
               return (
                 <div
                   key={virtualColumn.key}
@@ -313,7 +353,11 @@ export function DataTable({ columns, rows }: DataTableProps) {
                     width: `${virtualColumn.size}px`,
                   }}
                 >
-                  {header && flexRender(header.column.columnDef.header, header.getContext())}
+                  {header &&
+                    flexRender(
+                      header.column.columnDef.header,
+                      header.getContext(),
+                    )}
                 </div>
               );
             })}
@@ -336,7 +380,9 @@ export function DataTable({ columns, rows }: DataTableProps) {
                     height: `${virtualRow.size}px`,
                   }}
                 >
-                  {paddingLeft > 0 && <div style={{ width: `${paddingLeft}px` }} />}
+                  {paddingLeft > 0 && (
+                    <div style={{ width: `${paddingLeft}px` }} />
+                  )}
                   {virtualColumns.map((virtualColumn) => {
                     const cell = row.getVisibleCells()[virtualColumn.index];
                     return (
@@ -347,15 +393,23 @@ export function DataTable({ columns, rows }: DataTableProps) {
                           width: `${virtualColumn.size}px`,
                         }}
                       >
-                        {cell && flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        {cell &&
+                          flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
                       </div>
                     );
                   })}
-                  {paddingRight > 0 && <div style={{ width: `${paddingRight}px` }} />}
+                  {paddingRight > 0 && (
+                    <div style={{ width: `${paddingRight}px` }} />
+                  )}
                 </div>
               );
             })}
-            {paddingBottom > 0 && <div style={{ height: `${paddingBottom}px` }} />}
+            {paddingBottom > 0 && (
+              <div style={{ height: `${paddingBottom}px` }} />
+            )}
           </div>
         </div>
       </div>

@@ -4,13 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "../../../store/auth";
 import { useFileStore } from "../../../store/fileStore";
 import { Button } from "../../../components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../../../components/ui/card";
+import { Card, CardContent } from "../../../components/ui/card";
 import {
   Alert,
   AlertDescription,
@@ -26,6 +20,8 @@ import { toast } from "sonner";
 import { Loader2, AlertCircle, Save, X } from "lucide-react";
 import { ColumnSelectionPanel } from "../../../components/ColumnSelectionPanel";
 import { UploadSurface } from "../../../components/upload/UploadSurface";
+import { FileLayout } from "../../../components/layout/FileLayout";
+import { ActionSidebarItem } from "../../../components/layout/ActionSidebarItem";
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -175,19 +171,29 @@ export function HomePage() {
     return null;
   }
 
-  return (
-    <div className="w-full max-w-6xl mx-auto space-y-6">
-      {/* Hero Upload Surface - shown when no file is loaded */}
-      {!fileId && (
+  // Hero upload page (no fileId)
+  if (!fileId) {
+    return (
+      <div className="w-full max-w-6xl mx-auto p-6">
         <Card className="border-0 shadow-lg">
           <CardContent className="p-8 md:p-12">
             <UploadSurface variant="hero" />
           </CardContent>
         </Card>
-      )}
+      </div>
+    );
+  }
 
-      {/* Column Selection Panel - shown when fileId is present */}
-      {fileId && fileData && totalColumns > 0 && (
+  // File loaded page with three-pane layout
+  const actions = [];
+
+  // Add column selection panel to actions sidebar
+  if (fileData && totalColumns > 0) {
+    actions.push(
+      <ActionSidebarItem
+        title="Column Selection"
+        tooltipText="Select column ranges to display in the table. Ranges are shown in 1-based column numbers."
+      >
         <ColumnSelectionPanel
           totalColumns={totalColumns}
           currentRanges={selectionRanges}
@@ -195,97 +201,99 @@ export function HomePage() {
           onReset={handleResetColumnSelection}
           isLoading={columnSelectionMutation.isPending}
         />
-      )}
+      </ActionSidebarItem>,
+    );
+  }
 
-      {/* File Preview Card - shown when fileId is present */}
-      {fileId && (
-        <Card>
-          <CardHeader>
-            <CardTitle>File Preview</CardTitle>
-            <CardDescription>
+  return (
+    <FileLayout actions={actions}>
+      <div className="w-full h-full flex flex-col gap-4">
+        <div className="flex items-center justify-between flex-shrink-0 px-6 pt-6 pb-2">
+          <div>
+            <h2 className="text-2xl font-semibold">File Preview</h2>
+            <p className="text-sm text-muted-foreground">
               {fileData
                 ? `Displaying ${fileData.rows.length} rows and ${fileData.columns.length} columns`
                 : "Loading file data..."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoadingData && (
-              <div className="flex items-center justify-center h-64">
-                <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                <span className="ml-2 text-muted-foreground">
-                  Loading data...
-                </span>
-              </div>
-            )}
+            </p>
+          </div>
+        </div>
 
-            {dataError && (
-              <Alert variant="destructive">
+        {isLoadingData && (
+          <div className="flex items-center justify-center flex-1">
+            <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+            <span className="ml-2 text-muted-foreground">Loading data...</span>
+          </div>
+        )}
+
+        {dataError && (
+          <Alert variant="destructive" className="flex-shrink-0">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error loading file</AlertTitle>
+            <AlertDescription className="space-y-2">
+              <p>{(dataError as Error).message}</p>
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => refetchData()}
+                  variant="outline"
+                  size="sm"
+                >
+                  Retry
+                </Button>
+                <Button
+                  onClick={() => navigate("/")}
+                  variant="outline"
+                  size="sm"
+                >
+                  Back to Home
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {fileData && !isLoadingData && !dataError && (
+          <div className="flex flex-col gap-4 flex-1 min-h-0">
+            {hasPendingEdits && (
+              <Alert className="flex-shrink-0">
                 <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Error loading file</AlertTitle>
-                <AlertDescription className="space-y-2">
-                  <p>{(dataError as Error).message}</p>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => refetchData()}
-                      variant="outline"
-                      size="sm"
-                    >
-                      Retry
-                    </Button>
-                    <Button
-                      onClick={() => navigate("/")}
-                      variant="outline"
-                      size="sm"
-                    >
-                      Back to Home
-                    </Button>
-                  </div>
+                <AlertTitle>Unsaved changes</AlertTitle>
+                <AlertDescription className="flex items-center gap-2 mt-2">
+                  <Button
+                    onClick={handleSaveChanges}
+                    disabled={status === "saving"}
+                    size="sm"
+                  >
+                    {status === "saving" ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="mr-2 h-4 w-4" />
+                        Save Changes
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={handleDiscardChanges}
+                    disabled={status === "saving"}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <X className="mr-2 h-4 w-4" />
+                    Discard
+                  </Button>
                 </AlertDescription>
               </Alert>
             )}
-
-            {fileData && !isLoadingData && !dataError && (
-              <div className="space-y-4">
-                {hasPendingEdits && (
-                  <Alert>
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Unsaved changes</AlertTitle>
-                    <AlertDescription className="flex items-center gap-2 mt-2">
-                      <Button
-                        onClick={handleSaveChanges}
-                        disabled={status === "saving"}
-                        size="sm"
-                      >
-                        {status === "saving" ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Saving...
-                          </>
-                        ) : (
-                          <>
-                            <Save className="mr-2 h-4 w-4" />
-                            Save Changes
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        onClick={handleDiscardChanges}
-                        disabled={status === "saving"}
-                        variant="outline"
-                        size="sm"
-                      >
-                        <X className="mr-2 h-4 w-4" />
-                        Discard
-                      </Button>
-                    </AlertDescription>
-                  </Alert>
-                )}
-                <DataTable columns={fileData.columns} rows={fileData.rows} />
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
-    </div>
+            <div className="flex-1 min-h-0">
+              <DataTable columns={fileData.columns} rows={fileData.rows} />
+            </div>
+          </div>
+        )}
+      </div>
+    </FileLayout>
   );
 }

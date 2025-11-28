@@ -10,7 +10,7 @@ export function MainLayout() {
           Data Pre-Processing Platform
         </div>
       </header>
-      <div className="flex flex-1 flex-col p-6 bg-[#f7f8fb] min-h-[calc(100vh-4rem)]">
+      <div className="flex flex-1 bg-[#f7f8fb] min-h-[calc(100vh-4rem)] overflow-hidden">
         <Outlet />
       </div>
     </SidebarInset>

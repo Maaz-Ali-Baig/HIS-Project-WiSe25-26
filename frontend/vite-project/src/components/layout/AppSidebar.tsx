@@ -29,10 +29,10 @@ import { useAuthStore } from "@/store/auth";
 import { Button } from "@/components/ui/button";
 import { UploadSurface } from "@/components/upload/UploadSurface";
 
-const items = [
+const getItems = (fileId?: string) => [
   {
     title: "Load Data",
-    url: "/",
+    url: fileId ? `/${fileId}/load-data` : "/",
     icon: Upload,
   },
   {
@@ -81,6 +81,9 @@ export function AppSidebar({ mode = "default", ...props }: AppSidebarProps) {
   // 1. Sidebar is expanded
   // 2. User is on a file route (fileId exists)
   const showCompactUpload = state === "expanded" && Boolean(fileId);
+
+  // Get navigation items with dynamic load-data URL
+  const items = getItems(fileId);
 
   if (mode === "auth") {
     return (

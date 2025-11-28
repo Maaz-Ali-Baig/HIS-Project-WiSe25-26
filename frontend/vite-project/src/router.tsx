@@ -33,6 +33,10 @@ export const router = createBrowserRouter(
             },
             {
               path: ":fileId",
+              element: <Navigate to="load-data" replace />,
+            },
+            {
+              path: ":fileId/load-data",
               element: <HomePage />,
             },
           ],
@@ -53,5 +57,5 @@ export const router = createBrowserRouter(
       v7_partialHydration: true,
       v7_skipActionErrorRevalidation: true,
     },
-  }
+  },
 );

@@ -1,4 +1,4 @@
-import { apiFetch } from '../../../lib/http';
+import { apiFetch } from "../../../lib/http";
 
 export interface FileUploadResponse {
   fileId: string;
@@ -43,14 +43,14 @@ export async function uploadFile({
   file,
 }: UploadFileParams): Promise<FileUploadResponse> {
   const formData = new FormData();
-  formData.append('user_id', userId);
+  formData.append("user_id", userId);
   if (username) {
-    formData.append('username', username);
+    formData.append("username", username);
   }
-  formData.append('file', file);
+  formData.append("file", file);
 
-  return apiFetch<FileUploadResponse>('/api/files/upload', {
-    method: 'POST',
+  return apiFetch<FileUploadResponse>("/api/files/upload", {
+    method: "POST",
     body: formData,
   });
 }
@@ -60,7 +60,7 @@ export async function getFileData({
   fileId,
 }: GetFileDataParams): Promise<FileDataResponse> {
   return apiFetch<FileDataResponse>(
-    `/api/files/data?userId=${encodeURIComponent(userId)}&fileId=${encodeURIComponent(fileId)}`
+    `/api/files/data?userId=${encodeURIComponent(userId)}&fileId=${encodeURIComponent(fileId)}`,
   );
 }
 
@@ -69,8 +69,8 @@ export async function updateFileData({
   fileId,
   edits,
 }: UpdateFileDataParams): Promise<FileDataResponse> {
-  return apiFetch<FileDataResponse>('/api/files/data', {
-    method: 'PUT',
+  return apiFetch<FileDataResponse>("/api/files/data", {
+    method: "PUT",
     body: JSON.stringify({ userId, fileId, edits }),
   });
 }
@@ -86,8 +86,27 @@ export async function updateColumnSelection({
   fileId,
   ranges,
 }: UpdateColumnSelectionParams): Promise<FileDataResponse> {
-  return apiFetch<FileDataResponse>('/api/files/selection', {
-    method: 'POST',
+  return apiFetch<FileDataResponse>("/api/files/selection", {
+    method: "POST",
     body: JSON.stringify({ userId, fileId, ranges }),
+  });
+}
+
+export interface HandleMissingValuesParams {
+  userId: string;
+  fileId: string;
+  selected_columns: string[];
+  selected_method: string;
+}
+
+export async function handleMissingValues({
+  userId,
+  fileId,
+  selected_columns,
+  selected_method,
+}: HandleMissingValuesParams): Promise<FileDataResponse> {
+  return apiFetch<FileDataResponse>("/api/files/missing-values", {
+    method: "POST",
+    body: JSON.stringify({ userId, fileId, selected_columns, selected_method }),
   });
 }

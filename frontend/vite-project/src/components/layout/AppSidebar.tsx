@@ -34,21 +34,25 @@ const getItems = (fileId?: string) => [
     title: "Load Data",
     url: fileId ? `/${fileId}/load-data` : "/",
     icon: Upload,
+    disabled: false,
   },
   {
     title: "Pre-Processing",
-    url: "/preprocessing",
+    url: fileId ? `/${fileId}/pre-processing` : "/pre-processing",
     icon: Settings,
+    disabled: !fileId,
   },
   {
     title: "Visualization",
     url: "/visualization",
     icon: BarChart2,
+    disabled: !fileId,
   },
   {
     title: "Report",
     url: "/report",
     icon: FileText,
+    disabled: !fileId,
   },
 ];
 
@@ -144,14 +148,22 @@ export function AppSidebar({ mode = "default", ...props }: AppSidebarProps) {
           {items.map((item) => (
             <SidebarMenuItem key={item.title}>
               <SidebarMenuButton
-                asChild
+                asChild={!item.disabled}
                 isActive={location.pathname === item.url}
-                className="text-white/70 hover:text-white hover:bg-white/10 data-[active=true]:bg-white/20 data-[active=true]:text-white transition-colors"
+                disabled={item.disabled}
+                className="text-white/70 hover:text-white hover:bg-white/10 data-[active=true]:bg-white/20 data-[active=true]:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-white/70"
               >
-                <Link to={item.url}>
-                  <item.icon />
-                  <span>{item.title}</span>
-                </Link>
+                {item.disabled ? (
+                  <div>
+                    <item.icon />
+                    <span>{item.title}</span>
+                  </div>
+                ) : (
+                  <Link to={item.url}>
+                    <item.icon />
+                    <span>{item.title}</span>
+                  </Link>
+                )}
               </SidebarMenuButton>
             </SidebarMenuItem>
           ))}

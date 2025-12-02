@@ -18,6 +18,7 @@ import { useFileStore } from "../store/fileStore";
 interface DataTableProps {
   columns: string[];
   rows: Array<Record<string, string>>;
+  readOnly?: boolean;
 }
 
 interface ActiveCell {
@@ -25,7 +26,7 @@ interface ActiveCell {
   column: string;
 }
 
-export function DataTable({ columns, rows }: DataTableProps) {
+export function DataTable({ columns, rows, readOnly = false }: DataTableProps) {
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -45,6 +46,11 @@ export function DataTable({ columns, rows }: DataTableProps) {
 
   const handleCellDoubleClick = useCallback(
     (rowId: string, column: string, currentValue: string) => {
+      // Ignore double-clicks when in read-only mode
+      if (readOnly) {
+        return;
+      }
+
       // Ignore double-clicks on the id column
       if (column === "id") {
         console.log("🚫 Cannot edit id column");
@@ -63,7 +69,7 @@ export function DataTable({ columns, rows }: DataTableProps) {
       setEditValue(currentValue);
       startEditing(rowId, column, currentValue);
     },
-    [activeCell, saveCurrentEdit, startEditing],
+    [readOnly, activeCell, saveCurrentEdit, startEditing],
   );
 
   // Select text when input is mounted (autoFocus handles initial focus)
@@ -231,17 +237,23 @@ export function DataTable({ columns, rows }: DataTableProps) {
             return (
               <div
                 onDoubleClick={() =>
-                  !isIdColumn && handleCellDoubleClick(rowId, column, value)
+                  !isIdColumn &&
+                  !readOnly &&
+                  handleCellDoubleClick(rowId, column, value)
                 }
                 className={`w-full h-full flex items-center p-4 ${
-                  !isIdColumn
+                  !isIdColumn && !readOnly
                     ? "cursor-pointer hover:bg-muted/50"
                     : "cursor-default"
                 } ${hasEdit ? "bg-yellow-50 dark:bg-yellow-900/20" : ""} ${
                   isIdColumn ? "opacity-60" : ""
                 }`}
                 title={
-                  isIdColumn ? "ID column (read-only)" : "Double-click to edit"
+                  readOnly
+                    ? "Read-only view"
+                    : isIdColumn
+                      ? "ID column (read-only)"
+                      : "Double-click to edit"
                 }
               >
                 {value}

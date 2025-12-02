@@ -121,6 +121,17 @@
     body {
         @apply bg-background text-foreground;
     }
+
+    /* Radio button styling with brand colors */
+    input[type="radio"]:checked {
+        background-color: hsl(var(--primary));
+        border-color: hsl(var(--primary));
+    }
+
+    input[type="radio"]:focus {
+        ring-color: hsl(var(--ring));
+        ring-offset-color: hsl(var(--background));
+    }
 }
 
 /* Prevent content stretching during the morph */

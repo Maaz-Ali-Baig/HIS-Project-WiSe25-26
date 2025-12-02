@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 import { LoginPage } from "./features/auth/pages/LoginPage";
 import { RegisterPage } from "./features/auth/pages/RegisterPage";
 import { HomePage } from "./features/home/pages/HomePage";
+import { PreProcessingPage } from "./features/preprocessing/pages/PreProcessingPage";
 import { ProtectedRoute } from "./features/auth/components/ProtectedRoute";
 import { MainLayout } from "./components/layout/MainLayout";
 import { RootLayout } from "./components/layout/RootLayout";
@@ -38,6 +39,10 @@ export const router = createBrowserRouter(
             {
               path: ":fileId/load-data",
               element: <HomePage />,
+            },
+            {
+              path: ":fileId/pre-processing",
+              element: <PreProcessingPage />,
             },
           ],
         },

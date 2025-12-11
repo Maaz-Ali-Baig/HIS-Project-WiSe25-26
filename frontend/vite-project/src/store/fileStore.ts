@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
 export interface FileEdit {
   rowId: string;
@@ -11,7 +11,7 @@ export interface FileState {
   columns: string[];
   rows: Array<Record<string, string>>;
   pendingEdits: Map<string, Record<string, string>>;
-  status: 'clean' | 'dirty' | 'loading' | 'saving';
+  status: "clean" | "dirty" | "loading" | "saving";
   updatedAt: string;
   editingCell: { rowId: string; column: string } | null;
   selectionRanges: Array<{ start: number; end: number }>;
@@ -19,12 +19,26 @@ export interface FileState {
 }
 
 interface FileActions {
-  setFile: (fileId: string, userId: string, columns: string[], rows: Array<Record<string, string>>, updatedAt: string, selectionRanges?: Array<{ start: number; end: number }>, totalColumns?: number) => void;
+  setFile: (
+    fileId: string,
+    userId: string,
+    columns: string[],
+    rows: Array<Record<string, string>>,
+    updatedAt: string,
+    selectionRanges?: Array<{ start: number; end: number }>,
+    totalColumns?: number
+  ) => void;
   startEditing: (rowId: string, column: string, initialValue: string) => void;
   applyEdit: (rowId: string, column: string, value: string) => void;
   discardEdits: () => void;
   markSaved: (rows: Array<Record<string, string>>, updatedAt: string) => void;
-  updateColumnSelection: (columns: string[], rows: Array<Record<string, string>>, updatedAt: string, selectionRanges: Array<{ start: number; end: number }>, totalColumns: number) => void;
+  updateColumnSelection: (
+    columns: string[],
+    rows: Array<Record<string, string>>,
+    updatedAt: string,
+    selectionRanges: Array<{ start: number; end: number }>,
+    totalColumns: number
+  ) => void;
   setLoading: () => void;
   setSaving: () => void;
   reset: () => void;
@@ -38,8 +52,8 @@ const initialState: FileState = {
   columns: [],
   rows: [],
   pendingEdits: new Map(),
-  status: 'clean',
-  updatedAt: '',
+  status: "clean",
+  updatedAt: "",
   editingCell: null,
   selectionRanges: [],
   totalColumns: 0,
@@ -48,14 +62,22 @@ const initialState: FileState = {
 export const useFileStore = create<FileStore>((set, get) => ({
   ...initialState,
 
-  setFile: (fileId, userId, columns, rows, updatedAt, selectionRanges = [], totalColumns = 0) => {
+  setFile: (
+    fileId,
+    userId,
+    columns,
+    rows,
+    updatedAt,
+    selectionRanges = [],
+    totalColumns = 0
+  ) => {
     set({
       fileId,
       userId,
       columns,
       rows,
       pendingEdits: new Map(),
-      status: 'clean',
+      status: "clean",
       updatedAt,
       editingCell: null,
       selectionRanges,
@@ -65,12 +87,12 @@ export const useFileStore = create<FileStore>((set, get) => ({
 
   startEditing: (rowId, column, initialValue) => {
     // Prevent editing the id column
-    if (column === 'id') {
-      console.log('🚫 Store: Cannot edit id column');
+    if (column === "id") {
+      console.log("🚫 Store: Cannot edit id column");
       return;
     }
 
-    console.log('🎬 Store: startEditing', { rowId, column, initialValue });
+    console.log("🎬 Store: startEditing", { rowId, column, initialValue });
     set({
       editingCell: { rowId, column },
     });
@@ -78,29 +100,29 @@ export const useFileStore = create<FileStore>((set, get) => ({
 
   applyEdit: (rowId, column, value) => {
     // Prevent editing the id column
-    if (column === 'id') {
-      console.log('🚫 Store: Cannot edit id column');
+    if (column === "id") {
+      console.log("🚫 Store: Cannot edit id column");
       return;
     }
 
-    console.log('🏪 Store: applyEdit called', { rowId, column, value });
+    console.log("🏪 Store: applyEdit called", { rowId, column, value });
     const { pendingEdits } = get();
     const newEdits = new Map(pendingEdits);
 
     // Get existing edits for this row or create new
     const rowEdits = newEdits.get(rowId) || {};
-    console.log('📦 Store: existing rowEdits', { rowId, rowEdits });
+    console.log("📦 Store: existing rowEdits", { rowId, rowEdits });
     rowEdits[column] = value;
     newEdits.set(rowId, rowEdits);
-    console.log('✨ Store: updated pendingEdits', {
+    console.log("✨ Store: updated pendingEdits", {
       rowId,
       newRowEdits: rowEdits,
-      totalEdits: newEdits.size
+      totalEdits: newEdits.size,
     });
 
     set({
       pendingEdits: newEdits,
-      status: 'dirty',
+      status: "dirty",
       editingCell: null,
     });
   },
@@ -108,7 +130,7 @@ export const useFileStore = create<FileStore>((set, get) => ({
   discardEdits: () => {
     set({
       pendingEdits: new Map(),
-      status: 'clean',
+      status: "clean",
     });
   },
 
@@ -116,20 +138,26 @@ export const useFileStore = create<FileStore>((set, get) => ({
     set({
       rows,
       pendingEdits: new Map(),
-      status: 'clean',
+      status: "clean",
       updatedAt,
     });
   },
 
   setLoading: () => {
-    set({ status: 'loading' });
+    set({ status: "loading" });
   },
 
   setSaving: () => {
-    set({ status: 'saving' });
+    set({ status: "saving" });
   },
 
-  updateColumnSelection: (columns, rows, updatedAt, selectionRanges, totalColumns) => {
+  updateColumnSelection: (
+    columns,
+    rows,
+    updatedAt,
+    selectionRanges,
+    totalColumns
+  ) => {
     set({
       columns,
       rows,
@@ -137,7 +165,7 @@ export const useFileStore = create<FileStore>((set, get) => ({
       totalColumns,
       updatedAt,
       pendingEdits: new Map(),
-      status: 'clean',
+      status: "clean",
       editingCell: null,
     });
   },

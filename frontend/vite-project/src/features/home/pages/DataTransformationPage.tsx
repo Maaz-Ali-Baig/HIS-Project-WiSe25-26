@@ -1,11 +1,12 @@
-import { TopNav } from '../../../components/TopNav';
+import { TopNav } from "../../../components/TopNav";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../../../components/ui/card';
+} from "../../../components/ui/card";
+import Encoding from "./Encoding";
 
 export function DataTransformationPage() {
   return (
@@ -18,14 +19,17 @@ export function DataTransformationPage() {
             <CardHeader>
               <CardTitle>Data Transformation</CardTitle>
               <CardDescription>
-                R-based transformations (encoding, binning, recoding, etc.) will be implemented here.
+                R-based transformations (encoding, binning, recoding, etc.) will
+                be implemented here.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-gray-600">
-                This is a placeholder page. Later you can hook this up to your R preprocessing
-                endpoints and show transformation options and results here.
+                This is a placeholder page. Later you can hook this up to your R
+                preprocessing endpoints and show transformation options and
+                results here.
               </p>
+              <Encoding />
             </CardContent>
           </Card>
         </div>

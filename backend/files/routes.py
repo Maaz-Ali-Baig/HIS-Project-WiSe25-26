@@ -96,6 +96,7 @@ def validate_csv_extension(filename: str) -> bool:
     """Validate that the file has a .csv extension."""
     return filename.lower().endswith('.csv')
 
+print(">>> files/upload endpoint hit")
 
 @router.post("/upload", response_model=FileUploadResponse)
 async def upload_file(

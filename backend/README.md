@@ -13,11 +13,13 @@ python -m venv venv
 ### 2. Activate the virtual environment
 
 **Windows:**
+
 ```bash
 venv\Scripts\activate
 ```
 
 **Linux/Mac:**
+
 ```bash
 source venv/bin/activate
 ```
@@ -41,6 +43,7 @@ The server will start at `http://localhost:8000`
 ## API Documentation
 
 Once the server is running, visit:
+
 - Swagger UI: `http://localhost:8000/docs`
 - ReDoc: `http://localhost:8000/redoc`
 

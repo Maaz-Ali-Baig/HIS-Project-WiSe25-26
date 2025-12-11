@@ -1,39 +1,43 @@
-import { useNavigate, useParams } from 'react-router-dom';
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { useMutation, useQuery } from '@tanstack/react-query';
-import { useAuthStore } from '../../../store/auth';
-import { useFileStore } from '../../../store/fileStore';
-import { Button } from '../../../components/ui/button';
+import { useNavigate, useParams } from "react-router-dom";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useAuthStore } from "../../../store/auth";
+import { useFileStore } from "../../../store/fileStore";
+import { Button } from "../../../components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../../../components/ui/card';
-import { Input } from '../../../components/ui/input';
-import { Alert, AlertDescription, AlertTitle } from '../../../components/ui/alert';
+} from "../../../components/ui/card";
+import { Input } from "../../../components/ui/input";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "../../../components/ui/alert";
 import {
   DataTable,
   inferColumnTypeCounts,
   inferColumnSummaries,
-} from '../../../components/DataTable';
+} from "../../../components/DataTable";
 import {
   uploadFile,
   getFileData,
   updateFileData,
   updateColumnSelection,
-} from '../api/uploads';
-import { toast } from 'sonner';
-import { Loader2, AlertCircle, Save, X } from 'lucide-react';
-import { ColumnSelectionPanel } from '../../../components/ColumnSelectionPanel';
+} from "../api/uploads";
+import { toast } from "sonner";
+import { Loader2, AlertCircle, Save, X } from "lucide-react";
+import { ColumnSelectionPanel } from "../../../components/ColumnSelectionPanel";
 
 export function HomePage() {
   const navigate = useNavigate();
   const { fileId } = useParams<{ fileId?: string }>();
   const { user, logout } = useAuthStore();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewMode, setPreviewMode] = useState<'data' | 'summary'>('data');
+  const [previewMode, setPreviewMode] = useState<"data" | "summary">("data");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const {
@@ -64,7 +68,7 @@ export function HomePage() {
     error: dataError,
     refetch: refetchData,
   } = useQuery({
-    queryKey: ['fileData', user?.id, fileId],
+    queryKey: ["fileData", user?.id, fileId],
     queryFn: () =>
       getFileData({
         userId: user!.id,
@@ -99,34 +103,34 @@ export function HomePage() {
   const uploadMutation = useMutation({
     mutationFn: uploadFile,
     onSuccess: (data) => {
-      toast.success('File uploaded successfully!');
+      toast.success("File uploaded successfully!");
       setSelectedFile(null);
       if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+        fileInputRef.current.value = "";
       }
       navigate(`/${data.fileId}`);
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to upload file');
+      toast.error(error.message || "Failed to upload file");
     },
   });
 
   const saveMutation = useMutation({
     mutationFn: updateFileData,
     onSuccess: (data) => {
-      toast.success('Changes saved successfully!');
+      toast.success("Changes saved successfully!");
       markSaved(data.rows, data.updated_at);
       refetchData();
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to save changes');
+      toast.error(error.message || "Failed to save changes");
     },
   });
 
   const columnSelectionMutation = useMutation({
     mutationFn: updateColumnSelection,
     onSuccess: (data) => {
-      toast.success('Column selection updated successfully!');
+      toast.success("Column selection updated successfully!");
       updateStoreColumnSelection(
         data.columns,
         data.rows,
@@ -137,13 +141,13 @@ export function HomePage() {
       refetchData();
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Failed to update column selection');
+      toast.error(error.message || "Failed to update column selection");
     },
   });
 
   const handleLogout = () => {
     logout();
-    navigate('/login');
+    navigate("/login");
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -151,12 +155,12 @@ export function HomePage() {
     if (file) {
       const lower = file.name.toLowerCase();
       if (
-        !lower.endsWith('.csv') &&
-        !lower.endsWith('.xls') &&
-        !lower.endsWith('.xlsx')
+        !lower.endsWith(".csv") &&
+        !lower.endsWith(".xls") &&
+        !lower.endsWith(".xlsx")
       ) {
-        toast.error('Please select a CSV or Excel file (.csv, .xls, .xlsx)');
-        event.target.value = '';
+        toast.error("Please select a CSV or Excel file (.csv, .xls, .xlsx)");
+        event.target.value = "";
         return;
       }
       setSelectedFile(file);
@@ -165,7 +169,7 @@ export function HomePage() {
 
   const handleUpload = () => {
     if (!selectedFile || !user?.id) {
-      toast.error('Please select a file to upload');
+      toast.error("Please select a file to upload");
       return;
     }
 
@@ -180,10 +184,12 @@ export function HomePage() {
     if (!user?.id || !fileId || pendingEdits.size === 0) return;
 
     setSaving();
-    const edits = Array.from(pendingEdits.entries()).map(([rowId, changes]) => ({
-      rowId,
-      changes,
-    }));
+    const edits = Array.from(pendingEdits.entries()).map(
+      ([rowId, changes]) => ({
+        rowId,
+        changes,
+      })
+    );
 
     saveMutation.mutate({
       userId: user.id,
@@ -194,15 +200,17 @@ export function HomePage() {
 
   const handleDiscardChanges = () => {
     discardEdits();
-    toast.info('Changes discarded');
+    toast.info("Changes discarded");
   };
 
-  const handleApplyColumnSelection = (ranges: Array<{ start: number; end: number }>) => {
+  const handleApplyColumnSelection = (
+    ranges: Array<{ start: number; end: number }>
+  ) => {
     if (!user?.id || !fileId) return;
 
     if (pendingEdits.size > 0) {
       const confirmed = window.confirm(
-        'You have unsaved edits. Changing column selection will discard these edits. Continue?'
+        "You have unsaved edits. Changing column selection will discard these edits. Continue?"
       );
       if (!confirmed) return;
       discardEdits();
@@ -220,7 +228,7 @@ export function HomePage() {
 
     if (pendingEdits.size > 0) {
       const confirmed = window.confirm(
-        'You have unsaved edits. Resetting column selection will discard these edits. Continue?'
+        "You have unsaved edits. Resetting column selection will discard these edits. Continue?"
       );
       if (!confirmed) return;
       discardEdits();
@@ -300,16 +308,16 @@ export function HomePage() {
   // badge styling for Type
   const getTypeBadgeClass = (type: string) => {
     switch (type) {
-      case 'Numeric':
-        return 'bg-blue-100 text-blue-800';
-      case 'Categorical':
-        return 'bg-teal-100 text-teal-800';
-      case 'Free Text':
-        return 'bg-purple-100 text-purple-800';
-      case 'Other':
-        return 'bg-amber-100 text-amber-800';
+      case "Numeric":
+        return "bg-blue-100 text-blue-800";
+      case "Categorical":
+        return "bg-teal-100 text-teal-800";
+      case "Free Text":
+        return "bg-purple-100 text-purple-800";
+      case "Other":
+        return "bg-amber-100 text-amber-800";
       default:
-        return 'bg-slate-100 text-slate-800';
+        return "bg-slate-100 text-slate-800";
     }
   };
 
@@ -346,35 +354,35 @@ export function HomePage() {
             <button
               type="button"
               className="rounded-full bg-white px-6 py-2 text-sm font-semibold text-blue-700 shadow-lg"
-              onClick={() => navigate('/')}
+              onClick={() => navigate("/")}
             >
               Selection and Preview
             </button>
             <button
               type="button"
               className="text-sm font-medium text-blue-100 hover:text-white"
-              onClick={() => navigate('/transform')}
+              onClick={() => navigate("/transform")}
             >
               Data Transformation
             </button>
             <button
               type="button"
               className="text-sm font-medium text-blue-100 hover:text-white"
-              onClick={() => navigate('/correlation')}
+              onClick={() => navigate("/correlation")}
             >
               Correlation Analysis
             </button>
             <button
               type="button"
               className="text-sm font-medium text-blue-100 hover:text-white"
-              onClick={() => navigate('/visualization')}
+              onClick={() => navigate("/visualization")}
             >
               Visualization
             </button>
             <button
               type="button"
               className="text-sm font-medium text-blue-100 hover:text-white"
-              onClick={() => navigate('/report')}
+              onClick={() => navigate("/report")}
             >
               Report
             </button>
@@ -427,8 +435,8 @@ export function HomePage() {
                       {selectedFile
                         ? `${selectedFile.name} is selected`
                         : fileId
-                        ? 'File is uploaded ✓'
-                        : 'No file selected'}
+                        ? "File is uploaded ✓"
+                        : "No file selected"}
                     </p>
                     <p className="mt-1 text-center text-[11px] text-green-700">
                       Supported formats: CSV, Excel (.xls, .xlsx)
@@ -440,7 +448,7 @@ export function HomePage() {
                     disabled={!selectedFile || uploadMutation.isPending}
                     className="w-full text-xs"
                   >
-                    {uploadMutation.isPending ? 'Uploading...' : 'Upload File'}
+                    {uploadMutation.isPending ? "Uploading..." : "Upload File"}
                   </Button>
                 </div>
               </CardContent>
@@ -470,7 +478,9 @@ export function HomePage() {
                       {numericColumns}
                     </p>
                     <p>
-                      <span className="font-semibold">Categorical Columns: </span>
+                      <span className="font-semibold">
+                        Categorical Columns:{" "}
+                      </span>
                       {categoricalColumns}
                     </p>
                     <p>
@@ -483,14 +493,15 @@ export function HomePage() {
                     </p>
                     <p>
                       <span className="font-semibold">
-                        Missing Values (% of all cells):{' '}
+                        Missing Values (% of all cells):{" "}
                       </span>
                       {totalMissingPercent.toFixed(2)}%
                     </p>
                   </div>
                 ) : (
                   <p className="text-xs text-gray-500">
-                    No file loaded yet. Upload a file on the left to see its summary here.
+                    No file loaded yet. Upload a file on the left to see its
+                    summary here.
                   </p>
                 )}
               </CardContent>
@@ -516,28 +527,28 @@ export function HomePage() {
                   <CardTitle>File Preview</CardTitle>
                   <CardDescription>
                     {fileData
-                      ? previewMode === 'data'
+                      ? previewMode === "data"
                         ? `Displaying ${fileData.rows.length} rows and ${fileData.columns.length} columns`
                         : `Showing ${columnSummaries.length} of ${previewNumColumns} columns`
-                      : 'Loading file data...'}
+                      : "Loading file data..."}
                   </CardDescription>
                 </div>
                 <div className="inline-flex rounded-full bg-muted p-1">
                   <Button
                     type="button"
                     size="sm"
-                    variant={previewMode === 'data' ? 'default' : 'ghost'}
+                    variant={previewMode === "data" ? "default" : "ghost"}
                     className="rounded-full px-4 text-xs md:text-sm"
-                    onClick={() => setPreviewMode('data')}
+                    onClick={() => setPreviewMode("data")}
                   >
                     Show Data
                   </Button>
                   <Button
                     type="button"
                     size="sm"
-                    variant={previewMode === 'summary' ? 'default' : 'ghost'}
+                    variant={previewMode === "summary" ? "default" : "ghost"}
                     className="rounded-full px-4 text-xs md:text-sm"
-                    onClick={() => setPreviewMode('summary')}
+                    onClick={() => setPreviewMode("summary")}
                   >
                     Data Summary
                   </Button>
@@ -547,7 +558,9 @@ export function HomePage() {
                 {isLoadingData && (
                   <div className="flex h-64 items-center justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                    <span className="ml-2 text-muted-foreground">Loading data...</span>
+                    <span className="ml-2 text-muted-foreground">
+                      Loading data...
+                    </span>
                   </div>
                 )}
 
@@ -566,7 +579,7 @@ export function HomePage() {
                           Retry
                         </Button>
                         <Button
-                          onClick={() => navigate('/')}
+                          onClick={() => navigate("/")}
                           variant="outline"
                           size="sm"
                         >
@@ -579,17 +592,17 @@ export function HomePage() {
 
                 {fileData && !isLoadingData && !dataError && (
                   <div className="space-y-4">
-                    {previewMode === 'data' && hasPendingEdits && (
+                    {previewMode === "data" && hasPendingEdits && (
                       <Alert>
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle>Unsaved changes</AlertTitle>
                         <AlertDescription className="mt-2 flex items-center gap-2">
                           <Button
                             onClick={handleSaveChanges}
-                            disabled={status === 'saving'}
+                            disabled={status === "saving"}
                             size="sm"
                           >
-                            {status === 'saving' ? (
+                            {status === "saving" ? (
                               <>
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                 Saving...
@@ -603,7 +616,7 @@ export function HomePage() {
                           </Button>
                           <Button
                             onClick={handleDiscardChanges}
-                            disabled={status === 'saving'}
+                            disabled={status === "saving"}
                             variant="outline"
                             size="sm"
                           >
@@ -614,22 +627,28 @@ export function HomePage() {
                       </Alert>
                     )}
 
-                    {previewMode === 'data' && (
+                    {previewMode === "data" && (
                       <DataTable
                         columns={fileData.columns as string[]}
                         rows={fileData.rows as Array<Record<string, string>>}
                       />
                     )}
 
-                    {previewMode === 'summary' && (
+                    {previewMode === "summary" && (
                       <div className="rounded-xl border bg-slate-50">
                         <div className="max-h-[420px] overflow-y-auto overflow-x-auto">
                           <table className="min-w-full text-xs md:text-sm">
                             <thead className="bg-slate-100">
                               <tr>
-                                <th className="px-4 py-2 text-left font-semibold">Column</th>
-                                <th className="px-4 py-2 text-left font-semibold">Type</th>
-                                <th className="px-4 py-2 text-right font-semibold">Missing</th>
+                                <th className="px-4 py-2 text-left font-semibold">
+                                  Column
+                                </th>
+                                <th className="px-4 py-2 text-left font-semibold">
+                                  Type
+                                </th>
+                                <th className="px-4 py-2 text-right font-semibold">
+                                  Missing
+                                </th>
                                 <th className="px-4 py-2 text-right font-semibold">
                                   Missing %
                                 </th>
@@ -642,7 +661,9 @@ export function HomePage() {
                               {columnSummaries.map((col, idx) => (
                                 <tr
                                   key={col.columnName}
-                                  className={idx % 2 === 0 ? 'bg-slate-50' : 'bg-white'}
+                                  className={
+                                    idx % 2 === 0 ? "bg-slate-50" : "bg-white"
+                                  }
                                 >
                                   <td className="px-4 py-2 font-medium">
                                     {col.columnName}

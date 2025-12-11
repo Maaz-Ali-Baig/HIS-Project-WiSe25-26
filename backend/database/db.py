@@ -12,6 +12,7 @@ DATABASE_PATH = Path(__file__).parent.parent / "auth.db"
 def get_db_connection():
     """Get a database connection."""
     conn = sqlite3.connect(DATABASE_PATH)
+    print(f"Connected to database at {DATABASE_PATH}")
     conn.row_factory = sqlite3.Row
     return conn
 

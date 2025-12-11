@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from datetime import datetime
@@ -7,6 +6,16 @@ from database.db import init_db
 from auth.routes import router as auth_router
 from files.routes import router as files_router, ensure_files_directory
 from pathlib import Path
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from encode_route import encode_router
+import rpy2.robjects as ro
+import  csv
+import io
+import csv
+
+SUPPORTED_METHODS = ["One-Hot", "Label"]
 
 app = FastAPI(
     title="HIS Project API",
@@ -55,6 +64,8 @@ async def health_check():
         message="API is running successfully"
     )
 
+# include encode router
+app.include_router(encode_router, prefix="/api")
 @app.get("/", tags=["Root"])
 async def root():
     """
@@ -66,3 +77,5 @@ async def root():
         "docs": "/docs",
         "health": "/health"
     }
+
+

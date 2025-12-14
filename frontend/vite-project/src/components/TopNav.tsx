@@ -2,6 +2,7 @@
 import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { useAuthStore } from '../store/auth';
+import { useFileStore } from '../store/fileStore';
 
 export type NavKey =
   | 'home'
@@ -17,6 +18,7 @@ interface TopNavProps {
 export function TopNav({ active }: TopNavProps) {
   const navigate = useNavigate();
   const { logout } = useAuthStore();
+  const { fileId } = useFileStore();
 
   const handleLogout = () => {
     logout();
@@ -55,7 +57,7 @@ export function TopNav({ active }: TopNavProps) {
           <button
             type="button"
             className={pillClass('home')}
-            onClick={() => navigate('/')}
+            onClick={() => navigate(fileId ? `/${fileId}` : '/')}
           >
             Selection and Preview
           </button>

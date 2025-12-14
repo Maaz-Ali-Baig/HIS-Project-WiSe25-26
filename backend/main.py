@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -6,6 +7,7 @@ from datetime import datetime
 from database.db import init_db
 from auth.routes import router as auth_router
 from files.routes import router as files_router, ensure_files_directory
+from correlation.routes import router as correlation_router
 from pathlib import Path
 
 app = FastAPI(
@@ -31,6 +33,7 @@ app.add_middleware(
 # Include routers
 app.include_router(auth_router)
 app.include_router(files_router)
+app.include_router(correlation_router)
 
 # Mount static files directory for serving uploaded CSV files
 FILES_DIR = Path(__file__).parent / "files"

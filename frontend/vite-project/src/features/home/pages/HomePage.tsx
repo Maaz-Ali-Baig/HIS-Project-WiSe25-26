@@ -346,7 +346,7 @@ export function HomePage() {
             <button
               type="button"
               className="rounded-full bg-white px-6 py-2 text-sm font-semibold text-blue-700 shadow-lg"
-              onClick={() => navigate('/')}
+              onClick={() => navigate(fileId ? `/${fileId}` : '/')}
             >
               Selection and Preview
             </button>

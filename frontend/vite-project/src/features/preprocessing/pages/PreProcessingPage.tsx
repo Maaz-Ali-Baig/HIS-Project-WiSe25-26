@@ -89,7 +89,7 @@ export function PreProcessingPage() {
   return (
     <FileLayout actions={actions}>
       <div className="w-full h-full flex flex-col gap-4">
-        <div className="flex items-center justify-between flex-shrink-0 px-6 pt-6 pb-2">
+        <div className="flex items-center justify-between flex-shrink-0 px-6 pt-4 pb-2">
           <div>
             <h2 className="text-2xl font-semibold">Pre-Processing</h2>
             <p className="text-sm text-muted-foreground">
@@ -134,7 +134,7 @@ export function PreProcessingPage() {
         )}
 
         {fileData && !isLoadingData && !dataError && (
-          <div className="flex-1 min-h-0 px-6 pb-6">
+          <div className="flex-1 min-h-0">
             <DataTable
               columns={fileData.columns}
               rows={fileData.rows}

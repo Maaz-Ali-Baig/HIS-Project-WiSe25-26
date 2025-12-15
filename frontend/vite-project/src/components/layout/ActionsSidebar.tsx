@@ -10,8 +10,8 @@ export function ActionsSidebar({ actions }: ActionsSidebarProps) {
   }
 
   return (
-    <aside className="w-1/4 border-l bg-white flex-shrink-0">
-      <ScrollArea className="h-full">
+    <aside className="flex h-full min-h-0 w-[320px] min-w-[260px] max-w-[35vw] flex-shrink-0 border-l bg-white">
+      <ScrollArea className="h-full w-full">
         <div className="p-4 space-y-4">
           {actions.map((action, index) => (
             <div key={index}>{action}</div>

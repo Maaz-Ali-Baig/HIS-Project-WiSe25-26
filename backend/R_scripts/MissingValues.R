@@ -2,19 +2,20 @@ handle_missing_values_csv <- function(
     input_csv,
     output_csv,
     columns,
-    method = c("row_deletion", "mode", "median", "missing_category", "model_based")
+    method = c("row_deletion", "mode", "median", "missing_category", "model_based"),
+    k = 5
 ) {
   method <- match.arg(method)
 
-  # Check for mice package only if needed
+  # model_based = KNN, so we need VIM
   if (method == "model_based") {
-    if (!requireNamespace("mice", quietly = TRUE)) {
-      stop("Package 'mice' is required for model-based imputation. Please run install.packages('mice')")
+    if (!requireNamespace("VIM", quietly = TRUE)) {
+      stop("Package 'VIM' is required for model-based (KNN) imputation. Please run install.packages('VIM')")
     }
   }
 
   # Use Base R to read CSV
-  df <- read.csv(input_csv, stringsAsFactors = FALSE)
+  df <- read.csv(input_csv, stringsAsFactors = FALSE, na.strings = character(0))
 
   is_missing <- function(x) {
     is.na(x) | x == "" | x == "NA" | x == "NULL"
@@ -73,43 +74,32 @@ handle_missing_values_csv <- function(
     return(df)
   }
 
-  # 5. Model Based (MICE)
+  # 5. Model Based (KNN)
+
   if (method == "model_based") {
-    # Prepare data for MICE
-    for (col in names(df)) {
+
+    # Keep an exact copy of untouched columns
+    other_cols <- setdiff(names(df), columns)
+    df_other_original <- df[other_cols]
+
+    # Convert missing tokens to NA ONLY in target columns
+    for (col in columns) {
       mask <- is_missing(df[[col]])
       df[[col]][mask] <- NA
     }
 
-    # Convert characters to factors for MICE
-    df[sapply(df, is.character)] <- lapply(df[sapply(df, is.character)], as.factor)
-
-    # Setup methods
-    mice_methods <- rep("", ncol(df))
-    names(mice_methods) <- names(df)
-
-    for (v in names(df)) {
-      if (is.numeric(df[[v]])) {
-        mice_methods[v] <- "pmm"
-      } else {
-        mice_methods[v] <- "polyreg"
-      }
+    # (Optional but usually good) factorize ONLY target columns if they are character
+    for (col in columns) {
+      if (is.character(df[[col]])) df[[col]] <- as.factor(df[[col]])
     }
 
-    # Only impute requested columns
-    for (v in names(df)) {
-      if (!(v %in% columns)) {
-        mice_methods[v] <- ""
-      }
-    }
+    # Run KNN only on requested columns
+    df_knn <- VIM::kNN(df, variable = columns, k = k, imp_var = FALSE)
 
-    # Run MICE
-    imputed <- mice::mice(df, m = 1, maxit = 5, method = mice_methods, print = FALSE)
-    result <- mice::complete(imputed)
+    # Restore other columns EXACTLY as they were
+    df_knn[other_cols] <- df_other_original
 
-    write.csv(result, output_csv, row.names = FALSE)
-    return(result)
+    write.csv(df_knn, output_csv, row.names = FALSE, na = "")
+    return(df_knn)
   }
 }
-
-# Command line argument handling would go here if this is run as a script

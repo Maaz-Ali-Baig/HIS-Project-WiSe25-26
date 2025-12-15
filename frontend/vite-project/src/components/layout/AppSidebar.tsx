@@ -22,6 +22,7 @@ import {
   Settings,
   LogOut,
   User,
+  Network,
 } from "lucide-react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useEffect } from "react";
@@ -40,6 +41,12 @@ const getItems = (fileId?: string) => [
     title: "Pre-Processing",
     url: fileId ? `/${fileId}/pre-processing` : "/pre-processing",
     icon: Settings,
+    disabled: !fileId,
+  },
+  {
+    title: "Correlation Analysis",
+    url: fileId ? `/${fileId}/correlation` : "/correlation",
+    icon: Network,
     disabled: !fileId,
   },
   {
@@ -154,10 +161,10 @@ export function AppSidebar({ mode = "default", ...props }: AppSidebarProps) {
                 className="text-white/70 hover:text-white hover:bg-white/10 data-[active=true]:bg-white/20 data-[active=true]:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-white/70"
               >
                 {item.disabled ? (
-                  <div>
+                  <>
                     <item.icon />
                     <span>{item.title}</span>
-                  </div>
+                  </>
                 ) : (
                   <Link to={item.url}>
                     <item.icon />

@@ -15,6 +15,7 @@ import { Loader2, AlertCircle } from "lucide-react";
 import { FileLayout } from "../../../components/layout/FileLayout";
 import { ActionSidebarItem } from "../../../components/layout/ActionSidebarItem";
 import { HandleMissingValuesPanel } from "../components/HandleMissingValuesPanel";
+import { BinningPanel } from "../components/BinningPanel";
 import { DataEncodingPanel } from "../components/DataEncodingPanel";
 
 export function PreProcessingPage() {
@@ -71,6 +72,16 @@ export function PreProcessingPage() {
   const actions = [];
 
   if (fileData) {
+    // Filter numeric columns for binning
+    const numericColumns = fileData.columns.filter((col) => {
+      if (col === "id") return false;
+      const firstRow = fileData.rows[0];
+      if (!firstRow || !firstRow[col]) return false;
+      const value = firstRow[col].trim();
+      if (!value) return false;
+      return !isNaN(Number(value));
+    });
+
     actions.push(
       <ActionSidebarItem title="Handle Missing Values" key="missing-values">
         <HandleMissingValuesPanel
@@ -80,8 +91,25 @@ export function PreProcessingPage() {
           onSuccess={() => refetchData()}
         />
       </ActionSidebarItem>,
+      <ActionSidebarItem
+        title="Binning"
+        key="binning"
+        tooltip="Group numeric values into bins"
+      >
+        <BinningPanel
+          columns={numericColumns}
+          userId={user.id}
+          fileId={fileId}
+          onSuccess={() => refetchData()}
+        />
+      </ActionSidebarItem>,
       <ActionSidebarItem title="Data Encoding Techniques" key="data-encoding">
-        <DataEncodingPanel columns={fileData.columns} />
+        <DataEncodingPanel
+          columns={fileData.columns}
+          userId={user.id}
+          fileId={fileId}
+          onSuccess={() => refetchData()}
+        />
       </ActionSidebarItem>,
     );
   }

@@ -110,3 +110,66 @@ export async function handleMissingValues({
     body: JSON.stringify({ userId, fileId, selected_columns, selected_method }),
   });
 }
+
+export interface HandleBinningParams {
+  userId: string;
+  fileId: string;
+  selected_columns: string[];
+  method: string;
+  n_bins?: number;
+  bin_labels?: string[];
+  smooth_window?: number;
+  breaks?: number[];
+}
+
+export async function handleBinning({
+  userId,
+  fileId,
+  selected_columns,
+  method,
+  n_bins = 5,
+  bin_labels,
+  smooth_window = 3,
+  breaks,
+}: HandleBinningParams): Promise<FileDataResponse> {
+  return apiFetch<FileDataResponse>("/api/files/binning", {
+    method: "POST",
+    body: JSON.stringify({
+      userId,
+      fileId,
+      selected_columns,
+      method,
+      n_bins,
+      bin_labels,
+      smooth_window,
+      breaks,
+    }),
+  });
+}
+
+export interface HandleEncodingParams {
+  userId: string;
+  fileId: string;
+  selected_columns: string[];
+  method: string;
+  target_columns?: string[];
+}
+
+export async function handleEncoding({
+  userId,
+  fileId,
+  selected_columns,
+  method,
+  target_columns,
+}: HandleEncodingParams): Promise<FileDataResponse> {
+  return apiFetch<FileDataResponse>("/api/files/encoding", {
+    method: "POST",
+    body: JSON.stringify({
+      userId,
+      fileId,
+      selected_columns,
+      method,
+      target_columns,
+    }),
+  });
+}

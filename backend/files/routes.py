@@ -17,7 +17,15 @@ from database.db import (
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 from pydantic import BaseModel
 
-from .r_integration import handle_missing_values, map_method_name, validate_columns
+from .r_integration import (
+    handle_binning,
+    handle_encoding,
+    handle_missing_values,
+    map_binning_method_name,
+    map_encoding_method_name,
+    map_method_name,
+    validate_columns,
+)
 
 router = APIRouter(prefix="/api/files", tags=["Files"])
 
@@ -631,6 +639,314 @@ async def handle_missing_values_endpoint(request: HandleMissingValuesRequest):
         raise HTTPException(
             status_code=500,
             detail=f"Unexpected error during missing value handling: {str(e)}",
+        )
+
+    # Update timestamp in database
+    update_file_timestamp(user_id, file_id)
+
+    # Read updated CSV and return response
+    try:
+        async with aiofiles.open(selected_path, "r", encoding="utf-8") as f:
+            updated_content = await f.read()
+
+        updated_reader = csv.DictReader(io.StringIO(updated_content))
+        updated_columns = (
+            list(updated_reader.fieldnames) if updated_reader.fieldnames else []
+        )
+        updated_rows = list(updated_reader)
+
+        # Get updated metadata
+        metadata_updated = get_file_metadata(user_id, file_id)
+        selection_ranges = (
+            metadata_updated.get("selected_columns", []) if metadata_updated else []
+        )
+        total_columns = (
+            len(metadata["columns"])
+            if metadata and metadata["columns"]
+            else len(updated_columns)
+        )
+
+        return FileDataResponse(
+            columns=updated_columns,
+            rows=updated_rows,
+            updated_at=metadata_updated["updated_at"] if metadata_updated else "",
+            selectionRanges=selection_ranges or [],
+            totalColumns=total_columns,
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to read updated file: {str(e)}"
+        )
+
+
+class HandleEncodingRequest(BaseModel):
+    """Request model for encoding operations."""
+
+    userId: str
+    fileId: str
+    selected_columns: List[str]
+    method: str  # 'one-hot', 'label', 'frequency', 'target', 'ordinal'
+    target_columns: List[str] = None
+
+
+@router.post("/encoding", response_model=FileDataResponse)
+async def handle_encoding_endpoint(request: HandleEncodingRequest):
+    """
+    Apply encoding to selected columns in selected.csv using R script.
+
+    Args:
+        request: HandleEncodingRequest with userId, fileId, columns, method, and parameters
+
+    Returns:
+        FileDataResponse with updated data after encoding
+
+    Raises:
+        HTTPException: If file doesn't exist, R execution fails, or validation fails
+    """
+    user_id = request.userId
+    file_id = request.fileId
+    selected_columns = request.selected_columns
+    method = request.method
+    target_columns = request.target_columns
+
+    # Validate user exists
+    user = get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Attempt to migrate legacy file if necessary
+    migrate_legacy_file(user_id, file_id)
+
+    # Build file paths
+    file_dir = FILES_DIR / user_id / file_id
+    selected_path = file_dir / "selected.csv"
+
+    # Validate file existence
+    if not selected_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+
+    # Get metadata
+    metadata = get_file_metadata(user_id, file_id)
+    if not metadata:
+        raise HTTPException(status_code=404, detail="File metadata not found")
+
+    # Read current columns from selected.csv
+    try:
+        async with aiofiles.open(selected_path, "r", encoding="utf-8") as f:
+            content = await f.read()
+
+        csv_reader = csv.DictReader(io.StringIO(content))
+        current_columns = list(csv_reader.fieldnames) if csv_reader.fieldnames else []
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to read file: {str(e)}")
+
+    # Validate columns exist
+    if not selected_columns or len(selected_columns) == 0:
+        raise HTTPException(status_code=400, detail="No columns selected for encoding")
+
+    # Check if 'id' column is in selection
+    if "id" in selected_columns:
+        raise HTTPException(
+            status_code=400, detail="Cannot apply encoding to 'id' column"
+        )
+
+    # Validate all columns exist
+    for col in selected_columns:
+        if col not in current_columns:
+            raise HTTPException(
+                status_code=400, detail=f"Column '{col}' does not exist in the file"
+            )
+
+    # Validate target encoding requirements
+    if method == "target":
+        if not target_columns or len(target_columns) == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Target encoding requires at least one target column to be specified",
+            )
+
+    # Map method name from frontend (kebab-case) to R (snake_case)
+    r_method = map_encoding_method_name(method)
+
+    # Execute R script to perform encoding
+    try:
+        handle_encoding(selected_path, selected_columns, r_method, target_columns)
+    except HTTPException:
+        raise  # Re-raise HTTPExceptions from r_integration
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Unexpected error during encoding: {str(e)}"
+        )
+
+    # Update timestamp in database
+    update_file_timestamp(user_id, file_id)
+
+    # Read updated CSV and return response
+    try:
+        async with aiofiles.open(selected_path, "r", encoding="utf-8") as f:
+            updated_content = await f.read()
+
+        updated_reader = csv.DictReader(io.StringIO(updated_content))
+        updated_columns = (
+            list(updated_reader.fieldnames) if updated_reader.fieldnames else []
+        )
+        updated_rows = list(updated_reader)
+
+        # Get updated metadata
+        metadata_updated = get_file_metadata(user_id, file_id)
+        selection_ranges = (
+            metadata_updated.get("selected_columns", []) if metadata_updated else []
+        )
+        total_columns = (
+            len(metadata["columns"])
+            if metadata and metadata["columns"]
+            else len(updated_columns)
+        )
+
+        return FileDataResponse(
+            columns=updated_columns,
+            rows=updated_rows,
+            updated_at=metadata_updated["updated_at"] if metadata_updated else "",
+            selectionRanges=selection_ranges or [],
+            totalColumns=total_columns,
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to read updated file: {str(e)}"
+        )
+
+
+class HandleBinningRequest(BaseModel):
+    """Request model for binning operations."""
+
+    userId: str
+    fileId: str
+    selected_columns: List[str]
+    method: str  # 'equal-width', 'equal-freq', 'smooth-mean', 'smooth-median', 'quantile', 'custom'
+    n_bins: int = 5
+    bin_labels: List[str] = None
+    smooth_window: int = 3
+    breaks: List[float] = None
+
+
+@router.post("/binning", response_model=FileDataResponse)
+async def handle_binning_endpoint(request: HandleBinningRequest):
+    """
+    Apply binning to selected columns in selected.csv using R script.
+
+    Args:
+        request: HandleBinningRequest with userId, fileId, columns, method, and parameters
+
+    Returns:
+        FileDataResponse with updated data after binning
+
+    Raises:
+        HTTPException: If file doesn't exist, R execution fails, or validation fails
+    """
+    user_id = request.userId
+    file_id = request.fileId
+    selected_columns = request.selected_columns
+    method = request.method
+    n_bins = request.n_bins
+    bin_labels = request.bin_labels
+    smooth_window = request.smooth_window
+    breaks = request.breaks
+
+    # Validate user exists
+    user = get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Attempt to migrate legacy file if necessary
+    migrate_legacy_file(user_id, file_id)
+
+    # Build file paths
+    file_dir = FILES_DIR / user_id / file_id
+    selected_path = file_dir / "selected.csv"
+
+    # Validate file existence
+    if not selected_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+
+    # Get metadata
+    metadata = get_file_metadata(user_id, file_id)
+    if not metadata:
+        raise HTTPException(status_code=404, detail="File metadata not found")
+
+    # Read current columns from selected.csv
+    try:
+        async with aiofiles.open(selected_path, "r", encoding="utf-8") as f:
+            content = await f.read()
+
+        csv_reader = csv.DictReader(io.StringIO(content))
+        current_columns = list(csv_reader.fieldnames) if csv_reader.fieldnames else []
+        rows = list(csv_reader)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to read file: {str(e)}")
+
+    # Validate columns exist
+    if not selected_columns or len(selected_columns) == 0:
+        raise HTTPException(status_code=400, detail="No columns selected for binning")
+
+    # Check if 'id' column is in selection
+    if "id" in selected_columns:
+        raise HTTPException(
+            status_code=400, detail="Cannot apply binning to 'id' column"
+        )
+
+    # Validate all columns exist
+    for col in selected_columns:
+        if col not in current_columns:
+            raise HTTPException(
+                status_code=400, detail=f"Column '{col}' does not exist in the file"
+            )
+
+    # Validate columns are numeric (check first row for each column)
+    if rows:
+        non_numeric_columns = []
+        for col in selected_columns:
+            first_value = rows[0].get(col, "")
+            if first_value and first_value.strip():
+                try:
+                    float(first_value.strip())
+                except ValueError:
+                    non_numeric_columns.append(col)
+
+        if non_numeric_columns:
+            raise HTTPException(
+                status_code=400,
+                detail=f"The following columns are not numeric: {', '.join(non_numeric_columns)}",
+            )
+
+    # Validate n_bins range
+    if n_bins < 1 or n_bins > 20:
+        raise HTTPException(
+            status_code=400, detail="Number of bins must be between 1 and 20"
+        )
+
+    # Map method name from frontend (kebab-case) to R (snake_case)
+    r_method = map_binning_method_name(method)
+
+    # Execute R script to perform binning
+    try:
+        handle_binning(
+            selected_path,
+            selected_columns,
+            r_method,
+            n_bins,
+            bin_labels,
+            smooth_window,
+            breaks,
+        )
+    except HTTPException:
+        raise  # Re-raise HTTPExceptions from r_integration
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Unexpected error during binning: {str(e)}"
         )
 
     # Update timestamp in database

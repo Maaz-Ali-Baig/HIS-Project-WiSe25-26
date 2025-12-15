@@ -342,15 +342,18 @@ export function DataTable({ columns, rows, readOnly = false }: DataTableProps) {
   }
 
   return (
-    <div className="rounded-md border max-h-[calc(100vh-190px)] flex flex-col">
+    <div className="rounded-md border max-h-[calc(100vh-100px)] flex flex-col">
       <div ref={tableContainerRef} className="flex-1 overflow-auto relative">
         {/* Table container with fixed total size */}
         <div
-          style={{ height: `${totalRowSize}px`, width: `${totalColumnSize}px` }}
+          style={{
+            height: `${totalRowSize + 50}px`,
+            width: `${totalColumnSize}px`,
+          }}
         >
           {/* Sticky header */}
           <div
-            className="sticky top-0 bg-background border-b"
+            className="sticky top-0 bg-background z-2 border-b"
             style={{ display: "flex" }}
           >
             {paddingLeft > 0 && <div style={{ width: `${paddingLeft}px` }} />}

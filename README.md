@@ -152,6 +152,15 @@ Navigate to [backend](backend) for more details.
 - Keyboard shortcuts (Enter to save, Escape to cancel)
 - Responsive design
 
+### Text Transformation (AI-Powered)
+- **Automatic Theme Detection** - Transforms free text columns into categorical themes
+- **Sentence Embeddings** - Uses advanced NLP models (sentence-transformers)
+- **K-means Clustering** - Groups similar texts automatically
+- **Smart Labeling** - Generates meaningful theme names using KeyBERT
+- **Missing Value Handling** - Preserves empty/NA values separately
+- **Auto-Optimization** - Uses silhouette score to determine optimal number of themes
+- **Python & R Support** - Available in both backend implementations
+
 ## Available Endpoints
 
 ### Authentication API

@@ -1,74 +1,71 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom';
-import { LoginPage } from './features/auth/pages/LoginPage';
-import { RegisterPage } from './features/auth/pages/RegisterPage';
-import { HomePage } from './features/home/pages/HomePage';
-import { ProtectedRoute } from './features/auth/components/ProtectedRoute';
+import { createBrowserRouter, Navigate } from "react-router-dom";
+import { LoginPage } from "./features/auth/pages/LoginPage";
+import { RegisterPage } from "./features/auth/pages/RegisterPage";
+import { HomePage } from "./features/home/pages/HomePage";
+import { PreProcessingPage } from "./features/preprocessing/pages/PreProcessingPage";
+import { CorrelationAnalysisPage } from "./features/home/pages/CorrelationAnalysisPage";
+import { ProtectedRoute } from "./features/auth/components/ProtectedRoute";
+import { MainLayout } from "./components/layout/MainLayout";
+import { RootLayout } from "./components/layout/RootLayout";
 
-import { DataTransformationPage } from './features/home/pages/DataTransformationPage';
-import { CorrelationAnalysisPage } from './features/home/pages/CorrelationAnalysisPage';
-import { VisualizationPage } from './features/home/pages/VisualizationPage';
-import { ReportPage } from './features/home/pages/ReportPage';
-
-export const router = createBrowserRouter([
+export const router = createBrowserRouter(
+  [
+    {
+      element: <RootLayout />,
+      children: [
+        {
+          path: "/login",
+          element: <LoginPage />,
+        },
+        {
+          path: "/register",
+          element: <RegisterPage />,
+        },
+        {
+          path: "/",
+          element: (
+            <ProtectedRoute>
+              <MainLayout />
+            </ProtectedRoute>
+          ),
+          children: [
+            {
+              index: true,
+              element: <HomePage />,
+            },
+            {
+              path: ":fileId",
+              element: <Navigate to="load-data" replace />,
+            },
+            {
+              path: ":fileId/load-data",
+              element: <HomePage />,
+            },
+            {
+              path: ":fileId/pre-processing",
+              element: <PreProcessingPage />,
+            },
+            {
+              path: ":fileId/correlation",
+              element: <CorrelationAnalysisPage />,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      path: "*",
+      element: <Navigate to="/" replace />,
+    },
+  ],
   {
-    path: '/login',
-    element: <LoginPage />,
+    future: {
+      v7_startTransition: true,
+      v7_relativeSplatPath: true,
+      v7_fetcherPersist: true,
+      v7_normalizeFormMethod: true,
+      v7_partialHydration: true,
+      v7_skipActionErrorRevalidation: true,
+    },
   },
-  {
-    path: '/register',
-    element: <RegisterPage />,
-  },
-  {
-    path: '/',
-    element: (
-      <ProtectedRoute>
-        <HomePage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    // Keep this if you want /:fileId to open the same HomePage with a selected file
-    path: '/:fileId',
-    element: (
-      <ProtectedRoute>
-        <HomePage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/transform',
-    element: (
-      <ProtectedRoute>
-        <DataTransformationPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/correlation',
-    element: (
-      <ProtectedRoute>
-        <CorrelationAnalysisPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/visualization',
-    element: (
-      <ProtectedRoute>
-        <VisualizationPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '/report',
-    element: (
-      <ProtectedRoute>
-        <ReportPage />
-      </ProtectedRoute>
-    ),
-  },
-  {
-    path: '*',
-    element: <Navigate to="/" replace />,
-  },
-]);
+);

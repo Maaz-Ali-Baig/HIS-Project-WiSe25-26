@@ -16,10 +16,11 @@ export interface FileState {
   editingCell: { rowId: string; column: string } | null;
   selectionRanges: Array<{ start: number; end: number }>;
   totalColumns: number;
+  modifiedCells: Array<{ rowId: string; column: string }>;
 }
 
 interface FileActions {
-  setFile: (fileId: string, userId: string, columns: string[], rows: Array<Record<string, string>>, updatedAt: string, selectionRanges?: Array<{ start: number; end: number }>, totalColumns?: number) => void;
+  setFile: (fileId: string, userId: string, columns: string[], rows: Array<Record<string, string>>, updatedAt: string, selectionRanges?: Array<{ start: number; end: number }>, totalColumns?: number, modifiedCells?: Array<{ rowId: string; column: string }>) => void;
   startEditing: (rowId: string, column: string, initialValue: string) => void;
   applyEdit: (rowId: string, column: string, value: string) => void;
   discardEdits: () => void;
@@ -43,12 +44,13 @@ const initialState: FileState = {
   editingCell: null,
   selectionRanges: [],
   totalColumns: 0,
+  modifiedCells: [],
 };
 
 export const useFileStore = create<FileStore>((set, get) => ({
   ...initialState,
 
-  setFile: (fileId, userId, columns, rows, updatedAt, selectionRanges = [], totalColumns = 0) => {
+  setFile: (fileId, userId, columns, rows, updatedAt, selectionRanges = [], totalColumns = 0, modifiedCells = []) => {
     set({
       fileId,
       userId,
@@ -60,6 +62,7 @@ export const useFileStore = create<FileStore>((set, get) => ({
       editingCell: null,
       selectionRanges,
       totalColumns: totalColumns || columns.length,
+      modifiedCells,
     });
   },
 
@@ -130,6 +133,7 @@ export const useFileStore = create<FileStore>((set, get) => ({
   },
 
   updateColumnSelection: (columns, rows, updatedAt, selectionRanges, totalColumns) => {
+    const state = get();
     set({
       columns,
       rows,
@@ -139,6 +143,8 @@ export const useFileStore = create<FileStore>((set, get) => ({
       pendingEdits: new Map(),
       status: 'clean',
       editingCell: null,
+      // Preserve modifiedCells when updating column selection
+      modifiedCells: state.modifiedCells,
     });
   },
 

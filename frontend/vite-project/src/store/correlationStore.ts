@@ -1,210 +1,108 @@
-import { create } from 'zustand';
-
-export interface VariableConfig {
-  columnName: string;
-  type: 'nominal' | 'ordinal';
-  categories: string[];
-  ordering: Record<string, number> | null;
-}
-
-export interface CorrelationResult {
-  method: string;
-  method_name: string;
-  result: {
-    statistic?: number;
-    p_value?: number;
-    df?: number;
-    f_statistic?: number;
-    h_statistic?: number;
-    eta_squared?: number;
-    epsilon_squared?: number;
-    z_value?: number;
-    confidence_interval?: number[];
-    df_between?: number;
-    df_within?: number;
-    interpretation: string;
-  };
-  sample_size: number;
-  removed_rows: number;
-  missing_category_rows?: number;
-  variable1_name: string;
-  variable2_name: string;
-}
-
-export interface CorrelationMethod {
-  value: string;
-  label: string;
-  description: string;
-}
+/**
+ * Correlation Store (Two-Column Analysis)
+ * Manages state for simple two-variable correlation analysis
+ */
+import { create } from "zustand";
+import type {
+  VariableConfig,
+  CorrelationMethod,
+  CorrelationResult,
+  VariableType,
+} from "../features/home/api/correlation";
 
 interface CorrelationState {
-  // Column selection
-  selectedColumns: {
-    col1: string | null;
-    col2: string | null;
-  };
+  // Data source
+  userId: string | null;
+  fileId: string | null;
+
+  // Available data
   availableColumns: string[];
-  allCategories: Record<string, string[]>;
-  
+  columnCategories: Record<string, string[]>;
+
+  // Variable selection
+  selectedColumn1: string | null;
+  selectedColumn2: string | null;
+
   // Variable configuration
-  variableConfigs: {
-    col1: VariableConfig | null;
-    col2: VariableConfig | null;
-  };
-  
+  variable1Config: VariableConfig | null;
+  variable2Config: VariableConfig | null;
+
   // Method selection
   availableMethods: CorrelationMethod[];
   selectedMethod: string | null;
-  
+
   // Results
-  results: CorrelationResult | null;
-  isAnalyzing: boolean;
+  result: CorrelationResult | null;
+
+  // UI state
+  isLoading: boolean;
   error: string | null;
-  
-  // Current tab
-  currentTab: 'configuration' | 'results';
-  
+
   // Actions
-  setSelectedColumn: (columnKey: 'col1' | 'col2', columnName: string) => void;
-  setAvailableColumns: (columns: string[], categories: Record<string, string[]>) => void;
-  setVariableConfig: (columnKey: 'col1' | 'col2', config: VariableConfig) => void;
-  setVariableType: (columnKey: 'col1' | 'col2', type: 'nominal' | 'ordinal') => void;
-  setVariableOrdering: (columnKey: 'col1' | 'col2', ordering: Record<string, number>) => void;
+  setDataSource: (userId: string, fileId: string) => void;
+  setAvailableColumns: (
+    columns: string[],
+    categories: Record<string, string[]>,
+  ) => void;
+  setSelectedColumn1: (column: string | null) => void;
+  setSelectedColumn2: (column: string | null) => void;
+  setVariable1Config: (config: VariableConfig | null) => void;
+  setVariable2Config: (config: VariableConfig | null) => void;
   setAvailableMethods: (methods: CorrelationMethod[]) => void;
-  setSelectedMethod: (method: string) => void;
-  setResults: (results: CorrelationResult | null) => void;
-  setIsAnalyzing: (analyzing: boolean) => void;
+  setSelectedMethod: (method: string | null) => void;
+  setResult: (result: CorrelationResult | null) => void;
+  setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
-  setCurrentTab: (tab: 'configuration' | 'results') => void;
   reset: () => void;
-  resetResults: () => void;
 }
 
 const initialState = {
-  selectedColumns: {
-    col1: null,
-    col2: null,
-  },
+  userId: null,
+  fileId: null,
   availableColumns: [],
-  allCategories: {},
-  variableConfigs: {
-    col1: null,
-    col2: null,
-  },
+  columnCategories: {},
+  selectedColumn1: null,
+  selectedColumn2: null,
+  variable1Config: null,
+  variable2Config: null,
   availableMethods: [],
   selectedMethod: null,
-  results: null,
-  isAnalyzing: false,
+  result: null,
+  isLoading: false,
   error: null,
-  currentTab: 'configuration' as const,
 };
 
 export const useCorrelationStore = create<CorrelationState>((set) => ({
   ...initialState,
-  
-  setSelectedColumn: (columnKey, columnName) => {
-    set((state) => {
-      const newSelectedColumns = { ...state.selectedColumns, [columnKey]: columnName };
-      const categories = state.allCategories[columnName] || [];
-      
-      // Initialize variable config when column is selected
-      const newConfig: VariableConfig = {
-        columnName,
-        type: 'nominal',
-        categories,
-        ordering: null,
-      };
-      
-      return {
-        selectedColumns: newSelectedColumns,
-        variableConfigs: {
-          ...state.variableConfigs,
-          [columnKey]: newConfig,
-        },
-      };
-    });
-  },
-  
-  setAvailableColumns: (columns, categories) => {
+
+  setDataSource: (userId, fileId) => set({ userId, fileId }),
+
+  setAvailableColumns: (columns, categories) =>
+    set({ availableColumns: columns, columnCategories: categories }),
+
+  setSelectedColumn1: (column) =>
+    set({ selectedColumn1: column, variable1Config: null }),
+
+  setSelectedColumn2: (column) =>
+    set({ selectedColumn2: column, variable2Config: null }),
+
+  setVariable1Config: (config) => set({ variable1Config: config }),
+
+  setVariable2Config: (config) => set({ variable2Config: config }),
+
+  setAvailableMethods: (methods) =>
     set({
-      availableColumns: columns,
-      allCategories: categories,
-    });
-  },
-  
-  setVariableConfig: (columnKey, config) => {
-    set((state) => ({
-      variableConfigs: {
-        ...state.variableConfigs,
-        [columnKey]: config,
-      },
-    }));
-  },
-  
-  setVariableType: (columnKey, type) => {
-    set((state) => {
-      const currentConfig = state.variableConfigs[columnKey];
-      if (!currentConfig) return state;
-      
-      return {
-        variableConfigs: {
-          ...state.variableConfigs,
-          [columnKey]: {
-            ...currentConfig,
-            type,
-            ordering: type === 'ordinal' ? {} : null,
-          },
-        },
-      };
-    });
-  },
-  
-  setVariableOrdering: (columnKey, ordering) => {
-    set((state) => {
-      const currentConfig = state.variableConfigs[columnKey];
-      if (!currentConfig) return state;
-      
-      return {
-        variableConfigs: {
-          ...state.variableConfigs,
-          [columnKey]: {
-            ...currentConfig,
-            ordering,
-          },
-        },
-      };
-    });
-  },
-  
-  setAvailableMethods: (methods) => {
-    set({ availableMethods: methods });
-  },
-  
-  setSelectedMethod: (method) => {
-    set({ selectedMethod: method });
-  },
-  
-  setResults: (results) => {
-    set({ results, error: null });
-  },
-  
-  setIsAnalyzing: (analyzing) => {
-    set({ isAnalyzing: analyzing });
-  },
-  
-  setError: (error) => {
-    set({ error, isAnalyzing: false });
-  },
-  
-  setCurrentTab: (tab) => {
-    set({ currentTab: tab });
-  },
-  
-  reset: () => {
-    set(initialState);
-  },
-  
-  resetResults: () => {
-    set({ results: null, error: null, currentTab: 'configuration' });
-  },
+      availableMethods: methods,
+      selectedMethod: methods.length > 0 ? methods[0].value : null,
+    }),
+
+  setSelectedMethod: (method) => set({ selectedMethod: method }),
+
+  setResult: (result) => set({ result }),
+
+  setLoading: (loading) => set({ isLoading: loading }),
+
+  setError: (error) => set({ error }),
+
+  reset: () => set(initialState),
 }));

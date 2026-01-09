@@ -1,8 +1,6 @@
 """
 Correlation Analysis Module
-
-This module handles correlation analysis between categorical variables
-using various statistical methods for nominal and ordinal data.
+Provides statistical correlation analysis via R integration
 """
 
 from .routes import router

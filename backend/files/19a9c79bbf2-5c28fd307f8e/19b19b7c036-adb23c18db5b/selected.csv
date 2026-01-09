@@ -1,0 +1,892 @@
+id,Parch,Ticket,Fare,Cabin,Embarked,ExtraCol3,ExtraCol4,ExtraCol5,ExtraCol6,ExtraCol7,ExtraCol8,ExtraCol9,ExtraCol10,ExtraCol11,ExtraCol19,ExtraCol20,ExtraCol21,ExtraCol22,ExtraCol23,ExtraCol24
+1,0,A/5 21171,7.25,,S,,27,,high,57,C,low,90,Z,286,Z,medium,193,Z,low
+2,0,PC 17599,71.2833,C85,C,,,,low,62,D,,97,X,451,Y,high,451,Z,low
+3,0,STON/O2. 3101282,7.925,,S,medium,26,D,unknown,65,D,high,51,Z,337,Z,high,293,Y,high
+4,0,113803,53.1,C123,S,high,,C,high,19,,,59,Y,2,Y,medium,382,Y,medium
+5,0,373450,8.05,,S,low,17,A,,57,C,low,19,X,244,Z,high,174,X,medium
+6,0,330877,8.4583,,Q,,18,C,medium,26,C,,41,X,422,X,,465,Z,low
+7,0,17463,51.8625,E46,S,,92,D,medium,27,,,62,X,436,Y,medium,357,Y,medium
+8,1,349909,21.075,,S,medium,55,A,low,94,D,low,42,,,Z,high,257,X,medium
+9,2,347742,11.1333,,S,,4,B,,,A,,,,238,X,,289,Z,medium
+10,0,237736,30.0708,,C,unknown,,D,,,C,,13,Y,53,Y,low,311,Z,low
+11,1,PP 9549,16.7,G6,S,high,,B,unknown,,B,,15,Y,106,Y,,80,X,high
+12,0,113783,26.55,C103,S,high,,D,,24,A,high,33,X,423,Z,low,125,Y,medium
+13,0,A/5. 2151,8.05,,S,low,54,C,high,78,,,,Z,170,Z,low,343,Z,low
+14,5,347082,31.275,,S,,64,C,medium,,A,,81,Y,381,X,low,220,Z,low
+15,0,350406,7.8542,,S,,,C,medium,71,,,86,Z,18,X,low,391,X,low
+16,0,248706,16,,S,unknown,81,C,,,,unknown,,X,245,Z,medium,262,X,low
+17,1,382652,29.125,,Q,high,,,medium,,,,,Z,475,X,medium,32,Z,high
+18,0,244373,13,,S,unknown,96,D,unknown,72,A,,,Z,,Y,medium,332,Z,high
+19,0,345763,18,,S,,,B,low,33,D,unknown,53,Y,15,Z,medium,304,Z,high
+20,0,2649,7.225,,C,low,32,,low,96,A,medium,70,Z,144,Z,low,182,Y,low
+21,0,239865,26,,S,low,72,C,unknown,86,B,,72,Y,31,Z,medium,395,Z,medium
+22,0,248698,13,D56,S,high,89,C,unknown,59,B,,96,Z,306,X,high,175,Y,low
+23,0,330923,8.0292,,Q,,,B,unknown,,C,,57,Z,95,X,low,57,Z,low
+24,0,113788,35.5,A6,S,medium,98,B,medium,59,B,high,34,X,123,X,low,60,X,medium
+25,1,349909,21.075,,S,,19,C,medium,69,,,,Z,293,Z,medium,450,X,medium
+26,5,347077,31.3875,,S,high,41,,low,,D,low,,Z,162,X,,188,X,high
+27,0,2631,7.225,,C,medium,31,B,medium,14,D,low,80,X,325,Y,medium,207,X,low
+28,2,19950,263,C23 C25 C27,S,low,42,D,high,56,A,high,,Z,465,,high,152,X,high
+29,0,330959,7.8792,,Q,high,,B,medium,80,D,,,Y,465,Y,low,368,,low
+30,0,349216,7.8958,,S,high,73,C,medium,31,A,unknown,31,Z,364,Z,low,302,X,
+31,0,PC 17601,27.7208,,C,,,A,,45,,unknown,5,,484,Y,medium,449,Y,low
+32,0,PC 17569,146.5208,B78,C,,25,,,,D,high,,,368,Y,low,447,Y,low
+33,0,335677,7.75,,Q,medium,,D,high,70,A,,12,Y,33,Z,low,494,X,medium
+34,0,C.A. 24579,10.5,,S,high,,,high,86,A,high,8,Y,477,Y,low,,Y,low
+35,0,PC 17604,82.1708,,C,,65,D,high,,,medium,70,Y,283,X,low,291,Z,low
+36,0,113789,52,,S,,69,,unknown,,,high,43,X,2,Y,high,173,Y,medium
+37,0,2677,7.2292,,C,medium,66,B,low,4,D,low,,Z,310,Z,high,352,X,low
+38,0,A./5. 2152,8.05,,S,,60,D,medium,,C,unknown,,,122,Z,medium,374,Z,high
+39,0,345764,18,,S,,,B,high,94,C,unknown,,X,267,X,,125,Y,low
+40,0,2651,11.2417,,C,unknown,,,,8,D,medium,61,Y,328,,high,429,Y,high
+41,0,7546,9.475,,S,low,90,A,unknown,,,medium,53,X,13,Y,low,145,X,medium
+42,0,11668,21,,S,unknown,38,B,,83,,medium,58,Y,219,Z,medium,491,X,high
+43,0,349253,7.8958,,C,medium,51,B,low,,D,,70,Y,27,Y,high,425,X,low
+44,2,SC/Paris 2123,41.5792,,C,,18,,medium,17,,,38,X,,Y,medium,9,Z,low
+45,0,330958,7.8792,,Q,low,35,A,medium,2,A,medium,,Z,105,Z,medium,199,X,low
+46,0,S.C./A.4. 23567,8.05,,S,low,,D,unknown,,A,high,,Z,390,Y,,194,Y,low
+47,0,370371,15.5,,Q,unknown,64,A,medium,59,B,,14,Z,206,Z,medium,411,Z,medium
+48,0,14311,7.75,,Q,,21,,,84,A,medium,21,Y,23,Y,medium,,Y,medium
+49,0,2662,21.6792,,C,,54,C,,88,,low,8,Y,373,Z,high,25,X,high
+50,0,349237,17.8,,S,,,A,medium,45,,high,,Z,271,X,high,420,Z,high
+51,1,3101295,39.6875,,S,unknown,12,,high,42,B,,43,Z,70,Z,medium,,X,high
+52,0,A/4. 39886,7.8,,S,medium,6,D,high,93,B,unknown,,Z,281,Z,medium,184,Z,medium
+53,0,PC 17572,76.7292,D33,C,unknown,,D,,,,low,92,X,124,,low,85,Z,medium
+54,0,2926,26,,S,unknown,65,A,medium,20,,,,Z,317,X,low,78,Y,high
+55,1,113509,61.9792,B30,C,unknown,31,C,low,,,medium,55,Y,473,Z,high,263,X,
+56,0,19947,35.5,C52,S,high,82,,low,71,B,high,,Z,,X,low,42,Y,medium
+57,0,C.A. 31026,10.5,,S,,84,,,23,D,low,,Z,372,Y,high,40,X,high
+58,0,2697,7.2292,,C,high,53,C,high,97,A,low,76,X,11,X,low,392,Z,low
+59,2,C.A. 34651,27.75,,S,low,,C,,29,B,,90,X,203,Y,,171,Z,high
+60,2,CA 2144,46.9,,S,,,C,unknown,,,,96,X,444,Z,,324,Z,high
+61,0,2669,7.2292,,C,high,82,,,49,C,,38,Y,37,Y,high,493,Z,medium
+62,0,113572,80,B28,,unknown,89,,low,69,,,48,Z,464,X,medium,25,X,medium
+63,0,36973,83.475,C83,S,,,,high,90,D,unknown,,X,46,Y,high,397,X,low
+64,2,347088,27.9,,S,high,51,C,,39,,,5,X,240,X,medium,54,Y,medium
+65,0,PC 17605,27.7208,,C,,,A,high,,D,medium,11,Y,90,Y,high,380,Y,low
+66,1,2661,15.2458,,C,,,A,medium,75,,,4,Y,10,X,low,153,Z,high
+67,0,C.A. 29395,10.5,F33,S,,13,C,unknown,,A,,73,X,,Y,,67,Y,low
+68,0,S.P. 3464,8.1583,,S,unknown,67,,high,,,,22,Y,290,X,,,Z,low
+69,2,3101281,7.925,,S,medium,92,A,,75,A,low,,Z,361,X,high,182,Y,medium
+70,0,315151,8.6625,,S,,75,,medium,70,,high,37,X,157,X,high,364,X,high
+71,0,C.A. 33111,10.5,,S,,48,D,unknown,,C,low,79,,246,Z,medium,340,X,high
+72,2,CA 2144,46.9,,S,,52,C,high,,B,,11,X,91,Z,medium,364,Y,medium
+73,0,S.O.C. 14879,73.5,,S,,25,D,high,1,,medium,32,X,364,Z,medium,10,X,low
+74,0,2680,14.4542,,C,high,,D,medium,,,unknown,,Y,,Z,high,487,Y,high
+75,0,1601,56.4958,,S,unknown,24,D,,,C,low,,X,430,Y,low,216,Y,medium
+76,0,348123,7.65,F G73,S,unknown,34,A,unknown,,A,,56,Y,89,X,low,55,X,medium
+77,0,349208,7.8958,,S,low,26,,medium,,A,,16,X,332,Z,medium,464,Y,high
+78,0,374746,8.05,,S,low,33,,low,30,,,66,Z,165,Z,low,396,Z,medium
+79,2,248738,29,,S,,36,A,medium,89,C,high,96,Y,,Y,low,41,X,medium
+80,0,364516,12.475,,S,,8,,,70,,low,4,X,140,X,medium,218,Y,
+81,0,345767,9,,S,unknown,,,,56,,medium,8,X,474,Y,low,453,Z,low
+82,0,345779,9.5,,S,low,44,,low,88,B,high,95,Y,418,Y,low,341,X,high
+83,0,330932,7.7875,,Q,low,94,,low,9,C,unknown,,Y,233,Z,medium,97,Z,high
+84,0,113059,47.1,,S,unknown,,A,medium,64,,unknown,91,,247,X,high,350,Y,medium
+85,0,SO/C 14885,10.5,,S,unknown,66,B,medium,15,D,,70,X,176,Y,medium,94,X,medium
+86,0,3101278,15.85,,S,low,,,low,23,A,medium,,Y,213,Z,high,175,Z,low
+87,3,W./C. 6608,34.375,,S,medium,,B,medium,18,D,,,Y,232,Z,low,97,Y,low
+88,0,SOTON/OQ 392086,8.05,,S,,49,,,54,,,51,X,72,X,low,346,Z,high
+89,2,19950,263,C23 C25 C27,S,,44,A,low,62,C,,36,Y,161,Y,,465,Y,medium
+90,0,343275,8.05,,S,,65,,medium,75,A,medium,83,X,437,Y,high,22,Z,high
+91,0,343276,8.05,,S,,,B,,,C,unknown,4,Z,489,Y,low,301,Z,low
+92,0,347466,7.8542,,S,low,31,B,,93,,medium,,Z,27,X,low,124,,
+93,0,W.E.P. 5734,61.175,E31,S,medium,,D,,37,C,,55,X,366,X,low,375,Y,high
+94,2,C.A. 2315,20.575,,S,high,18,,,,B,high,97,X,119,X,high,69,Z,medium
+95,0,364500,7.25,,S,high,,,high,3,C,,99,X,326,Z,medium,183,X,low
+96,0,374910,8.05,,S,,,,,12,C,medium,59,Z,310,Y,medium,102,Y,
+97,0,PC 17754,34.6542,A5,C,unknown,95,A,unknown,,B,high,42,Z,439,X,low,436,Y,
+98,1,PC 17759,63.3583,D10 D12,C,unknown,,,,41,D,unknown,27,X,351,Z,high,41,X,low
+99,1,231919,23,,S,,39,C,,,C,unknown,99,Y,411,Y,low,290,Z,low
+100,0,244367,26,,S,,,B,unknown,12,,unknown,,X,400,Y,low,60,Z,low
+101,0,349245,7.8958,,S,high,80,B,,26,,high,12,Z,323,X,high,299,Z,high
+102,0,349215,7.8958,,S,,48,B,low,98,D,,50,X,205,Y,high,383,Y,medium
+103,1,35281,77.2875,D26,S,medium,96,,unknown,2,B,high,39,X,168,Y,medium,376,Y,low
+104,0,7540,8.6542,,S,low,,B,,42,C,,49,Z,173,,high,16,Y,high
+105,0,3101276,7.925,,S,medium,70,,,19,A,unknown,,,179,Y,medium,386,Z,high
+106,0,349207,7.8958,,S,,75,C,high,53,B,unknown,26,Y,144,Y,medium,148,Z,high
+107,0,343120,7.65,,S,unknown,,A,unknown,97,C,unknown,,Z,155,Z,medium,340,X,low
+108,0,312991,7.775,,S,unknown,,,low,22,D,high,,X,284,Z,,481,Y,low
+109,0,349249,7.8958,,S,,58,C,low,37,C,,32,X,135,Y,high,59,X,high
+110,0,371110,24.15,,Q,low,,,unknown,44,,medium,0,Y,174,,medium,181,Z,high
+111,0,110465,52,C110,S,low,11,,high,79,B,,67,Y,354,X,low,433,Y,high
+112,0,2665,14.4542,,C,medium,13,A,low,,C,unknown,85,,164,X,medium,70,Y,medium
+113,0,324669,8.05,,S,,,C,unknown,,,unknown,,Z,53,X,medium,,X,medium
+114,0,4136,9.825,,S,unknown,65,B,,48,A,medium,16,Z,8,Y,medium,274,X,low
+115,0,2627,14.4583,,C,,28,C,medium,,A,,76,X,382,X,medium,498,Z,low
+116,0,STON/O 2. 3101294,7.925,,S,,73,A,medium,0,C,,14,Z,474,X,medium,147,Z,low
+117,0,370369,7.75,,Q,,69,,high,80,D,low,62,X,341,Z,high,,Y,medium
+118,0,11668,21,,S,medium,,,low,24,,,70,Y,30,X,high,397,Z,medium
+119,1,PC 17558,247.5208,B58 B60,C,,91,B,medium,,D,,15,Y,281,Z,high,59,,medium
+120,2,347082,31.275,,S,high,88,,,97,,medium,11,Y,135,X,,163,Y,medium
+121,0,S.O.C. 14879,73.5,,S,low,,C,low,63,C,unknown,7,X,,Y,low,158,X,medium
+122,0,A4. 54510,8.05,,S,medium,76,,unknown,,D,,70,Y,460,X,low,200,Y,high
+123,0,237736,30.0708,,C,high,,,low,60,,high,61,X,412,Y,high,286,X,medium
+124,0,27267,13,E101,S,medium,40,A,unknown,21,,low,11,Z,367,X,high,110,X,high
+125,1,35281,77.2875,D26,S,,,D,low,69,C,unknown,50,X,250,X,low,195,Y,high
+126,0,2651,11.2417,,C,,60,A,medium,61,C,,79,Y,289,Z,low,458,X,medium
+127,0,370372,7.75,,Q,unknown,41,C,low,,,,23,X,457,Z,high,414,Z,high
+128,0,C 17369,7.1417,,S,low,99,,,7,B,,60,X,330,Y,low,478,X,low
+129,1,2668,22.3583,F E69,C,low,17,D,high,64,D,high,29,Y,289,Z,low,341,Z,medium
+130,0,347061,6.975,,S,high,9,,low,,,unknown,,Z,48,Z,high,291,X,low
+131,0,349241,7.8958,,C,medium,2,A,high,77,A,,,Y,,Z,low,106,Z,low
+132,0,SOTON/O.Q. 3101307,7.05,,S,high,81,D,,12,B,,35,Z,404,Z,low,79,Y,low
+133,0,A/5. 3337,14.5,,S,low,40,C,medium,53,,high,49,Z,182,X,high,,Z,low
+134,0,228414,26,,S,,43,,low,81,B,unknown,20,Y,125,X,low,202,Y,medium
+135,0,C.A. 29178,13,,S,unknown,64,C,high,89,,medium,39,Z,483,Y,high,393,,high
+136,0,SC/PARIS 2133,15.0458,,C,,,A,,93,,,62,Y,478,Y,medium,4,X,
+137,2,11752,26.2833,D47,S,medium,57,C,low,,,,38,Y,210,Z,medium,445,Y,
+138,0,113803,53.1,C123,S,,5,,,,B,low,,Z,115,X,high,85,Y,low
+139,0,7534,9.2167,,S,high,,B,medium,57,C,,,Y,398,X,,197,Z,medium
+140,0,PC 17593,79.2,B86,C,low,,,low,46,D,,13,Z,312,X,low,178,X,medium
+141,2,2678,15.2458,,C,,45,B,unknown,23,,medium,,X,450,Z,low,462,X,low
+142,0,347081,7.75,,S,,16,,high,,C,low,46,Y,272,Z,medium,360,X,low
+143,0,STON/O2. 3101279,15.85,,S,unknown,,,unknown,14,A,,60,Y,275,Z,high,17,X,medium
+144,0,365222,6.75,,Q,,33,D,medium,,A,unknown,73,X,,Z,low,426,Z,high
+145,0,231945,11.5,,S,medium,27,,,,,low,,Z,301,Z,medium,338,X,medium
+146,1,C.A. 33112,36.75,,S,unknown,29,A,,,A,,97,X,181,Y,medium,34,Z,medium
+147,0,350043,7.7958,,S,,72,A,low,10,,low,42,X,102,,low,390,X,high
+148,2,W./C. 6608,34.375,,S,,10,B,medium,26,B,,88,X,390,X,,16,Z,medium
+149,2,230080,26,F2,S,unknown,30,D,unknown,,D,high,41,Z,172,Y,low,212,,high
+150,0,244310,13,,S,low,46,B,medium,,,low,40,X,106,X,low,81,X,high
+151,0,S.O.P. 1166,12.525,,S,,54,,unknown,44,B,high,60,X,480,Z,medium,5,Y,low
+152,0,113776,66.6,C2,S,medium,88,B,medium,4,C,,19,Z,481,Y,high,279,Z,medium
+153,0,A.5. 11206,8.05,,S,unknown,,,medium,1,A,high,60,X,247,,medium,343,Z,medium
+154,2,A/5. 851,14.5,,S,low,,,,,D,unknown,,X,147,Y,medium,239,X,low
+155,0,Fa 265302,7.3125,,S,unknown,53,,,44,C,,,X,80,Z,high,171,Y,low
+156,1,PC 17597,61.3792,,C,low,2,A,,7,C,unknown,7,Y,313,Z,high,256,Y,medium
+157,0,35851,7.7333,,Q,low,61,D,low,83,,low,69,X,305,Y,high,75,Y,medium
+158,0,SOTON/OQ 392090,8.05,,S,high,15,D,medium,,D,low,3,Z,309,Z,high,24,Z,
+159,0,315037,8.6625,,S,high,7,A,high,34,D,medium,10,X,,Z,high,78,Y,high
+160,2,CA. 2343,69.55,,S,unknown,67,C,,45,A,medium,28,Y,235,Z,high,27,,high
+161,1,371362,16.1,,S,,,D,unknown,,C,low,,X,341,,high,384,Y,low
+162,0,C.A. 33595,15.75,,S,low,,,,93,,medium,0,X,327,X,high,304,Z,low
+163,0,347068,7.775,,S,,10,B,high,78,B,unknown,,X,397,Y,,93,Z,medium
+164,0,315093,8.6625,,S,,74,D,,19,,high,78,Z,371,X,low,,Z,medium
+165,1,3101295,39.6875,,S,,76,C,medium,73,,high,45,Z,17,X,medium,242,X,high
+166,2,363291,20.525,,S,,,,,17,B,low,19,X,309,Y,high,55,X,high
+167,1,113505,55,E33,S,unknown,83,A,high,45,C,low,42,X,487,,high,485,X,high
+168,4,347088,27.9,,S,unknown,43,C,low,,,medium,69,Z,279,X,medium,468,X,low
+169,0,PC 17318,25.925,,S,high,18,,unknown,3,A,,73,Y,264,Z,,379,Z,medium
+170,0,1601,56.4958,,S,,,,,,A,unknown,,X,303,X,low,404,Z,low
+171,0,111240,33.5,B19,S,high,21,A,medium,22,,,16,X,279,Y,medium,273,X,medium
+172,1,382652,29.125,,Q,high,20,B,medium,,A,,95,Y,200,Z,medium,401,Y,low
+173,1,347742,11.1333,,S,high,32,D,unknown,49,D,medium,,Y,496,X,medium,264,X,high
+174,0,STON/O 2. 3101280,7.925,,S,high,,,medium,2,C,high,98,Y,35,Y,low,83,X,medium
+175,0,17764,30.6958,A7,C,medium,,B,medium,,,low,,X,407,Z,low,83,Y,high
+176,1,350404,7.8542,,S,high,,,low,,B,,11,Y,79,Z,medium,427,X,low
+177,1,4133,25.4667,,S,unknown,62,B,medium,95,B,,,X,103,Z,medium,223,Z,high
+178,0,PC 17595,28.7125,C49,C,unknown,33,C,low,,,,32,Y,303,Y,high,364,Z,medium
+179,0,250653,13,,S,high,,B,,19,,unknown,,X,318,Z,low,72,Y,low
+180,0,LINE,0,,S,low,51,,unknown,60,,,71,X,463,Y,medium,223,X,
+181,2,CA. 2343,69.55,,S,,,C,,36,,high,,Z,147,Y,high,41,Y,low
+182,0,SC/PARIS 2131,15.05,,C,medium,43,D,unknown,60,A,,58,Y,12,Z,low,110,Z,low
+183,2,347077,31.3875,,S,low,29,B,unknown,,C,unknown,,Y,127,Z,low,,X,low
+184,1,230136,39,F4,S,,,,,29,C,low,61,X,272,Y,low,104,Z,high
+185,2,315153,22.025,,S,high,,A,high,65,C,unknown,39,X,178,Z,medium,303,X,high
+186,0,113767,50,A32,S,unknown,,D,high,26,B,unknown,,Z,126,Y,high,2,X,medium
+187,0,370365,15.5,,Q,,,,medium,90,A,,71,Z,457,X,medium,96,Y,high
+188,0,111428,26.55,,S,,47,A,,94,B,unknown,29,Y,280,Y,medium,345,Y,low
+189,1,364849,15.5,,Q,,,A,medium,,B,high,19,X,336,Z,high,74,X,low
+190,0,349247,7.8958,,S,high,,A,low,72,,,70,Y,374,Y,medium,277,Z,low
+191,0,234604,13,,S,,90,B,high,,D,low,,X,204,Y,medium,433,Z,high
+192,0,28424,13,,S,unknown,67,D,low,,B,low,44,X,367,Z,high,390,Y,high
+193,0,350046,7.8542,,S,unknown,,A,,73,,low,,X,481,Z,low,61,Y,high
+194,1,230080,26,F2,S,unknown,96,D,,93,C,low,18,Y,362,Y,high,73,X,high
+195,0,PC 17610,27.7208,B4,C,medium,71,,high,22,D,unknown,81,Y,148,Z,low,352,Y,low
+196,0,PC 17569,146.5208,B80,C,,5,C,medium,,B,low,98,Y,389,Y,medium,173,X,
+197,0,368703,7.75,,Q,,72,B,medium,,,,,Z,,Y,low,,X,medium
+198,1,4579,8.4042,,S,unknown,,D,low,33,A,,14,X,36,Z,medium,238,Z,high
+199,0,370370,7.75,,Q,,,,medium,23,C,,,X,222,X,medium,289,Y,high
+200,0,248747,13,,S,,48,B,high,,A,unknown,86,Z,,X,low,224,Z,medium
+201,0,345770,9.5,,S,low,51,A,,33,A,unknown,8,X,234,X,high,11,X,low
+202,2,CA. 2343,69.55,,S,,31,D,medium,72,,,,X,130,Z,high,47,Y,high
+203,0,3101264,6.4958,,S,low,,B,,37,,unknown,,Z,136,X,low,,X,high
+204,0,2628,7.225,,C,unknown,61,B,high,37,A,,3,,460,Z,medium,132,X,high
+205,0,A/5 3540,8.05,,S,high,,C,high,94,,low,,,145,Z,high,408,,low
+206,1,347054,10.4625,G6,S,medium,89,C,low,,D,,7,Z,391,Z,high,485,,low
+207,0,3101278,15.85,,S,high,77,C,high,92,C,medium,17,Y,,Z,low,237,Y,high
+208,0,2699,18.7875,,C,high,60,B,low,71,,high,48,X,53,Z,low,13,Z,high
+209,0,367231,7.75,,Q,high,,A,medium,,D,unknown,,Z,31,X,medium,35,Z,high
+210,0,112277,31,A31,C,high,33,,high,,B,,,X,121,Z,medium,407,X,medium
+211,0,SOTON/O.Q. 3101311,7.05,,S,,76,A,,93,D,low,,Z,420,X,,171,Y,high
+212,0,F.C.C. 13528,21,,S,medium,31,,high,94,,medium,20,Y,227,Y,medium,440,Z,low
+213,0,A/5 21174,7.25,,S,,26,,unknown,4,,,87,Z,347,Z,medium,253,X,high
+214,0,250646,13,,S,,86,C,,35,A,unknown,,Z,481,X,medium,439,Z,medium
+215,0,367229,7.75,,Q,,,D,unknown,41,,,,Z,24,X,medium,,Y,low
+216,0,35273,113.275,D36,C,low,,A,,,A,,72,X,54,Z,high,429,X,high
+217,0,STON/O2. 3101283,7.925,,S,unknown,86,D,medium,77,A,low,48,Z,460,,high,273,Z,medium
+218,0,243847,27,,S,low,,D,unknown,69,,,41,X,283,X,high,218,Z,low
+219,0,11813,76.2917,D15,C,low,,C,medium,21,D,unknown,75,X,308,X,low,264,X,high
+220,0,W/C 14208,10.5,,S,,52,C,low,,,low,,Y,170,X,medium,163,Z,
+221,0,SOTON/OQ 392089,8.05,,S,low,,,,,,,82,X,413,Y,low,301,Z,low
+222,0,220367,13,,S,medium,,A,,44,D,,68,Y,323,,high,385,Y,high
+223,0,21440,8.05,,S,medium,,,,,A,low,76,X,128,Y,medium,405,Y,high
+224,0,349234,7.8958,,S,,,,,,,low,42,Y,324,X,low,489,X,low
+225,0,19943,90,C93,S,,79,,high,92,,medium,38,Y,1,Z,high,,Y,medium
+226,0,PP 4348,9.35,,S,high,59,A,low,90,D,high,57,Y,120,Y,medium,384,Z,high
+227,0,SW/PP 751,10.5,,S,low,,A,high,1,,high,64,,101,X,low,444,Z,low
+228,0,A/5 21173,7.25,,S,high,40,A,high,,C,high,92,Z,392,Y,low,8,Y,high
+229,0,236171,13,,S,high,38,C,unknown,,A,,85,X,367,X,high,237,X,medium
+230,1,4133,25.4667,,S,high,42,C,,82,C,medium,5,Z,45,Y,low,350,Z,
+231,0,36973,83.475,C83,S,high,99,,,80,C,medium,15,Y,453,Z,medium,228,Z,high
+232,0,347067,7.775,,S,,,A,low,,D,medium,94,Y,,Y,high,50,X,medium
+233,0,237442,13.5,,S,,15,A,high,6,,,,Y,217,Z,low,327,Z,medium
+234,2,347077,31.3875,,S,,4,A,unknown,,A,low,,X,105,Z,low,203,,medium
+235,0,C.A. 29566,10.5,,S,high,51,,low,,A,,5,Z,210,Y,low,308,Z,medium
+236,0,W./C. 6609,7.55,,S,unknown,80,,medium,,D,unknown,,X,294,,high,0,Z,high
+237,0,26707,26,,S,high,,B,,8,A,,40,Z,315,Z,medium,5,Y,medium
+238,2,C.A. 31921,26.25,,S,low,56,,,,D,,,X,173,Y,low,301,,medium
+239,0,28665,10.5,,S,medium,79,B,,43,B,medium,77,Z,50,Z,low,491,X,high
+240,0,SCO/W 1585,12.275,,S,high,51,D,medium,76,,high,89,Y,304,Y,high,319,X,high
+241,0,2665,14.4542,,C,low,90,,medium,31,D,high,,Y,352,Z,low,471,X,medium
+242,0,367230,15.5,,Q,unknown,63,,unknown,,C,,,Z,133,X,low,423,Z,medium
+243,0,W./C. 14263,10.5,,S,unknown,73,B,,,C,low,54,X,319,Y,medium,140,Y,medium
+244,0,STON/O 2. 3101275,7.125,,S,unknown,78,A,low,,D,,54,Y,284,X,medium,51,X,medium
+245,0,2694,7.225,,C,low,62,D,unknown,29,D,high,3,Z,250,X,medium,279,,medium
+246,0,19928,90,C78,Q,high,5,,medium,25,C,low,,X,4,Y,high,310,Z,
+247,0,347071,7.775,,S,high,42,,unknown,,B,high,,X,153,X,low,385,Y,medium
+248,2,250649,14.5,,S,high,14,A,,28,D,,,Y,187,X,medium,260,Z,medium
+249,1,11751,52.5542,D35,S,unknown,51,B,,68,C,,,X,416,Z,low,,X,low
+250,0,244252,26,,S,,,,low,,,high,44,Z,413,X,medium,421,X,high
+251,0,362316,7.25,,S,high,,C,unknown,,,,,Z,436,Z,low,292,Y,high
+252,1,347054,10.4625,G6,S,high,,A,high,,C,,,X,231,X,high,275,Y,low
+253,0,113514,26.55,C87,S,,2,C,medium,,B,low,70,X,163,Y,high,9,Z,low
+254,0,A/5. 3336,16.1,,S,unknown,,D,unknown,58,D,medium,63,Z,249,X,high,390,Z,medium
+255,2,370129,20.2125,,S,,50,D,unknown,,,high,10,Y,395,X,low,340,X,high
+256,2,2650,15.2458,,C,unknown,7,,,25,,medium,29,Z,,Z,low,448,,medium
+257,0,PC 17585,79.2,,C,low,,,,98,C,unknown,84,Z,300,X,high,46,X,high
+258,0,110152,86.5,B77,S,,75,C,high,20,C,unknown,,Y,217,Z,medium,73,Y,low
+259,0,PC 17755,512.3292,,C,high,70,A,medium,13,C,unknown,,X,348,Y,low,335,Z,medium
+260,1,230433,26,,S,low,17,A,,82,D,low,52,Y,433,Y,medium,244,Z,high
+261,0,384461,7.75,,Q,medium,,D,,89,B,,11,Y,333,Z,high,293,X,high
+262,2,347077,31.3875,,S,,63,,,9,D,low,12,Y,201,,high,217,Y,low
+263,1,110413,79.65,E67,S,high,39,,,59,,high,98,X,419,Y,low,320,Z,high
+264,0,112059,0,B94,S,low,0,,,,A,medium,3,X,471,Y,,329,,low
+265,0,382649,7.75,,Q,medium,,,,22,C,,2,,398,Y,,94,Z,low
+266,0,C.A. 17248,10.5,,S,,79,C,medium,,A,,1,Y,438,Z,medium,380,Y,high
+267,1,3101295,39.6875,,S,high,3,C,low,68,D,low,62,Y,132,Y,high,246,X,high
+268,0,347083,7.775,,S,medium,,D,unknown,57,,high,,X,210,X,high,287,X,low
+269,1,PC 17582,153.4625,C125,S,high,38,D,high,51,,high,,Z,124,Z,medium,308,Z,high
+270,0,PC 17760,135.6333,C99,S,high,,A,high,88,C,high,79,Z,182,Y,medium,372,Y,high
+271,0,113798,31,,S,,47,,low,,B,medium,71,Z,366,Z,medium,150,Z,low
+272,0,LINE,0,,S,,42,A,low,62,B,,,Z,338,Y,medium,3,Y,low
+273,1,250644,19.5,,S,unknown,,B,low,31,D,,7,Y,1,X,low,90,Y,low
+274,1,PC 17596,29.7,C118,C,low,5,B,,97,,,48,X,377,Z,high,482,Z,high
+275,0,370375,7.75,,Q,,3,D,unknown,25,D,unknown,8,Y,96,,medium,111,Z,medium
+276,0,13502,77.9583,D7,S,low,9,,medium,,B,medium,11,Y,92,X,low,124,X,medium
+277,0,347073,7.75,,S,low,69,,high,63,,low,46,Z,271,Z,medium,429,Z,medium
+278,0,239853,0,,S,,78,,,,C,unknown,,X,120,X,medium,117,X,medium
+279,1,382652,29.125,,Q,,,B,unknown,75,A,medium,99,X,481,Z,high,232,Z,medium
+280,1,C.A. 2673,20.25,,S,high,7,,medium,24,A,low,,X,73,Y,high,185,X,low
+281,0,336439,7.75,,Q,medium,41,,medium,26,,low,27,X,75,Y,medium,,,medium
+282,0,347464,7.8542,,S,,98,,,34,,medium,32,Y,380,X,high,297,X,low
+283,0,345778,9.5,,S,medium,,D,low,68,A,low,,X,143,X,low,257,Z,high
+284,0,A/5. 10482,8.05,,S,low,,A,unknown,39,C,,,X,357,Z,high,250,Z,low
+285,0,113056,26,A19,S,medium,53,C,,56,A,high,51,Y,340,Y,medium,417,,low
+286,0,349239,8.6625,,C,high,,B,medium,55,D,,76,Z,94,,medium,290,Y,medium
+287,0,345774,9.5,,S,high,,,high,19,D,,84,Y,289,Y,,254,Z,medium
+288,0,349206,7.8958,,S,medium,47,C,high,23,,low,5,X,268,Z,low,443,X,medium
+289,0,237798,13,,S,,,,,30,A,unknown,28,X,47,X,high,46,Y,high
+290,0,370373,7.75,,Q,high,,,high,,B,,25,Z,382,Z,,416,Z,
+291,0,19877,78.85,,S,,,D,unknown,,,,55,Y,428,Z,high,98,Y,medium
+292,0,11967,91.0792,B49,C,medium,5,,,,,high,,Y,473,Y,low,165,X,high
+293,0,SC/Paris 2163,12.875,D,C,,0,,,,C,,,Z,43,X,low,6,Y,medium
+294,0,349236,8.85,,S,unknown,41,A,,67,C,,91,Y,89,Z,high,285,Y,low
+295,0,349233,7.8958,,S,,,D,,,C,unknown,33,Y,412,Z,high,415,Z,low
+296,0,PC 17612,27.7208,,C,,,,unknown,68,,high,,Z,152,,low,190,Z,low
+297,0,2693,7.2292,,C,,7,B,medium,,A,medium,43,X,312,Y,low,331,Y,low
+298,2,113781,151.55,C22 C26,S,high,67,D,,,,unknown,,Y,174,Z,medium,196,Z,high
+299,0,19988,30.5,C106,S,high,45,,high,89,,medium,88,Y,108,X,low,379,X,medium
+300,1,PC 17558,247.5208,B58 B60,C,,23,,,20,D,,,X,312,X,medium,499,X,medium
+301,0,9234,7.75,,Q,unknown,20,D,medium,16,C,low,33,,102,Y,low,357,Y,medium
+302,0,367226,23.25,,Q,unknown,66,D,unknown,39,B,low,,Z,68,Y,low,170,Z,low
+303,0,LINE,0,,S,unknown,52,B,unknown,83,C,unknown,38,X,265,Y,low,412,Z,high
+304,0,226593,12.35,E101,Q,unknown,,B,medium,96,C,,,Y,96,Y,low,18,Y,low
+305,0,A/5 2466,8.05,,S,unknown,28,,medium,,,,30,Y,96,Z,low,493,X,medium
+306,2,113781,151.55,C22 C26,S,,52,A,,,B,,10,X,390,Y,medium,419,Z,high
+307,0,17421,110.8833,,C,low,86,C,,23,C,,,X,264,Y,low,326,Y,high
+308,0,PC 17758,108.9,C65,C,,31,,medium,59,A,,65,,271,Z,low,310,X,medium
+309,0,P/PP 3381,24,,C,low,39,D,,18,A,high,93,Z,71,X,low,126,Y,high
+310,0,PC 17485,56.9292,E36,C,low,16,,low,53,A,,0,Y,80,Z,high,215,Z,low
+311,0,11767,83.1583,C54,C,unknown,,C,,,,medium,63,Y,195,Z,low,50,X,
+312,2,PC 17608,262.375,B57 B59 B63 B66,C,unknown,3,C,medium,7,A,low,56,Y,,Y,high,169,Y,medium
+313,1,250651,26,,S,high,24,C,unknown,96,B,unknown,62,Z,225,Y,low,294,X,low
+314,0,349243,7.8958,,S,high,,A,unknown,89,,unknown,98,Z,67,Y,low,181,Z,low
+315,1,F.C.C. 13529,26.25,,S,,1,B,unknown,,B,medium,39,X,449,X,medium,385,X,high
+316,0,347470,7.8542,,S,,98,,,62,A,,,Y,181,Y,high,426,Z,high
+317,0,244367,26,,S,unknown,40,B,,,D,low,1,Y,408,Z,low,280,Z,low
+318,0,29011,14,,S,medium,,D,high,57,B,,,X,200,,low,170,Z,low
+319,2,36928,164.8667,C7,S,high,53,,unknown,,A,,17,,236,X,high,151,Y,
+320,1,16966,134.5,E34,C,,,B,low,53,,,,X,56,Y,low,273,Z,low
+321,0,A/5 21172,7.25,,S,low,,,high,,,low,,Z,338,X,low,359,X,low
+322,0,349219,7.8958,,S,,88,A,low,39,,,27,X,29,Z,low,63,,high
+323,0,234818,12.35,,Q,,,B,,84,,low,11,Y,373,Y,high,223,X,high
+324,1,248738,29,,S,,,B,medium,25,,high,,Z,440,,high,220,X,high
+325,2,CA. 2343,69.55,,S,medium,70,D,high,96,B,high,65,Y,180,Y,high,143,Y,low
+326,0,PC 17760,135.6333,C32,C,high,30,,unknown,75,,,28,X,443,Y,medium,118,Y,high
+327,0,345364,6.2375,,S,unknown,99,A,low,89,B,low,13,X,349,Y,low,420,Z,low
+328,0,28551,13,D,S,high,25,,high,50,,medium,57,Y,1,Y,low,216,X,high
+329,1,363291,20.525,,S,medium,29,,low,22,A,low,,Z,101,Z,high,288,Y,medium
+330,1,111361,57.9792,B18,C,medium,71,A,low,3,D,high,,Y,320,Z,high,19,Z,low
+331,0,367226,23.25,,Q,high,78,C,,53,,low,38,X,350,X,low,141,X,high
+332,0,113043,28.5,C124,S,medium,12,C,high,39,D,high,,Z,46,X,high,111,Z,medium
+333,1,PC 17582,153.4625,C91,S,high,55,,low,11,C,unknown,24,Y,342,Z,high,164,Y,low
+334,0,345764,18,,S,,,B,medium,,D,high,28,X,405,Y,high,420,Y,high
+335,0,PC 17611,133.65,,S,,61,,,97,,,14,Y,45,X,high,,X,high
+336,0,349225,7.8958,,S,unknown,55,,medium,,D,,,X,439,Y,medium,451,X,medium
+337,0,113776,66.6,C2,S,medium,,B,unknown,,C,,14,Z,266,X,low,211,Z,medium
+338,0,16966,134.5,E40,C,medium,,,,,D,,68,Z,308,X,,385,Z,
+339,0,7598,8.05,,S,high,65,,,,,,,X,25,X,low,80,,medium
+340,0,113784,35.5,T,S,,67,D,,62,,unknown,,Y,306,X,,407,Y,
+341,1,230080,26,F2,S,unknown,,C,high,41,C,unknown,,X,227,X,high,305,Y,medium
+342,2,19950,263,C23 C25 C27,S,low,,,medium,,A,medium,63,Y,185,Z,low,19,Y,high
+343,0,248740,13,,S,unknown,72,B,,18,,medium,75,X,390,Y,high,344,Z,low
+344,0,244361,13,,S,,77,,medium,66,A,low,56,Z,,Y,high,239,Y,low
+345,0,229236,13,,S,,12,B,low,98,A,,,X,29,Z,medium,,X,low
+346,0,248733,13,F33,S,high,88,,low,85,,high,25,Z,249,Z,low,423,X,low
+347,0,31418,13,,S,unknown,,,medium,4,,,,X,371,Z,low,268,Z,high
+348,0,386525,16.1,,S,low,,C,unknown,11,A,medium,,X,66,X,high,303,Z,medium
+349,1,C.A. 37671,15.9,,S,high,48,,low,62,B,low,,Z,492,Z,low,,X,low
+350,0,315088,8.6625,,S,low,48,,,92,B,low,49,Z,336,Z,high,,X,medium
+351,0,7267,9.225,,S,low,91,,medium,84,C,,90,X,467,X,low,166,X,
+352,0,113510,35,C128,S,unknown,96,A,high,90,,low,27,X,235,Z,medium,350,Y,high
+353,1,2695,7.2292,,C,high,80,A,low,14,C,,51,Z,61,Z,medium,169,Y,low
+354,0,349237,17.8,,S,medium,65,B,low,51,B,,,Z,88,Z,low,444,X,high
+355,0,2647,7.225,,C,high,10,B,low,72,D,,63,Y,250,Y,high,158,X,medium
+356,0,345783,9.5,,S,medium,91,C,medium,62,B,,,X,294,X,high,,X,high
+357,1,113505,55,E33,S,medium,13,A,,77,B,high,41,X,367,Z,low,222,Y,medium
+358,0,237671,13,,S,medium,16,B,unknown,21,A,medium,0,X,397,Y,high,9,X,high
+359,0,330931,7.8792,,Q,medium,6,D,,45,D,,,Z,381,Z,high,405,Y,high
+360,0,330980,7.8792,,Q,unknown,94,D,,44,,low,,X,294,,high,67,X,
+361,4,347088,27.9,,S,medium,,D,,93,B,high,,Y,9,X,medium,234,Z,low
+362,0,SC/PARIS 2167,27.7208,,C,medium,,,,20,B,unknown,,Z,264,Z,medium,453,Z,high
+363,1,2691,14.4542,,C,high,8,A,medium,32,D,high,14,X,409,Y,medium,496,Y,low
+364,0,SOTON/O.Q. 3101310,7.05,,S,unknown,41,,medium,,,medium,,,423,,,115,Z,high
+365,0,370365,15.5,,Q,medium,72,A,high,15,A,high,79,Z,417,Z,,188,Y,medium
+366,0,C 7076,7.25,,S,unknown,99,,,,A,unknown,45,X,5,Y,low,282,X,low
+367,0,110813,75.25,D37,C,medium,,,medium,84,C,low,5,X,217,X,,349,X,low
+368,0,2626,7.2292,,C,high,60,D,medium,,A,high,6,X,,Z,high,125,X,high
+369,0,14313,7.75,,Q,unknown,83,C,high,70,,low,67,X,,Z,medium,274,Z,medium
+370,0,PC 17477,69.3,B35,C,,90,B,high,59,A,,,X,204,Y,medium,417,,low
+371,0,11765,55.4417,E50,C,low,27,B,low,,D,unknown,,Z,48,Z,high,381,Y,high
+372,0,3101267,6.4958,,S,high,,D,,30,D,medium,40,X,96,X,high,411,X,high
+373,0,323951,8.05,,S,,51,D,high,99,,,49,X,2,,high,444,X,low
+374,0,PC 17760,135.6333,,C,medium,93,C,high,,,medium,16,Z,489,X,low,430,Y,low
+375,1,349909,21.075,,S,unknown,11,D,,71,B,low,,X,429,Y,low,255,X,high
+376,0,PC 17604,82.1708,,C,,9,B,high,,,,76,X,201,Y,low,487,X,medium
+377,0,C 7077,7.25,,S,high,,B,high,,C,,42,X,2,Y,low,247,X,low
+378,2,113503,211.5,C82,C,high,67,D,medium,,,low,49,Z,167,X,medium,354,Y,medium
+379,0,2648,4.0125,,C,low,17,B,high,84,C,low,,Z,217,Z,high,471,X,high
+380,0,347069,7.775,,S,medium,89,D,medium,63,A,unknown,,,84,Y,medium,21,Z,medium
+381,0,PC 17757,227.525,,C,high,10,B,medium,28,B,,98,Z,330,Y,high,466,Y,high
+382,2,2653,15.7417,,C,low,,B,low,96,,unknown,81,X,498,Z,medium,,X,
+383,0,STON/O 2. 3101293,7.925,,S,medium,,A,medium,70,,high,,Y,421,Y,high,498,X,high
+384,0,113789,52,,S,,,C,low,42,,,,Y,428,Z,low,386,Z,medium
+385,0,349227,7.8958,,S,unknown,,B,,13,,medium,72,X,415,X,low,78,Y,high
+386,0,S.O.C. 14879,73.5,,S,low,84,B,medium,97,B,,33,Z,34,Z,high,150,Z,medium
+387,2,CA 2144,46.9,,S,unknown,10,C,high,,C,unknown,51,Y,275,Z,medium,1,Z,high
+388,0,27849,13,,S,medium,,A,unknown,,,low,14,Z,282,Z,medium,303,Z,low
+389,0,367655,7.7292,,Q,high,61,,low,83,,,,X,50,Z,high,218,,low
+390,0,SC 1748,12,,C,high,2,D,unknown,60,D,high,,Z,73,Z,high,237,Z,
+391,2,113760,120,B96 B98,S,,74,C,medium,,,unknown,72,X,282,Y,,366,Z,low
+392,0,350034,7.7958,,S,unknown,,C,,23,A,unknown,60,X,357,Z,medium,410,,high
+393,0,3101277,7.925,,S,low,75,,,7,A,low,,Y,104,Z,medium,36,X,low
+394,0,35273,113.275,D36,C,low,,C,unknown,,,,50,X,242,Y,medium,458,Y,high
+395,2,PP 9549,16.7,G6,S,unknown,19,B,low,,C,,,X,37,Z,high,186,Z,medium
+396,0,350052,7.7958,,S,high,,,,,,low,,Z,55,X,high,376,Z,medium
+397,0,350407,7.8542,,S,unknown,6,A,,16,A,,1,Y,290,Z,low,290,X,medium
+398,0,28403,26,,S,medium,53,C,,57,C,,,Y,278,Z,medium,221,X,medium
+399,0,244278,10.5,,S,,,C,high,12,A,low,,X,375,X,medium,106,X,medium
+400,0,240929,12.65,,S,low,,,medium,,A,,36,Z,455,X,medium,94,Z,medium
+401,0,STON/O 2. 3101289,7.925,,S,medium,20,,medium,79,A,high,87,Z,94,,low,365,Y,high
+402,0,341826,8.05,,S,low,76,D,,,C,unknown,64,Z,170,X,medium,160,Y,high
+403,0,4137,9.825,,S,unknown,69,,,94,B,low,60,Y,427,Z,high,114,X,medium
+404,0,STON/O2. 3101279,15.85,,S,,,C,,31,B,,,Y,25,Y,low,2,X,medium
+405,0,315096,8.6625,,S,unknown,,D,unknown,94,C,low,50,X,414,Y,medium,420,Z,low
+406,0,28664,21,,S,low,6,,,78,A,high,70,X,472,,high,197,X,high
+407,0,347064,7.75,,S,low,44,A,unknown,33,,unknown,,X,49,Y,medium,174,X,low
+408,1,29106,18.75,,S,,,B,unknown,,,unknown,60,Y,,Z,medium,185,X,medium
+409,0,312992,7.775,,S,,11,D,medium,10,C,medium,17,Z,342,,low,299,X,high
+410,1,4133,25.4667,,S,medium,55,B,high,,,medium,67,Z,237,X,low,240,Y,high
+411,0,349222,7.8958,,S,medium,,D,,20,C,,7,X,493,Y,medium,272,Z,medium
+412,0,394140,6.8583,,Q,,,,,26,,unknown,31,X,272,Y,,138,X,medium
+413,0,19928,90,C78,Q,,,,high,41,A,,91,X,327,Y,low,148,Y,low
+414,0,239853,0,,S,low,8,B,medium,,C,low,,X,118,Z,low,431,X,medium
+415,0,STON/O 2. 3101269,7.925,,S,,67,C,high,80,A,unknown,90,Y,,Y,high,219,Y,low
+416,0,343095,8.05,,S,low,33,,medium,69,B,,35,Z,88,X,high,,X,high
+417,1,28220,32.5,,S,low,,,high,15,,unknown,68,X,73,Y,low,422,Y,high
+418,2,250652,13,,S,,19,C,medium,16,,low,70,Z,56,Y,medium,355,,low
+419,0,28228,13,,S,medium,97,,medium,,C,,,Y,446,X,medium,274,Y,low
+420,2,345773,24.15,,S,,25,D,,94,D,medium,,Y,34,,low,418,X,medium
+421,0,349254,7.8958,,C,medium,68,D,,,C,high,96,Z,258,X,low,27,X,medium
+422,0,A/5. 13032,7.7333,,Q,medium,,B,,,B,medium,11,Z,254,X,low,249,X,medium
+423,0,315082,7.875,,S,medium,18,,low,14,A,medium,,,27,Y,,356,Z,low
+424,1,347080,14.4,,S,high,30,,low,23,C,medium,44,Y,421,X,low,54,X,high
+425,1,370129,20.2125,,S,,1,B,,,D,unknown,67,X,250,Z,medium,91,Y,low
+426,0,A/4. 34244,7.25,,S,low,,C,,20,B,,55,Z,63,X,low,32,Y,medium
+427,0,2003,26,,S,medium,33,,low,61,,,,Z,64,Y,low,243,Y,high
+428,0,250655,26,,S,low,49,A,unknown,92,,low,9,Z,350,X,low,270,X,high
+429,0,364851,7.75,,Q,medium,15,B,,,C,high,51,Y,309,Y,medium,234,Y,medium
+430,0,SOTON/O.Q. 392078,8.05,E10,S,,82,,high,60,C,high,83,X,206,Z,low,27,Z,low
+431,0,110564,26.55,C52,S,medium,21,B,low,,A,high,,,,Y,low,243,Z,high
+432,0,376564,16.1,,S,low,,,unknown,,A,low,27,Y,17,Y,low,444,X,low
+433,0,SC/AH 3085,26,,S,high,87,C,high,0,,unknown,86,Y,15,X,high,15,Y,low
+434,0,STON/O 2. 3101274,7.125,,S,low,71,,,11,B,unknown,35,X,267,X,medium,387,X,low
+435,0,13507,55.9,E44,S,low,60,B,,,,unknown,56,Z,181,Y,high,136,Z,high
+436,2,113760,120,B96 B98,S,,,A,medium,,B,unknown,,Y,126,Y,low,37,Y,medium
+437,2,W./C. 6608,34.375,,S,unknown,,D,,32,,medium,52,X,189,X,,25,Z,medium
+438,3,29106,18.75,,S,unknown,96,D,unknown,52,C,,,Y,302,Z,low,6,Z,high
+439,4,19950,263,C23 C25 C27,S,high,,D,,57,A,medium,,Z,146,Y,low,207,X,high
+440,0,C.A. 18723,10.5,,S,high,40,A,high,66,,,47,Y,174,X,low,248,Y,high
+441,1,F.C.C. 13529,26.25,,S,high,25,C,high,,,medium,,,141,X,low,310,Y,low
+442,0,345769,9.5,,S,high,,,unknown,37,,high,65,Z,333,Y,low,40,,
+443,0,347076,7.775,,S,high,97,D,medium,88,A,unknown,41,Y,27,Y,low,327,Z,medium
+444,0,230434,13,,S,unknown,69,,low,5,A,high,52,Y,459,Z,low,369,Y,high
+445,0,65306,8.1125,,S,,3,C,,,C,unknown,,X,277,Y,high,32,X,medium
+446,2,33638,81.8583,A34,S,low,46,A,high,95,,unknown,86,Z,122,Y,low,,Y,low
+447,1,250644,19.5,,S,medium,,C,,17,A,low,12,Z,379,Z,,59,Z,
+448,0,113794,26.55,,S,unknown,,D,medium,99,,unknown,87,Y,469,Y,medium,219,Y,medium
+449,1,2666,19.2583,,C,medium,77,A,high,28,A,unknown,,X,29,Z,medium,330,Z,high
+450,0,113786,30.5,C104,S,low,70,,,36,A,,,Y,102,Y,,435,Z,medium
+451,2,C.A. 34651,27.75,,S,unknown,6,,,,C,,2,Z,71,Z,medium,265,Y,medium
+452,0,65303,19.9667,,S,high,55,A,unknown,94,A,,,X,35,Y,low,217,Z,low
+453,0,113051,27.75,C111,C,,,,,,A,unknown,5,Y,,Z,low,,Y,low
+454,0,17453,89.1042,C92,C,medium,48,,high,16,D,,,Y,96,Z,low,108,Y,low
+455,0,A/5 2817,8.05,,S,low,,B,,48,A,low,,Y,191,Y,high,102,Z,low
+456,0,349240,7.8958,,C,medium,,D,medium,15,C,low,76,Y,407,X,medium,233,X,
+457,0,13509,26.55,E38,S,medium,86,D,high,78,D,low,70,Z,,X,low,60,Z,low
+458,0,17464,51.8625,D21,S,unknown,46,B,low,,D,,84,X,338,X,,11,Y,low
+459,0,F.C.C. 13531,10.5,,S,,53,A,,49,D,unknown,0,Y,48,X,medium,181,Y,high
+460,0,371060,7.75,,Q,low,62,,high,39,B,high,78,Z,485,Y,low,76,Z,high
+461,0,19952,26.55,E12,S,,65,A,high,3,D,low,31,Z,41,X,,318,Y,low
+462,0,364506,8.05,,S,unknown,63,D,medium,5,,,,Y,354,X,high,274,Z,high
+463,0,111320,38.5,E63,S,medium,78,C,high,51,,medium,76,Z,319,X,medium,242,Y,low
+464,0,234360,13,,S,medium,98,C,low,39,A,,68,X,206,X,high,248,X,low
+465,0,A/S 2816,8.05,,S,high,82,A,high,12,C,,41,Y,419,Y,low,49,Y,medium
+466,0,SOTON/O.Q. 3101306,7.05,,S,high,13,,unknown,13,D,medium,61,Z,446,Z,high,201,X,low
+467,0,239853,0,,S,medium,,C,unknown,,,,46,Y,35,Z,medium,35,Z,low
+468,0,113792,26.55,,S,unknown,,,unknown,,D,,62,Y,479,Z,high,177,X,high
+469,0,36209,7.725,,Q,high,50,B,,60,,medium,45,Y,120,Z,high,338,Y,high
+470,1,2666,19.2583,,C,low,52,,low,83,D,high,39,Y,395,Z,medium,493,Z,low
+471,0,323592,7.25,,S,,71,,high,6,C,,20,Z,410,X,low,148,,low
+472,0,315089,8.6625,,S,unknown,,B,low,,B,,38,Y,278,X,high,132,Y,high
+473,2,C.A. 34651,27.75,,S,medium,26,C,medium,,A,,,X,431,Y,medium,334,Y,high
+474,0,SC/AH Basle 541,13.7917,D,C,high,45,B,high,20,,unknown,87,X,412,X,medium,458,Y,low
+475,0,7553,9.8375,,S,,,,high,53,,,,Z,,X,high,147,Z,high
+476,0,110465,52,A14,S,,31,C,high,,B,medium,18,Y,89,Z,high,419,X,low
+477,0,31027,21,,S,unknown,2,,unknown,,C,low,50,X,217,Y,low,157,Y,medium
+478,0,3460,7.0458,,S,low,97,,low,,,,,X,450,Z,medium,319,X,high
+479,0,350060,7.5208,,S,high,,B,unknown,66,B,high,,X,101,Y,high,104,Y,medium
+480,1,3101298,12.2875,,S,high,60,,,75,A,,32,X,499,Y,,131,Z,medium
+481,2,CA 2144,46.9,,S,low,,A,medium,0,B,,4,Z,,X,medium,491,X,high
+482,0,239854,0,,S,,27,,medium,,A,,5,Y,332,X,low,194,Y,medium
+483,0,A/5 3594,8.05,,S,,34,,high,50,A,low,,Y,320,X,low,8,X,high
+484,0,4134,9.5875,,S,medium,28,B,high,36,,high,72,X,97,Z,medium,386,X,high
+485,0,11967,91.0792,B49,C,,,,medium,,,unknown,86,Z,236,Z,high,63,Z,low
+486,1,4133,25.4667,,S,low,15,B,low,,C,medium,49,Z,72,X,medium,55,Z,high
+487,0,19943,90,C93,S,,,D,low,75,C,unknown,,Z,182,Y,low,418,Z,high
+488,0,11771,29.7,B37,C,,45,,medium,82,C,low,92,Y,479,Y,high,174,Y,high
+489,0,A.5. 18509,8.05,,S,,53,B,,41,,,27,Y,27,Y,low,69,Y,medium
+490,1,C.A. 37671,15.9,,S,,1,,high,93,A,unknown,15,X,435,X,low,,Z,medium
+491,0,65304,19.9667,,S,,84,C,unknown,92,C,high,13,Z,338,X,medium,140,Y,medium
+492,0,SOTON/OQ 3101317,7.25,,S,low,67,,low,66,D,high,35,Z,374,X,high,316,Z,high
+493,0,113787,30.5,C30,S,medium,7,B,medium,58,A,unknown,73,X,141,X,low,131,X,medium
+494,0,PC 17609,49.5042,,C,high,84,C,low,,,medium,,Y,474,X,,290,X,low
+495,0,A/4 45380,8.05,,S,unknown,3,C,,60,C,,,X,126,Y,high,348,Y,high
+496,0,2627,14.4583,,C,unknown,,A,,,D,,34,Y,251,Z,medium,378,X,low
+497,0,36947,78.2667,D20,C,high,46,D,low,97,B,low,,X,18,Z,,,,medium
+498,0,C.A. 6212,15.1,,S,low,,C,,19,D,high,68,Z,443,Y,medium,307,X,low
+499,2,113781,151.55,C22 C26,S,,95,A,high,66,A,medium,66,Z,352,X,low,420,X,medium
+500,0,350035,7.7958,,S,low,,C,unknown,73,,unknown,43,Z,81,Y,low,420,Z,medium
+501,0,315086,8.6625,,S,low,,C,,,D,unknown,,X,331,X,medium,373,Y,
+502,0,364846,7.75,,Q,high,57,D,medium,34,B,medium,,X,91,X,medium,199,Z,high
+503,0,330909,7.6292,,Q,,,,high,86,C,high,65,Z,222,Z,high,265,X,medium
+504,0,4135,9.5875,,S,low,72,B,high,48,A,,81,X,256,,low,483,X,
+505,0,110152,86.5,B79,S,low,88,A,high,38,C,medium,,Y,465,Y,low,124,Y,low
+506,0,PC 17758,108.9,C65,C,high,,C,low,15,C,unknown,85,Z,166,Y,low,346,Z,high
+507,2,26360,26,,S,medium,,,,32,,medium,,Y,6,X,medium,396,Z,high
+508,0,111427,26.55,,S,high,51,B,,97,A,,,X,216,Y,high,240,Z,medium
+509,0,C 4001,22.525,,S,medium,,,unknown,,,high,95,Z,463,Y,high,432,Y,
+510,0,1601,56.4958,,S,high,,C,unknown,,,unknown,56,Z,399,Z,low,214,Z,medium
+511,0,382651,7.75,,Q,,,B,high,,D,high,27,X,29,Y,medium,418,X,high
+512,0,SOTON/OQ 3101316,8.05,,S,,70,,high,,A,unknown,60,Y,26,X,high,322,Y,low
+513,0,PC 17473,26.2875,E25,S,medium,51,B,,66,C,medium,62,Y,378,Z,low,25,X,high
+514,0,PC 17603,59.4,,C,high,,,unknown,37,D,medium,,Y,360,X,high,411,X,high
+515,0,349209,7.4958,,S,high,42,B,medium,84,C,medium,20,Z,278,X,low,348,Y,high
+516,0,36967,34.0208,D46,S,high,49,D,medium,42,B,low,,Z,44,Y,low,111,Z,high
+517,0,C.A. 34260,10.5,F33,S,,,C,high,85,A,,54,X,140,Z,low,351,X,high
+518,0,371110,24.15,,Q,low,55,C,,74,B,medium,14,Z,423,X,high,255,Z,
+519,0,226875,26,,S,,79,,,77,A,unknown,77,Z,69,X,high,471,Y,low
+520,0,349242,7.8958,,S,high,2,C,high,92,A,unknown,,X,100,X,high,152,Z,low
+521,0,12749,93.5,B73,S,high,75,A,high,79,B,,93,X,226,Z,high,131,X,medium
+522,0,349252,7.8958,,S,,50,,medium,,,medium,67,Y,367,,high,29,Z,
+523,0,2624,7.225,,C,,,B,high,52,A,high,33,Z,414,Z,medium,393,X,low
+524,1,111361,57.9792,B18,C,high,47,C,,,,unknown,37,Z,295,X,high,492,Y,medium
+525,0,2700,7.2292,,C,,47,C,medium,6,,low,69,Y,246,Z,low,344,Z,low
+526,0,367232,7.75,,Q,,12,B,,59,,unknown,8,X,192,X,medium,184,Z,medium
+527,0,W./C. 14258,10.5,,S,high,,B,,,,unknown,71,X,21,Z,high,439,X,
+528,0,PC 17483,221.7792,C95,S,medium,70,C,unknown,,D,unknown,55,Z,133,Z,high,126,X,high
+529,0,3101296,7.925,,S,high,,,high,10,C,low,22,Y,107,Z,medium,346,Y,high
+530,1,29104,11.5,,S,,9,A,unknown,50,A,unknown,89,Y,28,Z,low,298,Y,medium
+531,1,26360,26,,S,unknown,21,B,,57,A,high,62,Z,372,X,high,426,X,high
+532,0,2641,7.2292,,C,,87,,unknown,10,C,high,16,X,176,Y,low,485,X,low
+533,1,2690,7.2292,,C,,,D,high,63,,low,65,X,254,X,high,179,X,low
+534,2,2668,22.3583,,C,low,50,,unknown,16,,medium,41,Z,100,Y,high,47,X,high
+535,0,315084,8.6625,,S,,,D,unknown,14,D,medium,76,X,295,Y,high,78,Y,high
+536,2,F.C.C. 13529,26.25,,S,unknown,,C,unknown,40,D,unknown,49,Z,67,Z,low,369,X,
+537,0,113050,26.55,B38,S,,85,B,,,C,,99,Z,338,Y,low,181,Z,low
+538,0,PC 17761,106.425,,C,,89,,high,91,C,,92,X,369,Z,medium,69,Z,low
+539,0,364498,14.5,,S,low,28,D,unknown,,D,,4,Y,155,X,medium,407,X,low
+540,2,13568,49.5,B39,C,unknown,58,A,medium,,A,low,,Z,106,X,medium,324,Z,medium
+541,2,WE/P 5735,71,B22,S,,,A,low,73,C,unknown,,Y,390,Z,low,65,Y,low
+542,2,347082,31.275,,S,,,B,unknown,,,unknown,,X,111,,medium,356,X,high
+543,2,347082,31.275,,S,high,0,A,high,98,A,medium,14,X,89,Z,high,318,X,medium
+544,0,2908,26,,S,medium,97,D,,74,A,high,53,X,170,Y,high,492,Y,high
+545,0,PC 17761,106.425,C86,C,high,35,D,high,,B,unknown,15,X,483,Z,medium,493,Z,medium
+546,0,693,26,,S,,,C,low,94,B,high,,X,231,Y,low,487,X,high
+547,0,2908,26,,S,low,61,,medium,10,D,high,45,X,131,Y,low,447,X,low
+548,0,SC/PARIS 2146,13.8625,,C,,78,A,medium,45,B,low,99,Z,256,Z,low,,,medium
+549,1,363291,20.525,,S,,,C,,,C,,87,Y,174,Z,,335,Z,low
+550,1,C.A. 33112,36.75,,S,unknown,,B,unknown,0,,,,X,332,X,high,,X,high
+551,2,17421,110.8833,C70,C,low,89,B,high,45,D,high,,X,219,Z,medium,396,Z,medium
+552,0,244358,26,,S,unknown,93,B,low,68,C,unknown,,X,294,Y,high,482,Y,
+553,0,330979,7.8292,,Q,high,15,,medium,79,D,,66,X,218,Z,low,58,X,high
+554,0,2620,7.225,,C,,90,C,low,41,C,high,13,Z,,Y,high,68,Z,high
+555,0,347085,7.775,,S,unknown,90,A,unknown,86,A,,,X,223,Z,low,249,X,low
+556,0,113807,26.55,,S,low,,C,medium,67,C,,99,Y,196,Y,low,146,Y,high
+557,0,11755,39.6,A16,C,low,21,D,,4,B,low,,Y,481,X,high,265,Y,high
+558,0,PC 17757,227.525,,C,unknown,,A,medium,27,B,high,1,X,132,Z,high,155,Z,medium
+559,1,110413,79.65,E67,S,low,99,D,low,93,C,medium,,X,402,X,medium,391,Z,medium
+560,0,345572,17.4,,S,,,C,unknown,0,B,unknown,,X,354,Y,medium,449,Z,high
+561,0,372622,7.75,,Q,,,B,high,10,A,unknown,,X,263,Z,high,141,,medium
+562,0,349251,7.8958,,S,unknown,19,C,medium,34,,unknown,63,Z,158,Z,high,386,X,medium
+563,0,218629,13.5,,S,,8,,,99,C,unknown,35,Z,241,Z,low,53,X,low
+564,0,SOTON/OQ 392082,8.05,,S,high,25,D,high,,,medium,35,Y,,,low,398,Y,high
+565,0,SOTON/O.Q. 392087,8.05,,S,low,6,A,low,,,,,Z,90,Z,low,,Y,high
+566,0,A/4 48871,24.15,,S,,19,A,,39,C,high,85,Z,293,X,medium,355,X,low
+567,0,349205,7.8958,,S,,7,C,,93,C,,49,Z,,Z,low,,X,medium
+568,4,349909,21.075,,S,low,76,B,low,21,D,medium,31,X,316,X,medium,53,Y,low
+569,0,2686,7.2292,,C,high,58,A,high,57,B,high,,Z,72,Z,low,421,Z,medium
+570,0,350417,7.8542,,S,low,51,B,unknown,46,,,1,,254,Y,medium,54,Z,low
+571,0,S.W./PP 752,10.5,,S,medium,80,C,,,,unknown,48,Y,91,Z,high,240,Z,high
+572,0,11769,51.4792,C101,S,,41,,high,75,,low,55,Z,464,Y,low,87,Y,
+573,0,PC 17474,26.3875,E25,S,high,40,D,,83,,medium,67,Y,175,Z,low,423,Z,high
+574,0,14312,7.75,,Q,,20,B,unknown,11,D,,80,X,210,Z,,287,Y,high
+575,0,A/4. 20589,8.05,,S,low,,A,high,,D,,36,X,428,,low,253,Y,high
+576,0,358585,14.5,,S,unknown,,,high,,D,high,,X,213,X,,158,X,low
+577,0,243880,13,,S,high,58,D,unknown,,,low,,X,96,Y,high,391,Y,high
+578,0,13507,55.9,E44,S,,,A,unknown,66,D,medium,76,Y,446,Y,medium,105,X,high
+579,0,2689,14.4583,,C,,53,B,,63,,unknown,,,323,X,low,360,Y,low
+580,0,STON/O 2. 3101286,7.925,,S,,29,,high,37,D,medium,3,Y,302,X,medium,484,Z,low
+581,1,237789,30,,S,high,,C,low,,B,medium,,Y,37,X,high,133,Y,high
+582,1,17421,110.8833,C68,C,high,82,B,unknown,,,low,,X,224,Z,low,343,X,medium
+583,0,28403,26,,S,,,,unknown,82,B,,,Y,229,Y,high,154,Z,low
+584,0,13049,40.125,A10,C,medium,25,,medium,89,A,low,50,Z,131,Z,high,464,Z,medium
+585,0,3411,8.7125,,C,unknown,71,,high,29,C,medium,46,X,282,Z,low,449,Y,high
+586,2,110413,79.65,E68,S,,,A,,,A,high,37,,122,,medium,156,X,medium
+587,0,237565,15,,S,,,,,32,A,,41,Z,235,Z,low,,X,medium
+588,1,13567,79.2,B41,C,medium,31,C,,3,,,1,Y,400,X,medium,41,X,medium
+589,0,14973,8.05,,S,unknown,35,A,unknown,16,,medium,10,,367,Y,high,348,Z,low
+590,0,A./5. 3235,8.05,,S,medium,,B,unknown,30,A,low,75,X,139,Z,high,459,X,low
+591,0,STON/O 2. 3101273,7.125,,S,low,1,A,low,98,D,medium,36,Z,,,low,72,Y,medium
+592,0,36947,78.2667,D20,C,high,,D,unknown,20,D,,,Y,2,Z,medium,408,Z,low
+593,0,A/5 3902,7.25,,S,unknown,12,,,50,D,medium,39,,172,Y,low,377,Z,high
+594,2,364848,7.75,,Q,low,,D,low,,B,medium,99,Y,9,,low,235,X,medium
+595,0,SC/AH 29037,26,,S,medium,55,,,35,A,medium,,Z,64,Z,high,111,Z,medium
+596,1,345773,24.15,,S,medium,,,high,91,,,18,,489,,,326,Z,medium
+597,0,248727,33,,S,low,34,B,unknown,9,C,high,58,,427,Y,medium,297,Y,high
+598,0,LINE,0,,S,high,77,,low,87,A,high,,Y,279,Y,high,405,X,medium
+599,0,2664,7.225,,C,medium,,,,74,D,unknown,14,Z,387,X,high,282,Z,low
+600,0,PC 17485,56.9292,A20,C,low,1,A,,,B,high,,Z,244,Y,low,24,Y,medium
+601,1,243847,27,,S,medium,,D,medium,76,,high,,Y,300,Y,low,101,Y,low
+602,0,349214,7.8958,,S,unknown,2,,,42,A,high,73,X,458,X,medium,190,Y,medium
+603,0,113796,42.4,,S,unknown,52,D,unknown,97,B,high,56,Z,39,Y,high,245,X,medium
+604,0,364511,8.05,,S,high,87,A,unknown,3,,low,65,Y,,X,low,174,Y,medium
+605,0,111426,26.55,,C,medium,,D,medium,2,,medium,26,Y,59,Y,medium,439,X,medium
+606,0,349910,15.55,,S,unknown,,,,,C,,28,Z,397,X,high,140,X,medium
+607,0,349246,7.8958,,S,low,,B,high,93,D,low,63,Y,411,Z,high,340,Y,high
+608,0,113804,30.5,,S,high,78,A,low,6,C,unknown,35,Y,360,Z,medium,180,X,high
+609,2,SC/Paris 2123,41.5792,,C,,,,high,77,,,,X,304,Z,high,496,Z,high
+610,0,PC 17582,153.4625,C125,S,high,28,,unknown,93,C,,15,Z,238,Z,high,458,Z,low
+611,5,347082,31.275,,S,low,0,,,,,low,30,Y,11,X,high,392,Y,medium
+612,0,SOTON/O.Q. 3101305,7.05,,S,high,44,B,low,86,,unknown,10,Z,387,Y,high,382,Y,low
+613,0,367230,15.5,,Q,high,61,,low,75,D,low,8,X,446,X,high,321,X,medium
+614,0,370377,7.75,,Q,unknown,,C,high,,C,,,Z,482,X,low,293,X,high
+615,0,364512,8.05,,S,low,93,A,low,85,B,low,48,Y,170,Y,low,281,Z,medium
+616,2,220845,65,,S,,,,unknown,69,B,unknown,14,X,100,Y,medium,13,Y,high
+617,1,347080,14.4,,S,unknown,78,B,low,1,,low,9,X,326,X,high,,Z,high
+618,0,A/5. 3336,16.1,,S,,2,,low,,,unknown,87,X,8,X,high,,X,high
+619,1,230136,39,F4,S,high,85,,medium,,A,high,51,X,30,Y,high,263,X,high
+620,0,31028,10.5,,S,low,75,A,unknown,,,low,71,Y,410,X,low,435,Y,high
+621,0,2659,14.4542,,C,high,,C,,,,,72,Z,478,X,high,201,Z,high
+622,0,11753,52.5542,D19,S,,58,D,medium,,B,unknown,10,Z,201,Y,,56,Y,low
+623,1,2653,15.7417,,C,,,D,high,29,,low,,Z,253,X,low,417,Z,low
+624,0,350029,7.8542,,S,low,90,,,19,D,unknown,,Y,,Z,high,254,X,medium
+625,0,54636,16.1,,S,high,55,A,unknown,8,D,,44,Y,69,Z,high,470,Z,high
+626,0,36963,32.3208,D50,S,,,,low,63,,,86,X,111,Z,medium,106,Y,medium
+627,0,219533,12.35,,Q,medium,61,D,unknown,95,D,medium,,X,149,X,low,239,X,low
+628,0,13502,77.9583,D9,S,,68,C,unknown,,D,,,Y,,Y,low,333,Y,high
+629,0,349224,7.8958,,S,unknown,,C,,,D,medium,10,Z,,Z,high,68,Z,high
+630,0,334912,7.7333,,Q,high,81,B,,,,unknown,61,X,360,Y,low,498,Z,medium
+631,0,27042,30,A23,S,,20,C,medium,17,B,,88,X,97,X,medium,304,X,high
+632,0,347743,7.0542,,S,,89,A,unknown,21,,,57,X,476,Z,low,85,Z,high
+633,0,13214,30.5,B50,C,low,55,,unknown,28,D,unknown,80,X,441,X,low,370,X,high
+634,0,112052,0,,S,high,32,,high,68,,medium,53,X,237,Z,high,439,Y,low
+635,2,347088,27.9,,S,high,,,,29,D,low,41,X,112,X,high,186,,low
+636,0,237668,13,,S,unknown,1,A,,82,,unknown,,X,488,Z,medium,,Z,medium
+637,0,STON/O 2. 3101292,7.925,,S,unknown,74,A,high,36,C,,15,Y,404,X,medium,373,Y,high
+638,1,C.A. 31921,26.25,,S,,37,,,10,A,,,Z,,Z,medium,72,,high
+639,5,3101295,39.6875,,S,,84,D,unknown,9,B,,,X,133,Y,medium,265,Y,low
+640,0,376564,16.1,,S,medium,23,C,high,40,C,unknown,,X,,,high,,Z,high
+641,0,350050,7.8542,,S,,92,,high,40,A,unknown,,Z,185,Z,high,150,Z,medium
+642,0,PC 17477,69.3,B35,C,high,94,B,low,,A,high,99,X,337,Z,low,149,X,high
+643,2,347088,27.9,,S,unknown,10,C,,47,C,,23,Z,416,Z,low,314,Y,high
+644,0,1601,56.4958,,S,,64,D,,16,A,medium,72,Y,244,Y,high,375,X,low
+645,1,2666,19.2583,,C,,93,B,,21,,high,87,Z,24,,medium,194,Y,medium
+646,0,PC 17572,76.7292,D33,C,,32,C,high,56,B,unknown,83,X,281,,medium,73,Y,low
+647,0,349231,7.8958,,S,unknown,,C,medium,33,,low,,,429,X,high,393,Z,medium
+648,0,13213,35.5,A26,C,high,,D,unknown,67,,,17,Y,111,X,medium,86,X,high
+649,0,S.O./P.P. 751,7.55,,S,low,47,D,,92,,high,46,X,479,X,medium,,Z,high
+650,0,CA. 2314,7.55,,S,low,2,C,low,35,C,high,77,X,181,Y,medium,161,Z,high
+651,0,349221,7.8958,,S,unknown,84,C,,55,C,unknown,61,Z,342,Z,low,409,Y,medium
+652,1,231919,23,,S,unknown,,D,medium,,B,,,X,350,Y,high,378,Y,low
+653,0,8475,8.4333,,S,unknown,,,low,21,,low,21,Y,91,X,high,153,,medium
+654,0,330919,7.8292,,Q,low,25,,,51,D,low,65,Z,,Y,high,259,X,medium
+655,0,365226,6.75,,Q,high,1,C,high,30,D,unknown,42,X,474,X,medium,479,Z,medium
+656,0,S.O.C. 14879,73.5,,S,unknown,,C,,62,D,,,X,350,Y,low,359,Y,low
+657,0,349223,7.8958,,S,high,2,A,low,74,,high,93,Y,315,Z,medium,379,X,high
+658,1,364849,15.5,,Q,high,79,C,unknown,14,C,medium,0,X,151,X,low,43,Y,
+659,0,29751,13,,S,,51,,unknown,18,A,medium,23,Z,54,Z,high,120,Z,medium
+660,2,35273,113.275,D48,C,low,,,high,2,D,unknown,91,X,135,X,medium,52,Z,low
+661,0,PC 17611,133.65,,S,medium,81,C,low,1,A,,,X,273,Z,low,489,X,
+662,0,2623,7.225,,C,,89,,,,,,30,X,346,X,medium,171,Z,medium
+663,0,5727,25.5875,E58,S,low,12,D,high,70,D,unknown,,X,159,X,high,249,,medium
+664,0,349210,7.4958,,S,low,,C,high,,,unknown,,X,107,Y,low,275,X,
+665,0,STON/O 2. 3101285,7.925,,S,,12,B,,40,D,high,,Y,124,Y,medium,261,Y,high
+666,0,S.O.C. 14879,73.5,,S,unknown,68,D,unknown,,B,low,30,Y,480,Y,high,26,Z,medium
+667,0,234686,13,,S,high,56,B,unknown,72,,high,53,Y,,X,high,454,X,low
+668,0,312993,7.775,,S,high,8,B,high,80,A,high,,X,495,Z,high,190,Y,low
+669,0,A/5 3536,8.05,,S,,23,,,73,,high,,X,3,Z,medium,459,Y,low
+670,0,19996,52,C126,S,low,53,D,high,,,low,79,X,229,Z,medium,382,X,low
+671,1,29750,39,,S,medium,,C,low,52,B,,62,X,228,Z,medium,,X,high
+672,0,F.C. 12750,52,B71,S,,34,,,52,A,unknown,,Z,200,Z,medium,351,Y,low
+673,0,C.A. 24580,10.5,,S,unknown,,D,,64,A,medium,98,X,195,X,,489,X,high
+674,0,244270,13,,S,,99,A,low,79,B,medium,,X,39,Y,low,151,X,medium
+675,0,239856,0,,S,,76,,high,,,low,89,Y,16,Z,high,164,X,medium
+676,0,349912,7.775,,S,medium,,C,high,67,C,unknown,,X,389,X,medium,335,X,high
+677,0,342826,8.05,,S,medium,,D,,83,A,low,92,Y,220,Y,medium,116,,high
+678,0,4138,9.8417,,S,unknown,,B,high,,,medium,78,Y,81,X,medium,401,X,low
+679,6,CA 2144,46.9,,S,medium,51,D,unknown,41,C,medium,21,,,Z,medium,14,,high
+680,1,PC 17755,512.3292,B51 B53 B55,C,unknown,44,A,unknown,,B,,20,X,466,Z,high,448,Z,low
+681,0,330935,8.1375,,Q,,83,D,medium,2,,,54,,233,X,medium,173,Y,medium
+682,0,PC 17572,76.7292,D49,C,,,A,,,D,unknown,50,Z,495,Z,medium,,Z,medium
+683,0,6563,9.225,,S,,,,,80,B,unknown,23,Y,80,Y,medium,301,X,low
+684,2,CA 2144,46.9,,S,medium,,,high,17,,high,26,X,61,Z,low,137,Z,medium
+685,1,29750,39,,S,,6,D,low,,B,low,89,Y,281,X,low,152,X,medium
+686,2,SC/Paris 2123,41.5792,,C,,69,D,,90,,unknown,,Y,341,X,,240,X,high
+687,1,3101295,39.6875,,S,,65,,high,49,,medium,,Z,490,Z,,289,Z,high
+688,0,349228,10.1708,,S,unknown,58,D,medium,48,B,,,Z,232,,,68,Y,medium
+689,0,350036,7.7958,,S,low,5,B,high,42,A,medium,15,Y,100,X,low,24,Z,high
+690,1,24160,211.3375,B5,S,low,49,C,low,37,,,,X,270,X,high,,Z,
+691,0,17474,57,B20,S,high,89,A,medium,38,A,,,,153,Y,medium,177,Y,
+692,1,349256,13.4167,,C,medium,23,A,high,55,C,,64,X,89,X,high,291,X,high
+693,0,1601,56.4958,,S,,69,A,high,,A,,,Z,44,Z,medium,374,Y,high
+694,0,2672,7.225,,C,low,85,C,unknown,,A,,23,Y,361,Z,high,307,Y,low
+695,0,113800,26.55,,S,,,,unknown,86,D,medium,18,Y,321,Z,,52,Y,high
+696,0,248731,13.5,,S,medium,51,D,,11,A,unknown,,,83,,high,498,X,low
+697,0,363592,8.05,,S,medium,,,low,30,B,,7,Y,279,Y,low,357,Z,medium
+698,0,35852,7.7333,,Q,high,69,C,,75,C,unknown,,Y,442,Y,low,24,Y,high
+699,1,17421,110.8833,C68,C,,,,low,54,B,medium,86,X,409,,low,381,Z,high
+700,0,348121,7.65,F G63,S,medium,,B,,33,B,medium,30,Y,226,Y,,440,Y,
+701,0,PC 17757,227.525,C62 C64,C,low,,A,low,31,,low,,X,28,Y,medium,284,,high
+702,0,PC 17475,26.2875,E24,S,high,71,,,11,,,,X,317,Y,high,416,X,low
+703,1,2691,14.4542,,C,low,24,C,low,,D,low,25,X,258,Y,high,443,,
+704,0,36864,7.7417,,Q,medium,75,,high,,C,medium,6,Y,460,Z,low,482,X,medium
+705,0,350025,7.8542,,S,,54,C,,41,D,unknown,,Z,276,Y,medium,477,X,
+706,0,250655,26,,S,low,93,D,high,,C,high,2,X,368,Z,medium,96,Z,medium
+707,0,223596,13.5,,S,medium,65,C,high,27,,high,42,X,264,X,low,17,Y,low
+708,0,PC 17476,26.2875,E24,S,,,A,low,,,unknown,3,Y,270,Y,medium,325,Y,medium
+709,0,113781,151.55,,S,unknown,97,B,,,C,unknown,,X,158,Y,low,339,X,high
+710,1,2661,15.2458,,C,unknown,99,D,unknown,40,C,unknown,,X,201,Z,high,,X,high
+711,0,PC 17482,49.5042,C90,C,low,74,A,high,25,D,,32,Y,147,X,low,118,Y,medium
+712,0,113028,26.55,C124,S,high,59,A,medium,63,,,,Y,231,X,low,474,X,low
+713,0,19996,52,C126,S,high,11,D,unknown,54,B,,,X,475,Y,low,204,Y,high
+714,0,7545,9.4833,,S,medium,,,,57,A,,,X,170,Z,,370,Z,high
+715,0,250647,13,,S,medium,47,D,,,,high,,X,231,Y,high,311,Y,high
+716,0,348124,7.65,F G73,S,,78,,low,72,,medium,36,Z,473,Y,high,447,Y,high
+717,0,PC 17757,227.525,C45,C,medium,58,C,,,D,,,Y,75,X,high,356,X,high
+718,0,34218,10.5,E101,S,low,43,C,,83,C,low,25,,126,Z,high,,Y,medium
+719,0,36568,15.5,,Q,,,A,low,42,A,,,X,246,Z,medium,420,Z,high
+720,0,347062,7.775,,S,medium,,,,40,C,medium,73,Z,204,X,low,27,Y,medium
+721,1,248727,33,,S,,,,,38,B,low,75,,170,Z,medium,352,Z,high
+722,0,350048,7.0542,,S,low,,D,medium,42,,unknown,51,Z,389,X,low,293,Z,low
+723,0,12233,13,,S,low,,,low,66,B,medium,75,Z,249,Y,low,388,Z,low
+724,0,250643,13,,S,unknown,87,D,low,49,C,medium,59,Y,182,Z,high,112,Y,low
+725,0,113806,53.1,E8,S,low,11,D,unknown,12,A,medium,,Z,,Z,low,299,X,medium
+726,0,315094,8.6625,,S,high,40,A,unknown,56,C,medium,35,Z,443,X,low,142,X,high
+727,0,31027,21,,S,high,51,,,,D,unknown,51,Z,491,X,medium,58,Z,
+728,0,36866,7.7375,,Q,high,,C,low,10,,high,,X,121,Z,low,287,Y,high
+729,0,236853,26,,S,unknown,16,C,,,A,low,76,X,20,X,high,10,Z,high
+730,0,STON/O2. 3101271,7.925,,S,,,D,,31,A,low,,Z,15,Z,high,46,Z,high
+731,0,24160,211.3375,B5,S,,59,,medium,,,,5,Z,222,X,medium,264,Y,medium
+732,0,2699,18.7875,,C,low,,,medium,17,D,,49,Y,314,X,low,449,X,low
+733,0,239855,0,,S,,16,B,high,,D,,7,X,25,Y,high,357,Z,medium
+734,0,28425,13,,S,high,42,D,,,,unknown,19,Y,254,Z,medium,7,X,low
+735,0,233639,13,,S,unknown,72,D,,13,B,medium,37,Y,199,X,low,54,Y,low
+736,0,54636,16.1,,S,medium,73,,unknown,,A,,0,Y,466,Z,high,215,X,high
+737,3,W./C. 6608,34.375,,S,,19,C,unknown,31,B,low,22,Y,301,Z,high,214,X,
+738,0,PC 17755,512.3292,B101,C,unknown,,,medium,58,B,medium,54,,211,X,medium,19,Y,high
+739,0,349201,7.8958,,S,high,89,,,56,C,medium,37,Y,293,X,medium,128,Y,medium
+740,0,349218,7.8958,,S,unknown,22,A,,,D,,89,Z,67,Y,high,63,Y,medium
+741,0,16988,30,D45,S,,2,C,medium,58,D,,9,X,237,Y,low,,Y,high
+742,0,19877,78.85,C46,S,medium,95,,unknown,56,,low,,Z,164,X,medium,329,Y,medium
+743,2,PC 17608,262.375,B57 B59 B63 B66,C,,52,A,,8,A,high,59,Z,90,Y,medium,195,X,high
+744,0,376566,16.1,,S,high,77,,,,,medium,64,Y,196,Z,medium,285,X,low
+745,0,STON/O 2. 3101288,7.925,,S,low,32,,,11,B,medium,67,Y,319,X,,100,Z,medium
+746,1,WE/P 5735,71,B22,S,unknown,,A,,43,B,low,5,Y,291,X,low,425,Z,
+747,1,C.A. 2673,20.25,,S,low,,D,medium,36,C,low,79,Y,481,Z,low,2,,high
+748,0,250648,13,,S,medium,,A,,,C,medium,33,Z,137,Y,medium,252,X,high
+749,0,113773,53.1,D30,S,,47,C,unknown,,D,medium,65,,349,Z,high,160,Z,low
+750,0,335097,7.75,,Q,high,,,unknown,,C,,,Y,275,Y,medium,225,Z,medium
+751,1,29103,23,,S,high,,B,low,41,,unknown,39,,436,Z,low,258,,low
+752,1,392096,12.475,E121,S,unknown,,A,unknown,6,A,,70,Y,454,Z,high,323,X,high
+753,0,345780,9.5,,S,,91,,,0,,medium,93,Y,353,Y,medium,464,X,medium
+754,0,349204,7.8958,,S,,,A,,54,D,,87,Y,211,Y,high,280,Z,low
+755,2,220845,65,,S,,,,medium,,D,high,,Y,266,Y,low,113,Z,high
+756,1,250649,14.5,,S,unknown,51,D,medium,54,B,medium,53,Y,325,X,low,,Y,high
+757,0,350042,7.7958,,S,medium,,D,,72,,,52,Z,402,Y,high,256,X,low
+758,0,29108,11.5,,S,,82,,unknown,75,A,,96,Z,114,Y,low,432,Y,low
+759,0,363294,8.05,,S,unknown,72,D,,87,A,medium,20,Z,436,Z,low,283,X,low
+760,0,110152,86.5,B77,S,,14,,,,C,,95,Y,400,Z,,434,X,low
+761,0,358585,14.5,,S,low,58,D,medium,88,C,low,64,Z,44,Y,low,324,X,medium
+762,0,SOTON/O2 3101272,7.125,,S,unknown,53,,low,79,C,unknown,,Z,134,Z,medium,285,X,high
+763,0,2663,7.2292,,C,high,,,low,43,,,,X,117,Y,medium,164,X,low
+764,2,113760,120,B96 B98,S,high,,B,medium,50,B,medium,81,Z,289,Y,low,128,Z,medium
+765,0,347074,7.775,,S,unknown,,B,,61,A,high,,Z,104,X,medium,49,Y,medium
+766,0,13502,77.9583,D11,S,medium,,,,,,,,Y,150,X,low,274,Y,high
+767,0,112379,39.6,,C,,51,B,unknown,67,C,,,Z,94,Z,low,460,Y,medium
+768,0,364850,7.75,,Q,high,,,unknown,58,B,medium,72,X,33,X,low,6,Z,high
+769,0,371110,24.15,,Q,low,,A,high,52,C,unknown,91,Z,229,X,low,476,Z,high
+770,0,8471,8.3625,,S,low,4,B,,,B,low,,Y,159,X,medium,429,Y,
+771,0,345781,9.5,,S,,35,,unknown,68,C,unknown,,Z,252,Z,medium,219,Z,low
+772,0,350047,7.8542,,S,,,D,medium,93,B,high,4,Y,106,X,low,156,Y,low
+773,0,S.O./P.P. 3,10.5,E77,S,high,,A,medium,97,B,low,63,Y,143,X,medium,290,X,low
+774,0,2674,7.225,,C,medium,,C,low,82,A,low,,Y,446,Y,high,427,Z,medium
+775,3,29105,23,,S,low,,D,high,29,C,high,96,Y,402,Y,low,14,Z,low
+776,0,347078,7.75,,S,high,44,D,low,,D,,,Z,133,Z,low,224,Y,medium
+777,0,383121,7.75,F38,Q,unknown,75,D,high,29,C,low,91,Z,80,X,high,23,Y,low
+778,0,364516,12.475,,S,medium,33,A,,,,high,,X,487,Y,medium,322,Z,
+779,0,36865,7.7375,,Q,low,15,B,low,,,unknown,0,Y,,X,,38,Y,high
+780,1,24160,211.3375,B3,S,,84,D,high,88,A,high,,X,246,X,medium,158,Y,medium
+781,0,2687,7.2292,,C,,77,D,medium,68,D,high,63,X,349,X,medium,369,Z,medium
+782,0,17474,57,B20,S,,,C,medium,68,A,low,,Z,110,X,low,375,X,
+783,0,113501,30,D6,S,medium,,D,high,95,C,high,17,Z,214,Z,low,113,Y,low
+784,2,W./C. 6607,23.45,,S,medium,77,C,,68,D,high,91,Z,195,Z,high,256,Z,medium
+785,0,SOTON/O.Q. 3101312,7.05,,S,low,74,A,unknown,14,D,low,,Y,360,X,high,92,X,high
+786,0,374887,7.25,,S,medium,,D,medium,,B,medium,41,Y,91,Y,high,295,X,low
+787,0,3101265,7.4958,,S,unknown,,A,medium,35,D,,29,Z,244,X,low,4,Y,high
+788,1,382652,29.125,,Q,medium,59,B,unknown,63,,unknown,,X,416,Z,high,406,X,
+789,2,C.A. 2315,20.575,,S,high,,A,low,63,A,low,,,,,medium,11,Y,
+790,0,PC 17593,79.2,B82 B84,C,low,77,C,,29,,high,11,,59,Y,medium,304,X,low
+791,0,12460,7.75,,Q,low,46,A,unknown,,D,high,,Y,410,X,high,202,Y,low
+792,0,239865,26,,S,high,90,,medium,8,D,high,98,Y,436,Y,medium,111,Y,low
+793,2,CA. 2343,69.55,,S,low,,D,low,29,D,high,23,X,215,Z,,270,X,high
+794,0,PC 17600,30.6958,,C,medium,,,medium,82,B,unknown,77,Y,22,Y,low,70,Y,
+795,0,349203,7.8958,,S,medium,91,,unknown,65,B,,2,Z,270,Y,high,289,X,high
+796,0,28213,13,,S,low,47,D,unknown,94,,high,89,X,149,Z,medium,322,X,low
+797,0,17465,25.9292,D17,S,high,,B,unknown,,A,high,65,Y,293,Z,medium,,Y,high
+798,0,349244,8.6833,,S,unknown,,C,,85,,high,22,X,69,X,medium,180,X,
+799,0,2685,7.2292,,C,low,87,,,17,C,unknown,88,X,402,Y,low,229,Z,low
+800,1,345773,24.15,,S,unknown,75,A,medium,,C,low,,Y,342,Y,medium,478,X,medium
+801,0,250647,13,,S,high,16,A,,5,B,unknown,99,Y,322,Y,high,376,Y,high
+802,1,C.A. 31921,26.25,,S,,49,A,unknown,9,D,high,59,Y,256,Y,low,2,X,low
+803,2,113760,120,B96 B98,S,low,37,D,,23,C,unknown,44,X,110,Z,high,144,Y,low
+804,1,2625,8.5167,,C,unknown,64,D,unknown,28,A,medium,5,Y,469,Z,low,12,X,medium
+805,0,347089,6.975,,S,low,,,,1,,,26,X,132,X,low,118,Z,medium
+806,0,347063,7.775,,S,,71,,,,D,,5,Y,183,Z,low,389,X,medium
+807,0,112050,0,A36,S,high,74,,unknown,52,A,,85,Z,463,Z,medium,,Y,high
+808,0,347087,7.775,,S,medium,,D,low,65,C,unknown,,Y,20,Y,low,228,Z,medium
+809,0,248723,13,,S,low,15,,,65,A,,11,Z,62,,medium,,Y,high
+810,0,113806,53.1,E8,S,,62,,,96,,low,,Y,380,X,medium,185,Z,low
+811,0,3474,7.8875,,S,low,,,,,,high,97,Z,183,Y,medium,238,,low
+812,0,A/4 48871,24.15,,S,high,94,,low,34,B,high,97,Z,289,X,high,414,X,low
+813,0,28206,10.5,,S,unknown,77,B,,,,high,71,Z,290,Z,medium,137,Z,low
+814,2,347082,31.275,,S,medium,95,,unknown,55,A,low,7,Y,413,X,low,159,X,low
+815,0,364499,8.05,,S,,53,B,medium,52,C,,50,X,310,Y,high,68,Y,high
+816,0,112058,0,B102,S,low,93,,medium,79,D,medium,94,Y,213,Y,low,109,,low
+817,0,STON/O2. 3101290,7.925,,S,,1,,medium,56,B,high,9,Z,274,Z,high,18,Y,
+818,1,S.C./PARIS 2079,37.0042,,C,low,28,,,23,D,unknown,79,Y,369,Z,,407,Y,low
+819,0,C 7075,6.45,,S,low,0,B,high,,B,high,1,Z,189,Z,high,426,Z,low
+820,2,347088,27.9,,S,high,67,,high,96,A,,,Z,85,X,low,210,Y,low
+821,1,12749,93.5,B69,S,,51,A,,,C,unknown,,Z,243,X,medium,296,Z,low
+822,0,315098,8.6625,,S,,28,,medium,59,D,,,,499,Y,high,124,Z,medium
+823,0,19972,0,,S,,30,C,unknown,17,B,unknown,41,X,56,Y,medium,22,Z,low
+824,1,392096,12.475,E121,S,,,,unknown,0,D,,,Y,86,X,low,257,Z,low
+825,1,3101295,39.6875,,S,high,18,B,high,,C,unknown,84,Y,497,Z,low,79,,high
+826,0,368323,6.95,,Q,,51,A,,2,,,32,Z,414,X,high,424,Y,low
+827,0,1601,56.4958,,S,unknown,61,,medium,45,,,64,,58,X,medium,139,X,low
+828,2,S.C./PARIS 2079,37.0042,,C,,23,,high,88,B,,46,X,106,Z,,368,X,
+829,0,367228,7.75,,Q,,22,C,medium,,A,low,43,X,345,,low,131,Y,medium
+830,0,113572,80,B28,,medium,,,,,,,79,Y,391,Y,medium,63,Y,high
+831,0,2659,14.4542,,C,,,,,85,,low,22,X,366,X,medium,274,X,high
+832,1,29106,18.75,,S,high,25,D,low,,C,medium,,Y,430,X,high,91,Z,high
+833,0,2671,7.2292,,C,unknown,37,,,65,C,unknown,48,X,,X,high,199,Z,low
+834,0,347468,7.8542,,S,unknown,54,C,,78,A,,,Z,438,,medium,146,X,medium
+835,0,2223,8.3,,S,medium,18,B,low,,,low,,Y,298,Y,low,441,X,medium
+836,1,PC 17756,83.1583,E49,C,,56,D,unknown,42,B,medium,34,Z,237,Y,high,251,,high
+837,0,315097,8.6625,,S,low,13,,,39,C,,66,Y,318,Z,low,359,X,medium
+838,0,392092,8.05,,S,unknown,14,B,unknown,,B,,47,X,214,Z,,294,X,high
+839,0,1601,56.4958,,S,low,23,C,medium,40,D,,,X,303,Z,high,455,X,high
+840,0,11774,29.7,C47,C,,28,,unknown,,A,high,52,Z,416,X,high,219,Z,high
+841,0,SOTON/O2 3101287,7.925,,S,medium,2,D,,18,A,,,Y,479,Y,high,431,X,high
+842,0,S.O./P.P. 3,10.5,,S,unknown,96,B,,17,B,low,,Z,289,X,low,,X,high
+843,0,113798,31,,C,,,D,low,71,A,unknown,44,Z,2,X,,460,Y,
+844,0,2683,6.4375,,C,medium,,,,76,A,,43,Y,310,Z,medium,347,Y,medium
+845,0,315090,8.6625,,S,,,,medium,67,C,medium,27,Y,125,Y,low,490,Z,medium
+846,0,C.A. 5547,7.55,,S,low,80,B,,,D,,,X,,Z,high,372,X,medium
+847,2,CA. 2343,69.55,,S,,83,D,low,0,C,,,X,440,X,high,155,X,high
+848,0,349213,7.8958,,C,low,10,C,unknown,,,medium,,X,223,Z,medium,78,Y,low
+849,1,248727,33,,S,,37,,high,46,,,69,X,395,X,low,104,Y,medium
+850,0,17453,89.1042,C92,C,medium,,D,unknown,,B,,41,Y,184,X,low,286,Y,medium
+851,2,347082,31.275,,S,,57,,high,92,A,unknown,70,Z,303,X,medium,82,,medium
+852,0,347060,7.775,,S,medium,0,D,low,86,D,medium,71,Y,332,X,low,118,Y,medium
+853,1,2678,15.2458,,C,,,D,medium,77,,low,52,Y,446,Y,low,314,Z,low
+854,1,PC 17592,39.4,D28,S,low,,,medium,2,B,,,Z,98,X,low,166,Z,high
+855,0,244252,26,,S,,,,low,,,unknown,,Z,280,X,high,340,Z,low
+856,1,392091,9.35,,S,,38,,unknown,43,C,high,15,,202,Z,medium,498,X,low
+857,1,36928,164.8667,,S,,,B,unknown,,A,,,X,231,X,medium,43,Z,low
+858,0,113055,26.55,E17,S,,30,A,,,A,unknown,95,Y,424,Y,medium,320,Z,medium
+859,3,2666,19.2583,,C,,29,B,high,29,C,,40,X,67,Z,low,410,Y,
+860,0,2629,7.2292,,C,unknown,34,A,high,11,,high,31,X,273,Y,medium,70,X,high
+861,0,350026,14.1083,,S,high,30,C,high,32,C,medium,79,Y,193,X,high,391,Y,
+862,0,28134,11.5,,S,,,C,low,79,B,high,60,Y,448,X,high,253,Z,medium
+863,0,17466,25.9292,D17,S,medium,4,C,high,,A,unknown,,,108,Z,low,314,Y,high
+864,2,CA. 2343,69.55,,S,high,27,C,unknown,,,low,9,X,116,Z,low,25,X,low
+865,0,233866,13,,S,,31,B,,59,B,,80,Z,45,Y,high,217,,low
+866,0,236852,13,,S,high,,C,high,9,,unknown,,Y,219,Z,high,183,,
+867,0,SC/PARIS 2149,13.8583,,C,,87,D,,,,,,Y,5,X,high,76,Z,high
+868,0,PC 17590,50.4958,A24,S,,67,A,high,15,,,,,250,X,medium,381,Y,medium
+869,0,345777,9.5,,S,high,,B,,26,,,,X,111,Z,medium,252,Z,high
+870,1,347742,11.1333,,S,high,,D,medium,97,,medium,,Y,200,Z,high,439,Z,medium
+871,0,349248,7.8958,,S,medium,,,,50,A,low,,X,302,Y,high,79,Z,medium
+872,1,11751,52.5542,D35,S,low,90,D,unknown,19,,low,63,X,342,Y,high,365,Y,high
+873,0,695,5,B51 B53 B55,S,low,45,,low,50,A,low,84,Z,30,Z,,302,Z,high
+874,0,345765,9,,S,,68,B,medium,7,B,,61,Z,74,Y,high,325,X,medium
+875,0,P/PP 3381,24,,C,medium,38,A,,31,A,unknown,77,Y,158,Y,low,154,X,high
+876,0,2667,7.225,,C,,49,D,,,D,,34,X,259,Y,low,345,Z,medium
+877,0,7534,9.8458,,S,,48,,medium,,A,unknown,28,X,441,Y,medium,123,Z,medium
+878,0,349212,7.8958,,S,,,A,high,89,,,26,Y,69,Y,medium,381,X,low
+879,0,349217,7.8958,,S,medium,,A,low,,A,medium,11,,33,Y,medium,220,Y,low
+880,1,11767,83.1583,C50,C,high,73,C,medium,65,A,medium,27,Y,314,Z,high,239,X,high
+881,1,230433,26,,S,,2,D,unknown,70,C,high,24,Y,489,Y,high,290,,low
+882,0,349257,7.8958,,S,high,13,D,high,55,D,,75,X,415,X,,42,Y,medium
+883,0,7552,10.5167,,S,low,84,D,unknown,3,A,,,X,282,Y,low,183,Y,high
+884,0,C.A./SOTON 34068,10.5,,S,medium,56,,low,91,A,unknown,,X,9,Y,low,101,Z,medium
+885,0,SOTON/OQ 392076,7.05,,S,,,D,medium,,B,medium,73,Y,,X,low,,Z,low
+886,5,382652,29.125,,Q,high,60,D,unknown,65,D,,,X,228,X,medium,,Z,high
+887,0,211536,13,,S,,,,,55,A,low,,X,223,X,,2,X,low
+888,0,112053,30,B42,S,low,89,B,,65,A,unknown,,Y,246,X,high,13,Z,high
+889,2,W./C. 6607,23.45,,S,,66,D,medium,35,B,high,21,Y,280,X,low,456,Y,low
+890,0,111369,30,C148,C,,,D,unknown,84,B,unknown,78,Z,360,Z,low,78,X,medium
+891,0,370376,7.75,,Q,unknown,,A,medium,22,A,high,3,Y,96,Z,medium,0,,medium

@@ -1,150 +1,123 @@
-import { useMultiCorrelationStore } from '@/store/multiCorrelationStore';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft, ArrowRight, AlertTriangle } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+/**
+ * MissingValueHandler Component
+ * Display missing value information and allow user to select handling strategy
+ */
+import React from "react";
+import type { ColumnInfo, MissingValueMethod } from "../api/correlation";
+import { AlertCircle } from "lucide-react";
 
-export function MissingValueHandler() {
-  const {
-    missingInfo,
-    missingValueMethod,
-    setMissingValueMethod,
-    setCurrentStep,
-  } = useMultiCorrelationStore();
+interface MissingValueHandlerProps {
+  missingValueInfo: ColumnInfo[];
+  hasMissing: boolean;
+  selectedMethod: MissingValueMethod;
+  onMethodChange: (method: MissingValueMethod) => void;
+}
 
-  const hasMissing = missingInfo.some((info) => info.missingCount > 0);
-
-  const handleContinue = () => {
-    setCurrentStep('methods');
-  };
-
-  const handleBack = () => {
-    setCurrentStep('configure');
-  };
+export const MissingValueHandler: React.FC<MissingValueHandlerProps> = ({
+  missingValueInfo,
+  hasMissing,
+  selectedMethod,
+  onMethodChange,
+}) => {
+  const methods: {
+    value: MissingValueMethod;
+    label: string;
+    description: string;
+  }[] = [
+    {
+      value: "remove",
+      label: "Pairwise Deletion",
+      description:
+        "Remove rows with missing values for each pair independently (recommended)",
+    },
+    {
+      value: "mode",
+      label: "Mode Imputation",
+      description: "Replace missing values with the most frequent category",
+    },
+    {
+      value: "median",
+      label: "Median Imputation",
+      description: "Replace with median category (ordinal) or mode (nominal)",
+    },
+    {
+      value: "missing_category",
+      label: "Missing Category",
+      description: "Treat missing values as a separate category",
+    },
+  ];
 
   if (!hasMissing) {
-    // No missing values, skip this step
     return (
-      <Card>
-        <CardHeader className="pb-2 py-3">
-          <CardTitle>No Missing Values Detected</CardTitle>
-          <CardDescription className="text-xs">
-            All selected columns have complete data. You can proceed to method selection.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="py-3">
-          <div className="flex justify-between pt-2">
-            <Button variant="outline" onClick={handleBack}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back
-            </Button>
-            <Button onClick={handleContinue}>
-              Continue to Methods
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+        <p className="text-green-800 text-sm">
+          ✓ No missing values detected in selected columns
+        </p>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-2 py-3">
-        <CardTitle>Missing Values Detected</CardTitle>
-        <CardDescription className="text-xs">
-          Choose how to handle missing values before analysis
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4 py-3">
-        {/* Missing value summary */}
-        <Alert>
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
+    <div className="space-y-4">
+      {/* Missing value summary */}
+      <div className="p-4 bg-amber-50 border border-amber-200 rounded-md">
+        <div className="flex items-start gap-2">
+          <AlertCircle className="text-amber-600 mt-0.5" size={20} />
+          <div className="flex-1">
+            <h4 className="font-medium text-amber-900 mb-2">
+              Missing Values Detected
+            </h4>
             <div className="space-y-1">
-              {missingInfo
-                .filter((info) => info.missingCount > 0)
-                .map((info) => (
-                  <div key={info.columnName} className="flex justify-between text-sm">
-                    <span className="font-medium">{info.columnName}:</span>
-                    <span className="text-orange-600">
-                      {info.missingCount} missing ({info.missingPercentage.toFixed(1)}%)
-                    </span>
-                  </div>
-                ))}
+              {missingValueInfo.map(
+                (info) =>
+                  info.missingCount > 0 && (
+                    <div
+                      key={info.columnName}
+                      className="text-sm text-amber-800"
+                    >
+                      <strong>{info.columnName}:</strong> {info.missingCount}{" "}
+                      missing ({info.missingPercentage.toFixed(1)}%)
+                    </div>
+                  ),
+              )}
             </div>
-          </AlertDescription>
-        </Alert>
+          </div>
+        </div>
+      </div>
 
-        {/* Method selection */}
+      {/* Strategy selection */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Missing Value Handling Strategy
+        </label>
         <div className="space-y-2">
-          <Label>Missing Value Handling Method</Label>
-          <RadioGroup value={missingValueMethod} onValueChange={(value) => setMissingValueMethod(value as any)}>
-            <div className="space-y-3">
-              <div className="flex items-start space-x-2 p-3 border rounded-md hover:bg-muted/50">
-                <RadioGroupItem value="remove" id="remove" className="mt-1" />
-                <div className="grid gap-1.5 leading-none flex-1">
-                  <Label htmlFor="remove" className="font-semibold cursor-pointer">
-                    Remove rows with missing values
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    Only use complete cases (recommended when missing % is small)
-                  </p>
+          {methods.map((method) => (
+            <label
+              key={method.value}
+              className={`flex items-start gap-3 p-3 border rounded-md cursor-pointer transition-colors ${
+                selectedMethod === method.value
+                  ? "bg-blue-50 border-blue-500"
+                  : "bg-white border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              <input
+                type="radio"
+                name="missing-value-method"
+                value={method.value}
+                checked={selectedMethod === method.value}
+                onChange={() => onMethodChange(method.value)}
+                className="mt-1"
+              />
+              <div className="flex-1">
+                <div className="font-medium text-gray-900">{method.label}</div>
+                <div className="text-sm text-gray-600">
+                  {method.description}
                 </div>
               </div>
-
-              <div className="flex items-start space-x-2 p-3 border rounded-md hover:bg-muted/50">
-                <RadioGroupItem value="mode" id="mode" className="mt-1" />
-                <div className="grid gap-1.5 leading-none flex-1">
-                  <Label htmlFor="mode" className="font-semibold cursor-pointer">
-                    Impute with Mode (most common value)
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    Best for nominal/categorical variables
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-2 p-3 border rounded-md hover:bg-muted/50">
-                <RadioGroupItem value="median" id="median" className="mt-1" />
-                <div className="grid gap-1.5 leading-none flex-1">
-                  <Label htmlFor="median" className="font-semibold cursor-pointer">
-                    Impute with Median
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    Best for ordinal variables (uses middle value based on ordering)
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-2 p-3 border rounded-md hover:bg-muted/50">
-                <RadioGroupItem value="missing_category" id="missing_category" className="mt-1" />
-                <div className="grid gap-1.5 leading-none flex-1">
-                  <Label htmlFor="missing_category" className="font-semibold cursor-pointer">
-                    Create "Missing" category
-                  </Label>
-                  <p className="text-xs text-muted-foreground">
-                    Keep missing as separate category in analysis
-                  </p>
-                </div>
-              </div>
-            </div>
-          </RadioGroup>
+            </label>
+          ))}
         </div>
-
-        <div className="flex justify-between pt-2">
-          <Button variant="outline" onClick={handleBack}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Configuration
-          </Button>
-          <Button onClick={handleContinue}>
-            Apply & Continue
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
-}
+};

@@ -4,12 +4,12 @@ echo Starting HIS Project
 echo ========================================
 echo.
 
-REM Check if backend venv exists
-if not exist "backend\venv\" (
+REM Check if backend venv311 exists
+if not exist "backend\venv311\" (
     echo Creating Python virtual environment...
     cd backend
-    python -m venv venv
-    call venv\Scripts\activate
+    py -3.11 -m venv venv311
+    call venv311\Scripts\activate
     echo Installing Python dependencies...
     pip install -r requirements.txt
     cd ..
@@ -26,7 +26,7 @@ if not exist "frontend\node_modules\" (
 )
 
 echo Starting Backend Server...
-start "Backend Server" cmd /k "cd backend && venv\Scripts\activate && uvicorn main:app --reload --host 0.0.0.0 --port 8000"
+start "Backend Server" cmd /k "cd backend && venv311\Scripts\activate && uvicorn main:app --reload --host 0.0.0.0 --port 8000"
 
 echo Waiting for backend to initialize...
 timeout /t 3 /nobreak > nul

@@ -1,305 +1,173 @@
-import { useMultiCorrelationStore } from '@/store/multiCorrelationStore';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
-
 /**
- * Modal component for displaying detailed correlation analysis results
+ * CorrelationDetailModal Component
+ * Display detailed correlation statistics in a modal
  */
-export function CorrelationDetailModal() {
-  const { selectedCell, correlationMatrix, pairDetails, setSelectedCell } = useMultiCorrelationStore();
+import React from "react";
+import type { CorrelationResult } from "../api/correlation";
+import { X } from "lucide-react";
 
-  if (!selectedCell) return null;
+interface CorrelationDetailModalProps {
+  result: CorrelationResult;
+  onClose: () => void;
+}
 
-  const { row, col } = selectedCell;
-  const cellData = correlationMatrix?.[row]?.[col];
-  const pairKey = `${row}::${col}`;
-  const reverseKey = `${col}::${row}`;
-  const detailData = pairDetails[pairKey] || pairDetails[reverseKey];
+export const CorrelationDetailModal: React.FC<CorrelationDetailModalProps> = ({
+  result,
+  onClose,
+}) => {
+  const getInterpretation = (
+    effectSize: number | undefined,
+    pValue: number,
+  ): string => {
+    if (pValue >= 0.05) return "Not statistically significant";
+    if (!effectSize) return "Statistically significant";
 
-  if (!cellData) return null;
-
-  const handleClose = () => {
-    setSelectedCell(null);
+    const abs = Math.abs(effectSize);
+    if (abs >= 0.7) return "Strong correlation";
+    if (abs >= 0.5) return "Moderate correlation";
+    if (abs >= 0.3) return "Weak correlation";
+    return "Very weak correlation";
   };
 
-  const correlation = cellData.correlation ?? null;
-  const pValue = cellData.p_value ?? null;
-  const isNA = correlation === null;
-  const isSignificant = pValue !== null && pValue < 0.05;
-
-  // Get N/A reason
-  const getNAReason = () => {
-    if (!detailData) {
-      return "Analysis could not be performed. The data may have insufficient valid observations.";
-    }
-    
-    const sampleSize = detailData.sample_size || 0;
-    const removedRows = detailData.removed_rows || 0;
-    const totalRows = sampleSize + removedRows;
-    
-    if (sampleSize === 0) {
-      return "No valid data available after removing missing values. All rows had missing values in at least one of these variables.";
-    }
-    
-    if (sampleSize < 3) {
-      return `Insufficient data for analysis. Only ${sampleSize} valid observation${sampleSize === 1 ? '' : 's'} available (minimum 3 required).`;
-    }
-    
-    // Check if all values are the same (no variation)
-    if (detailData.result?.error && detailData.result.error.includes("variation")) {
-      return "One or both variables have no variation (all values are the same). Correlation cannot be computed without variability.";
-    }
-    
-    if (removedRows === totalRows) {
-      return "All rows contained missing values in at least one of these variables. No complete observations were available for analysis.";
-    }
-    
-    if (detailData.result?.error) {
-      return `Analysis error: ${detailData.result.error}`;
-    }
-    
-    return "Unable to compute correlation. This may be due to insufficient variation in the data or missing values.";
+  const getSignificanceLevel = (pValue: number): string => {
+    if (pValue < 0.001) return "p < 0.001 (highly significant)";
+    if (pValue < 0.01) return "p < 0.01 (very significant)";
+    if (pValue < 0.05) return "p < 0.05 (significant)";
+    return `p = ${pValue.toFixed(4)} (not significant)`;
   };
 
   return (
-    <Dialog open={!!selectedCell} onOpenChange={(open: boolean) => !open && handleClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">
-            {isNA ? 'Analysis Not Available' : 'Variables Analyzed'}
-          </DialogTitle>
-        </DialogHeader>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h2 className="text-xl font-semibold">Correlation Details</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <X size={24} />
+          </button>
+        </div>
 
-        <div className="space-y-6 mt-4">
-          {/* Variables Section */}
-          <div className="space-y-3">
-            <div className="flex items-baseline gap-3">
-              <span className="font-semibold text-lg">Feature 1:</span>
-              <span className="text-lg">{detailData?.variable1_name || row}</span>
-            </div>
-            <div className="flex items-baseline gap-3">
-              <span className="font-semibold text-lg">Feature 2:</span>
-              <span className="text-lg">{detailData?.variable2_name || col}</span>
-            </div>
-            
-            {detailData && (
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                <div>
-                  <p className="text-sm text-muted-foreground">Sample size:</p>
-                  <p className="text-2xl font-bold">{detailData.sample_size}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    {detailData.missing_category_rows && detailData.missing_category_rows > 0 
-                      ? 'Rows with missing category removed:' 
-                      : 'Rows with missing values removed:'}
-                  </p>
-                  <p className="text-2xl font-bold">{detailData.removed_rows}</p>
-                </div>
-              </div>
-            )}
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {/* Variables */}
+          <div>
+            <h3 className="text-sm font-medium text-gray-500 mb-2">
+              Variables
+            </h3>
+            <p className="text-lg">
+              <strong>{result.variable1_name}</strong> ×{" "}
+              <strong>{result.variable2_name}</strong>
+            </p>
           </div>
 
-          {/* N/A Warning */}
-          {isNA && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                <div className="space-y-2">
-                  <p className="font-semibold">Why is this correlation showing "N/A"?</p>
-                  <p>{getNAReason()}</p>
-                  <div className="mt-3">
-                    <p className="font-semibold text-sm">Possible solutions:</p>
-                    <ul className="list-disc ml-5 mt-1 space-y-1 text-sm">
-                      <li>Try a different missing value handling method (mode, median, or missing category instead of remove)</li>
-                      <li>Check if these variables have sufficient data in your dataset</li>
-                      <li>Verify that the variables have enough variation in their values</li>
-                      <li>Consider removing one of these variables from your analysis if it has too many missing values</li>
-                    </ul>
-                  </div>
-                </div>
-              </AlertDescription>
-            </Alert>
+          {/* Method */}
+          <div>
+            <h3 className="text-sm font-medium text-gray-500 mb-2">
+              Statistical Method
+            </h3>
+            <p className="text-lg font-medium">{result.method_name}</p>
+          </div>
+
+          {/* Results */}
+          <div className="grid grid-cols-2 gap-4">
+            {result.result.effect_size !== undefined && (
+              <div className="bg-blue-50 p-4 rounded-md">
+                <h3 className="text-sm font-medium text-gray-700 mb-1">
+                  Effect Size
+                </h3>
+                <p className="text-2xl font-bold text-blue-900">
+                  {result.result.effect_size.toFixed(4)}
+                </p>
+              </div>
+            )}
+
+            <div className="bg-purple-50 p-4 rounded-md">
+              <h3 className="text-sm font-medium text-gray-700 mb-1">
+                P-Value
+              </h3>
+              <p className="text-2xl font-bold text-purple-900">
+                {result.result.p_value < 0.001
+                  ? "<0.001"
+                  : result.result.p_value.toFixed(4)}
+              </p>
+            </div>
+
+            {result.result.statistic !== undefined && (
+              <div className="bg-green-50 p-4 rounded-md">
+                <h3 className="text-sm font-medium text-gray-700 mb-1">
+                  Test Statistic
+                </h3>
+                <p className="text-2xl font-bold text-green-900">
+                  {result.result.statistic.toFixed(4)}
+                </p>
+              </div>
+            )}
+
+            <div className="bg-gray-50 p-4 rounded-md">
+              <h3 className="text-sm font-medium text-gray-700 mb-1">
+                Sample Size
+              </h3>
+              <p className="text-2xl font-bold text-gray-900">
+                {result.sample_size}
+              </p>
+            </div>
+          </div>
+
+          {/* Confidence Interval */}
+          {result.result.confidence_interval && (
+            <div className="bg-indigo-50 p-4 rounded-md">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">
+                95% Confidence Interval
+              </h3>
+              <p className="text-lg font-medium text-indigo-900">
+                [{result.result.confidence_interval[0].toFixed(4)},{" "}
+                {result.result.confidence_interval[1].toFixed(4)}]
+              </p>
+            </div>
           )}
 
-          {!isNA && detailData && (
-            <>
-              {/* Statistical Results */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-xl">Statistical Results</CardTitle>
-                  <p className="text-sm text-muted-foreground">Key statistics from the correlation analysis</p>
-                </CardHeader>
-                <CardContent className="space-y-4">
-              {/* Significance Badge */}
-              <div className="flex items-center gap-2">
-                {isSignificant ? (
-                  <>
-                    <CheckCircle className="h-5 w-5 text-green-600" />
-                    <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
-                      Significant
-                    </Badge>
-                  </>
-                ) : (
-                  <>
-                    <XCircle className="h-5 w-5 text-orange-600" />
-                    <Badge variant="outline" className="border-orange-300 text-orange-800">
-                      Not Significant
-                    </Badge>
-                  </>
-                )}
-              </div>
-
-              {/* Statistics Grid */}
-              <div className="grid grid-cols-2 gap-6">
-                {/* Main statistic */}
-                {detailData.result.statistic !== undefined && (
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">
-                      {getStatisticLabel(cellData.method || '')}
-                    </p>
-                    <p className="text-3xl font-bold">{detailData.result.statistic.toFixed(4)}</p>
-                  </div>
-                )}
-
-                {/* P-value */}
-                {pValue !== null && (
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">P-value</p>
-                    <p className="text-3xl font-bold">
-                      {pValue < 0.0001 ? '< 0.0001' : pValue.toFixed(4)}
-                    </p>
-                  </div>
-                )}
-
-                {/* Effect size measures */}
-                {detailData.result.eta_squared !== undefined && (
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Eta Squared (η²)</p>
-                    <p className="text-3xl font-bold">{detailData.result.eta_squared.toFixed(4)}</p>
-                  </div>
-                )}
-
-                {detailData.result.epsilon_squared !== undefined && (
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Epsilon Squared (ε²)</p>
-                    <p className="text-3xl font-bold">{detailData.result.epsilon_squared.toFixed(4)}</p>
-                  </div>
-                )}
-
-                {/* Degrees of freedom */}
-                {detailData.result.df !== undefined && (
-                  <div className="space-y-1">
-                    <p className="text-sm text-muted-foreground">Degrees of Freedom</p>
-                    <p className="text-3xl font-bold">{detailData.result.df}</p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Interpretation */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl">Interpretation</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm leading-relaxed">
-                {detailData.result.interpretation || generateInterpretation(cellData.method || '', correlation!, pValue, detailData.result)}
-              </p>
-            </CardContent>
-          </Card>
+          <div className="bg-amber-50 p-4 rounded-md">
+            <h3 className="text-sm font-medium text-gray-700 mb-2">
+              Interpretation
+            </h3>
+            <p className="text-lg font-medium text-amber-900">
+              {getInterpretation(
+                result.result.effect_size,
+                result.result.p_value,
+              )}
+            </p>
+            <p className="text-sm text-amber-700 mt-1">
+              {getSignificanceLevel(result.result.p_value)}
+            </p>
+          </div>
 
-          {/* Method Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl">Method: {detailData.method_name}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                {getMethodDescription(cellData.method || '')}
+          {/* Data quality */}
+          {result.removed_rows > 0 && (
+            <div className="bg-yellow-50 p-4 rounded-md border border-yellow-200">
+              <h3 className="text-sm font-medium text-yellow-800 mb-1">
+                Data Quality Note
+              </h3>
+              <p className="text-sm text-yellow-700">
+                {result.removed_rows} row(s) removed due to missing values
               </p>
-            </CardContent>
-          </Card>
-        </>
-      )}
+            </div>
+          )}
         </div>
-      </DialogContent>
-    </Dialog>
+
+        {/* Footer */}
+        <div className="flex justify-end p-6 border-t border-gray-200">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
   );
-}
-
-function getStatisticLabel(method: string): string {
-  const labels: Record<string, string> = {
-    chi_square: 'Chi-square statistic (χ²)',
-    phi: 'Phi coefficient (φ)',
-    cramers_v: "Cramér's V",
-    spearman: "Spearman's ρ",
-    kendall_tau_b: "Kendall's τb",
-    somers_d: "Somers' D",
-    pearson_ordinal: 'Pearson r',
-    anova_eta: 'F-statistic',
-    kruskal_wallis: 'H-statistic',
-  };
-  return labels[method] || 'Test Statistic';
-}
-
-function generateInterpretation(method: string, correlation: number, pValue: number | null, result: any): string {
-  const significance = pValue !== null && pValue < 0.05 ? 'significant' : 'not significant';
-  const effectSize = Math.abs(correlation);
-  
-  let strength = 'negligible';
-  if (effectSize >= 0.5) strength = 'large';
-  else if (effectSize >= 0.3) strength = 'medium';
-  else if (effectSize >= 0.1) strength = 'small';
-
-  if (method === 'chi_square') {
-    return `χ²(${result.df || 'N/A'}) = ${result.statistic?.toFixed(2) || 'N/A'}, p = ${pValue?.toFixed(4) || 'N/A'}. ${
-      pValue !== null && pValue < 0.05
-        ? 'There is a significant association between the variables.'
-        : 'No significant association between the variables (p >= 0.05).'
-    }`;
-  }
-
-  if (method === 'anova_eta' || method === 'kruskal_wallis') {
-    const testName = method === 'anova_eta' ? 'One-way ANOVA' : 'Kruskal-Wallis';
-    const effectMeasure = method === 'anova_eta' ? 'η²' : 'ε²';
-    const effectValue = method === 'anova_eta' ? result.eta_squared : result.epsilon_squared;
-    
-    return `${testName}: H(${result.df || 'N/A'}) = ${result.statistic?.toFixed(2) || 'N/A'}, p = ${pValue?.toFixed(4) || 'N/A'}. ${effectMeasure} = ${effectValue?.toFixed(4) || '0'} (${strength} effect size). ${
-      pValue !== null && pValue < 0.05
-        ? 'Significant group differences detected.'
-        : 'No significant group differences (p >= 0.05).'
-    }`;
-  }
-
-  return `Correlation coefficient = ${correlation.toFixed(4)}, p = ${pValue?.toFixed(4) || 'N/A'}. This indicates a ${strength} ${correlation > 0 ? 'positive' : 'negative'} association that is ${significance}.`;
-}
-
-function getMethodDescription(method: string): string {
-  const descriptions: Record<string, string> = {
-    chi_square:
-      'Chi-square test of independence (χ²) examines whether two nominal variables are statistically independent. A significant result indicates an association between the variables.',
-    phi:
-      'Phi coefficient (φ) is an association measure for 2×2 contingency tables with two binary nominal variables. Values range from -1 to 1.',
-    cramers_v:
-      "Cramér's V is a measure of association between two nominal variables, ranging from 0 (no association) to 1 (perfect association). It is appropriate for tables of any size.",
-    spearman:
-      "Spearman's rank correlation (ρ) measures the strength and direction of monotonic relationships between two ordinal variables. Values range from -1 to 1.",
-    kendall_tau_b:
-      "Kendall's tau-b (τb) is a non-parametric measure of ordinal association that accounts for ties. Values range from -1 to 1.",
-    somers_d:
-      "Somers' D is an asymmetric measure of ordinal association. It is useful when one variable is considered dependent on the other. Values range from -1 to 1.",
-    pearson_ordinal:
-      'Pearson correlation on ordinal scores treats the ordinal values as numeric scores and computes a standard Pearson correlation coefficient.',
-    anova_eta:
-      'One-way ANOVA with eta squared (η²) tests for differences in means across groups. Eta squared represents the proportion of variance in the ordinal variable explained by the nominal variable.',
-    kruskal_wallis:
-      'Kruskal-Wallis test with epsilon-squared (ε²) is a non-parametric alternative to ANOVA. Epsilon-squared measures effect size, indicating the strength of association between nominal and ordinal variables.',
-  };
-
-  return descriptions[method] || 'No description available for this method.';
-}
+};

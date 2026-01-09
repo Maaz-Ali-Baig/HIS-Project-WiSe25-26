@@ -1,0 +1,161 @@
+
+
+class FileStatsResponse(BaseModel):
+    """Response model for file statistics."""
+    
+    total_rows: int
+    total_columns: int
+    categorical_columns: int
+    numeric_columns: int
+    text_columns: int
+    datetime_columns: int
+    other_columns: int
+    missing_value_percentage: float
+
+
+@router.get("/stats", response_model=FileStatsResponse)
+async def get_file_stats(
+    userId: str = Query(..., description="User ID"),
+    fileId: str = Query(..., description="File ID"),
+):
+    """
+    Get statistics about the file including column types and missing values.
+    
+    Args:
+        userId: User identifier
+        fileId: File identifier
+        
+    Returns:
+        FileStatsResponse with file statistics
+        
+    Raises:
+        HTTPException: If file doesn't exist
+    """
+    import re
+    
+    # Attempt to migrate legacy file if necessary
+    migrate_legacy_file(userId, fileId)
+    
+    # Build file path - read from original.csv for true stats
+    file_dir = FILES_DIR / userId / fileId
+    original_path = file_dir / "original.csv"
+    
+    # Validate file existence
+    if not original_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    try:
+        # Read CSV file
+        async with aiofiles.open(original_path, "r", encoding="utf-8") as f:
+            content = await f.read()
+        
+        # Parse CSV
+        csv_reader = csv.DictReader(io.StringIO(content))
+        fieldnames = list(csv_reader.fieldnames) if csv_reader.fieldnames else []
+        rows = list(csv_reader)
+        
+        total_rows = len(rows)
+        total_columns = len(fieldnames)
+        
+        if total_rows == 0 or total_columns == 0:
+            return FileStatsResponse(
+                total_rows=total_rows,
+                total_columns=total_columns,
+                categorical_columns=0,
+                numeric_columns=0,
+                text_columns=0,
+                datetime_columns=0,
+                other_columns=0,
+                missing_value_percentage=0.0,
+            )
+        
+        # Analyze each column
+        categorical_columns = 0
+        numeric_columns = 0
+        text_columns = 0
+        datetime_columns = 0
+        other_columns = 0
+        total_cells = total_rows * total_columns
+        missing_cells = 0
+        
+        # Common date/time patterns
+        datetime_patterns = [
+            r'^\d{4}-\d{2}-\d{2}',  # YYYY-MM-DD
+            r'^\d{2}/\d{2}/\d{4}',  # MM/DD/YYYY or DD/MM/YYYY
+            r'^\d{2}-\d{2}-\d{4}',  # MM-DD-YYYY or DD-MM-YYYY
+            r'^\d{4}/\d{2}/\d{2}',  # YYYY/MM/DD
+            r'\d{2}:\d{2}:\d{2}',   # HH:MM:SS (time component)
+        ]
+        
+        for col in fieldnames:
+            values = [row.get(col, "") for row in rows]
+            non_empty_values = [v for v in values if v and str(v).strip()]
+            
+            # Count missing values
+            missing_cells += len(values) - len(non_empty_values)
+            
+            if len(non_empty_values) == 0:
+                other_columns += 1
+                continue
+            
+            # Sample values for analysis (max 100 for performance)
+            sample_size = min(100, len(non_empty_values))
+            sample_values = non_empty_values[:sample_size]
+            
+            # Check if numeric
+            numeric_count = 0
+            for val in sample_values:
+                try:
+                    float(str(val).replace(',', ''))
+                    numeric_count += 1
+                except ValueError:
+                    pass
+            
+            if numeric_count / len(sample_values) >= 0.8:
+                numeric_columns += 1
+                continue
+            
+            # Check if datetime
+            datetime_count = 0
+            for val in sample_values:
+                val_str = str(val).strip()
+                for pattern in datetime_patterns:
+                    if re.search(pattern, val_str):
+                        datetime_count += 1
+                        break
+            
+            if datetime_count / len(sample_values) >= 0.8:
+                datetime_columns += 1
+                continue
+            
+            # Check if text (long sentences - avg length > 50 chars)
+            avg_length = sum(len(str(v)) for v in sample_values) / len(sample_values)
+            if avg_length > 50:
+                text_columns += 1
+                continue
+            
+            # Check unique values for categorical
+            unique_ratio = len(set(non_empty_values)) / len(non_empty_values)
+            if unique_ratio < 0.5:  # Less than 50% unique values suggests categorical
+                categorical_columns += 1
+            else:
+                other_columns += 1
+        
+        # Calculate missing value percentage
+        missing_percentage = (missing_cells / total_cells * 100) if total_cells > 0 else 0.0
+        
+        return FileStatsResponse(
+            total_rows=total_rows,
+            total_columns=total_columns,
+            categorical_columns=categorical_columns,
+            numeric_columns=numeric_columns,
+            text_columns=text_columns,
+            datetime_columns=datetime_columns,
+            other_columns=other_columns,
+            missing_value_percentage=round(missing_percentage, 2),
+        )
+    
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to calculate file statistics: {str(e)}"
+        )

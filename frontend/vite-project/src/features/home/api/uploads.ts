@@ -1,4 +1,4 @@
-import { apiFetch } from '../../../lib/http';
+import { apiFetch } from "../../../lib/http";
 
 export interface FileUploadResponse {
   fileId: string;
@@ -19,6 +19,7 @@ export interface FileDataResponse {
   updated_at: string;
   selectionRanges: Array<{ start: number; end: number }>;
   totalColumns: number;
+  modifiedCells?: Array<{ rowId: string; column: string }>;
 }
 
 export interface GetFileDataParams {
@@ -43,14 +44,14 @@ export async function uploadFile({
   file,
 }: UploadFileParams): Promise<FileUploadResponse> {
   const formData = new FormData();
-  formData.append('user_id', userId);
+  formData.append("user_id", userId);
   if (username) {
-    formData.append('username', username);
+    formData.append("username", username);
   }
-  formData.append('file', file);
+  formData.append("file", file);
 
-  return apiFetch<FileUploadResponse>('/api/files/upload', {
-    method: 'POST',
+  return apiFetch<FileUploadResponse>("/api/files/upload", {
+    method: "POST",
     body: formData,
   });
 }
@@ -60,7 +61,7 @@ export async function getFileData({
   fileId,
 }: GetFileDataParams): Promise<FileDataResponse> {
   return apiFetch<FileDataResponse>(
-    `/api/files/data?userId=${encodeURIComponent(userId)}&fileId=${encodeURIComponent(fileId)}`
+    `/api/files/data?userId=${encodeURIComponent(userId)}&fileId=${encodeURIComponent(fileId)}`,
   );
 }
 
@@ -69,8 +70,8 @@ export async function updateFileData({
   fileId,
   edits,
 }: UpdateFileDataParams): Promise<FileDataResponse> {
-  return apiFetch<FileDataResponse>('/api/files/data', {
-    method: 'PUT',
+  return apiFetch<FileDataResponse>("/api/files/data", {
+    method: "PUT",
     body: JSON.stringify({ userId, fileId, edits }),
   });
 }
@@ -86,8 +87,157 @@ export async function updateColumnSelection({
   fileId,
   ranges,
 }: UpdateColumnSelectionParams): Promise<FileDataResponse> {
-  return apiFetch<FileDataResponse>('/api/files/selection', {
-    method: 'POST',
+  return apiFetch<FileDataResponse>("/api/files/selection", {
+    method: "POST",
     body: JSON.stringify({ userId, fileId, ranges }),
+  });
+}
+
+export interface HandleMissingValuesParams {
+  userId: string;
+  fileId: string;
+  selected_columns: string[];
+  selected_method: string;
+}
+
+export async function handleMissingValues({
+  userId,
+  fileId,
+  selected_columns,
+  selected_method,
+}: HandleMissingValuesParams): Promise<FileDataResponse> {
+  return apiFetch<FileDataResponse>("/api/files/missing-values", {
+    method: "POST",
+    body: JSON.stringify({ userId, fileId, selected_columns, selected_method }),
+  });
+}
+
+export interface HandleBinningParams {
+  userId: string;
+  fileId: string;
+  selected_columns: string[];
+  method: string;
+  n_bins?: number;
+  min_freq?: number;
+  target_column?: string;
+  custom_mapping?: Record<string, string[]>;
+  similarity_threshold?: number;
+  // Legacy parameters
+  bin_labels?: string[];
+  smooth_window?: number;
+  breaks?: number[];
+}
+
+export async function handleBinning({
+  userId,
+  fileId,
+  selected_columns,
+  method,
+  n_bins = 5,
+  min_freq = 10,
+  target_column,
+  custom_mapping,
+  similarity_threshold = 0.7,
+  bin_labels,
+  smooth_window = 3,
+  breaks,
+}: HandleBinningParams): Promise<FileDataResponse> {
+  return apiFetch<FileDataResponse>("/api/files/binning", {
+    method: "POST",
+    body: JSON.stringify({
+      userId,
+      fileId,
+      selected_columns,
+      method,
+      n_bins,
+      min_freq,
+      target_column,
+      custom_mapping,
+      similarity_threshold,
+      bin_labels,
+      smooth_window,
+      breaks,
+    }),
+  });
+}
+
+export interface HandleEncodingParams {
+  userId: string;
+  fileId: string;
+  selected_columns: string[];
+  method: string;
+  target_columns?: string[];
+}
+
+export async function handleEncoding({
+  userId,
+  fileId,
+  selected_columns,
+  method,
+  target_columns,
+}: HandleEncodingParams): Promise<FileDataResponse> {
+  return apiFetch<FileDataResponse>("/api/files/encoding", {
+    method: "POST",
+    body: JSON.stringify({
+      userId,
+      fileId,
+      selected_columns,
+      method,
+      target_columns,
+    }),
+  });
+}
+
+export interface HandleTextTransformationParams {
+  userId: string;
+  fileId: string;
+  selected_columns: string[];
+  k?: number;
+}
+
+export async function handleTextTransformation({
+  userId,
+  fileId,
+  selected_columns,
+  k,
+}: HandleTextTransformationParams): Promise<FileDataResponse> {
+  return apiFetch<FileDataResponse>("/api/files/text-transformation", {
+    method: "POST",
+    body: JSON.stringify({
+      userId,
+      fileId,
+      selected_columns,
+      k,
+    }),
+  });
+}
+
+export interface FileStatsResponse {
+  total_rows: number;
+  total_columns: number;
+  categorical_columns: number;
+  numeric_columns: number;
+  text_columns: number;
+  datetime_columns: number;
+  other_columns: number;
+  missing_value_percentage: number;
+}
+
+export interface GetFileStatsParams {
+  userId: string;
+  fileId: string;
+}
+
+export async function getFileStats({
+  userId,
+  fileId,
+}: GetFileStatsParams): Promise<FileStatsResponse> {
+  const params = new URLSearchParams({
+    userId,
+    fileId,
+  });
+
+  return apiFetch<FileStatsResponse>(`/api/files/stats?${params.toString()}`, {
+    method: "GET",
   });
 }

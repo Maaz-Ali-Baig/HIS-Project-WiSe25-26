@@ -55,6 +55,16 @@ def init_db():
         cursor.execute("ALTER TABLE files ADD COLUMN selected_columns TEXT")
         conn.commit()
         print("Migration complete: selected_columns column added")
+    
+    # Migration: Add column_highlights column if it doesn't exist
+    try:
+        cursor.execute("SELECT column_highlights FROM files LIMIT 1")
+    except sqlite3.OperationalError:
+        # Column doesn't exist, add it
+        print("Migrating database: Adding column_highlights column to files table")
+        cursor.execute("ALTER TABLE files ADD COLUMN column_highlights TEXT")
+        conn.commit()
+        print("Migration complete: column_highlights column added")
 
     conn.commit()
     conn.close()

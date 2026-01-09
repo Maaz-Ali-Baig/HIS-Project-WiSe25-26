@@ -1,263 +1,544 @@
-import React, { useEffect, useState } from 'react';
-import { TopNav } from '../../../components/TopNav';
+/**
+ * CorrelationAnalysisPage
+ * Main page for correlation analysis with multi-step workflow
+ */
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { useMultiCorrelationStore } from "../../../store/multiCorrelationStore";
+import { useAuthStore } from "../../../store/auth";
+import {
+  checkHealth,
+  getColumns,
+  checkMissingValues,
+  analyzeCorrelationMatrix,
+} from "../api/correlation";
+import type { MatrixCell } from "../api/correlation";
+import { MultiColumnSelector } from "../components/MultiColumnSelector";
+import { BatchVariableConfigurator } from "../components/BatchVariableConfigurator";
+import { MissingValueHandler } from "../components/MissingValueHandler";
+import { PairTypeMethodSelector } from "../components/PairTypeMethodSelector";
+import { CorrelationMatrixDisplay } from "../components/CorrelationMatrixDisplay";
+import { CorrelationDetailModal } from "../components/CorrelationDetailModal";
+import { AlertCircle, Loader2, RotateCcw } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from '../../../components/ui/card';
-import { Alert, AlertDescription } from '../../../components/ui/alert';
-import { Loader2, AlertTriangle, Info } from 'lucide-react';
-import { useCorrelationStore } from '../../../store/correlationStore';
-import { useMultiCorrelationStore } from '../../../store/multiCorrelationStore';
-import { useFileStore } from '../../../store/fileStore';
-import { MultiColumnSelector } from '../components/MultiColumnSelector';
-import { BatchVariableConfigurator } from '../components/BatchVariableConfigurator';
-import { MissingValueHandler } from '../components/MissingValueHandler';
-import { PairTypeMethodSelector } from '../components/PairTypeMethodSelector';
-import { CorrelationMatrixDisplay } from '../components/CorrelationMatrixDisplay';
-import { CorrelationDetailModal } from '../components/CorrelationDetailModal';
-import { TwoColumnResults } from '../components/TwoColumnResults';
-import { getColumnInfo, checkCorrelationHealth } from '../api/correlation';
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
-export function CorrelationAnalysisPage() {
-  const {
-    error,
-    setAvailableColumns,
-    setError,
-    reset,
-  } = useCorrelationStore();
+export const CorrelationAnalysisPage: React.FC = () => {
+  const { fileId } = useParams<{ fileId?: string }>();
+  const { user } = useAuthStore();
+  const navigate = useNavigate();
+  const store = useMultiCorrelationStore();
+  const [rHealthy, setRHealthy] = useState<boolean | null>(null);
+  const [selectedCell, setSelectedCell] = useState<MatrixCell | null>(null);
 
-  const multiStore = useMultiCorrelationStore();
-  const { userId, fileId } = useFileStore();
-  
-  const [isLoading, setIsLoading] = useState(true);
-  const [healthCheck, setHealthCheck] = useState<{
-    checked: boolean;
-    healthy: boolean;
-    message: string;
-  }>({ checked: false, healthy: false, message: '' });
-
-  // Check R installation and load column data on mount
+  // Redirect if no fileId or user
   useEffect(() => {
+    if (!fileId || !user) {
+      navigate("/");
+    }
+  }, [fileId, user, navigate]);
+
+  // Initialize - check R health and load columns
+  useEffect(() => {
+    if (!fileId || !user) return;
+
     const initialize = async () => {
       try {
-        // Check if user has selected a file
-        if (!userId || !fileId) {
-          console.log('No userId or fileId:', { userId, fileId });
-          setError('No file selected. Please select and preview a file from the Home page first.');
-          setHealthCheck({
-            checked: false,
-            healthy: false,
-            message: 'No file selected',
-          });
-          setIsLoading(false);
+        // Check R installation
+        const health = await checkHealth();
+        setRHealthy(health.r_installed);
+
+        if (!health.r_installed) {
+          store.setError(
+            "R is not installed. Please install R to use correlation analysis.",
+          );
           return;
         }
 
-        console.log('Initializing correlation analysis with:', { userId, fileId });
+        // Get userId from auth store
+        const userId = user.id.toString();
 
-        // Check if R is installed
-        try {
-          const health = await checkCorrelationHealth();
-          console.log('R health check:', health);
-          setHealthCheck({
-            checked: true,
-            healthy: health.r_installed,
-            message: health.message,
-          });
-        } catch (healthErr) {
-          console.warn('Could not check R health:', healthErr);
-          setHealthCheck({
-            checked: true,
-            healthy: false,
-            message: 'Could not connect to backend. Please ensure the server is running.',
-          });
-        }
+        store.setDataSource(userId, fileId);
 
         // Load available columns
-        try {
-          console.log('Fetching column info for:', { userId, fileId });
-          const columnInfo = await getColumnInfo(userId, fileId);
-          console.log('Column info received:', columnInfo);
-          if (columnInfo.columns.length === 0) {
-            setError('No columns found in the selected file. Please select a different file.');
-          } else {
-            // Set columns for both stores
-            setAvailableColumns(columnInfo.columns, columnInfo.categories);
-            multiStore.setFileContext(userId, fileId);
-            multiStore.setAvailableColumns(columnInfo.columns, columnInfo.categories);
-            setError(null); // Clear any previous errors
-          }
-        } catch (columnErr: any) {
-          console.error('Error loading columns:', columnErr);
-          console.error('Error response:', columnErr.response);
-          const errorMsg = columnErr.response?.data?.detail || 'Failed to load column data. Please ensure your file is properly selected.';
-          setError(errorMsg);
-        }
-      } catch (err) {
-        console.error('Initialization error:', err);
-        setError('An unexpected error occurred during initialization.');
-      } finally {
-        setIsLoading(false);
+        const columnsData = await getColumns(userId, fileId);
+        store.setAvailableColumns(columnsData.columns, columnsData.categories);
+      } catch (error: any) {
+        store.setError(
+          error.response?.data?.detail ||
+            "Failed to initialize correlation analysis",
+        );
       }
     };
 
     initialize();
+  }, [fileId, user]);
 
-    return () => {
-      // Cleanup on unmount
-      reset();
-      multiStore.reset();
-    };
-  }, [userId, fileId]);
+  // Step 1: Select columns
+  const handleColumnSelection = async () => {
+    if (store.selectedColumns.length < 2) {
+      store.setError("Please select at least 2 columns");
+      return;
+    }
 
-  if (isLoading) {
+    try {
+      store.setLoading(true);
+      store.setError(null);
+
+      // Check for missing values
+      const missingData = await checkMissingValues({
+        userId: store.userId!,
+        fileId: store.fileId!,
+        columns: store.selectedColumns,
+      });
+
+      store.setMissingValueInfo(
+        missingData.columnsInfo,
+        missingData.hasMissing,
+      );
+      
+      // Set default nominal configuration for newly selected columns
+      const currentConfigs = { ...store.variableConfigs };
+      
+      // Remove configs for deselected columns
+      Object.keys(currentConfigs).forEach((col) => {
+        if (!store.selectedColumns.includes(col)) {
+          delete currentConfigs[col];
+        }
+      });
+      
+      // Add default nominal config for columns without configuration
+      store.selectedColumns.forEach((col) => {
+        if (!currentConfigs[col]) {
+          const categories = store.columnCategories[col] || [];
+          currentConfigs[col] = {
+            columnName: col,
+            type: "nominal",
+            categories: categories,
+            ordering: null,
+          };
+        }
+      });
+      
+      // Update all configs in store
+      Object.keys(currentConfigs).forEach((col) => {
+        store.setVariableConfig(col, currentConfigs[col]);
+      });
+      
+      store.setCurrentStep("configure");
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.detail || error.message || "Failed to check missing values";
+      store.setError(`Error checking missing values: ${errorMsg}`);
+    } finally {
+      store.setLoading(false);
+    }
+  };
+
+  // Step 2: Configure variables
+  const handleConfigurationComplete = () => {
+    const allConfigured = store.selectedColumns.every(
+      (col) => store.variableConfigs[col],
+    );
+
+    if (!allConfigured) {
+      store.setError("Please configure all selected columns");
+      return;
+    }
+
+    if (store.hasMissingValues) {
+      store.setCurrentStep("missing");
+    } else {
+      store.setCurrentStep("methods");
+    }
+  };
+
+  // Step 3: Handle missing values (if any)
+  const handleMissingValueSelection = () => {
+    store.setCurrentStep("methods");
+  };
+
+  // Step 4: Analyze
+  const handleAnalyze = async () => {
+    try {
+      store.setLoading(true);
+      store.setError(null);
+
+      const result = await analyzeCorrelationMatrix({
+        userId: store.userId!,
+        fileId: store.fileId!,
+        columns: store.selectedColumns,
+        variableConfigs: store.variableConfigs,
+        missingValueMethod: store.selectedMissingValueMethod,
+        methodsByPairType: store.methodsByPairType,
+      });
+
+      store.setMatrixResult(result);
+      store.setCurrentStep("results");
+    } catch (error: any) {
+      let errorMsg = "Analysis failed";
+      
+      if (error.response?.data?.detail) {
+        errorMsg = error.response.data.detail;
+      } else if (error.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+      
+      // Add helpful context
+      if (errorMsg.toLowerCase().includes('r')) {
+        errorMsg += ". Please ensure R is properly installed and the required packages are available.";
+      }
+      
+      store.setError(`Correlation Analysis Error: ${errorMsg}`);
+    } finally {
+      store.setLoading(false);
+    }
+  };
+
+  // Handle cell click
+  const handleCellClick = (cell: MatrixCell) => {
+    if (cell.is_diagonal) return;
+
+    const pairKey = `${cell.row_name}::${cell.col_name}`;
+    const altKey = `${cell.col_name}::${cell.row_name}`;
+    const details =
+      store.matrixResult?.pairDetails[pairKey] ||
+      store.matrixResult?.pairDetails[altKey];
+
+    if (!details) return;
+
+    // Normalize the cell order to match the found details
+    const normalizedCell = store.matrixResult?.pairDetails[pairKey]
+      ? cell
+      : {
+          ...cell,
+          row_name: details.variable1_name,
+          col_name: details.variable2_name,
+        };
+
+    setSelectedCell(normalizedCell);
+  };
+
+  // Reset analysis
+  const handleReset = () => {
+    store.reset();
+    store.setCurrentStep("select");
+  };
+
+  if (rHealthy === false) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <TopNav active="correlation" />
-        <main className="flex justify-center items-center px-4 py-16">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
-            <p className="text-muted-foreground">Loading correlation analysis...</p>
+      <div className="p-6">
+        <div className="max-w-2xl mx-auto bg-red-50 border border-red-200 rounded-lg p-6">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="text-red-600 mt-1" size={24} />
+            <div>
+              <h2 className="text-lg font-semibold text-red-900 mb-2">
+                R Not Installed
+              </h2>
+              <p className="text-red-800">
+                The correlation analysis feature requires R to be installed on
+                your system. Please install R from{" "}
+                <a
+                  href="https://cran.r-project.org/"
+                  className="underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  https://cran.r-project.org/
+                </a>{" "}
+                and add it to your PATH.
+              </p>
+            </div>
           </div>
-        </main>
+        </div>
+      </div>
+    );
+  }
+
+  if (rHealthy === null) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="animate-spin" size={48} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <TopNav active="correlation" />
-
-      <main className="flex justify-center px-4 py-8">
-        <div className="w-full max-w-6xl space-y-6">
-          {/* Header Card */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Correlation Analysis</CardTitle>
-              <CardDescription>
-                Select columns to begin. Choose 2 columns for pairwise analysis or 3+ columns for a correlation matrix.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          {/* No File Selected Warning */}
-          {(!userId || !fileId) && (
-            <Alert>
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                <strong>No file selected.</strong> Please go to the Home page, upload a CSV file, select columns, and preview the data before performing correlation analysis.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* R Installation Warning */}
-          {healthCheck.checked && !healthCheck.healthy && userId && fileId && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                <strong>R is not installed or not accessible.</strong> {healthCheck.message}
-                <br />
-                Please install R and ensure it's available in your system PATH to use correlation analysis.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Error Alert */}
-          {error && userId && fileId && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          {/* Multi-Step Workflow */}
-          {userId && fileId && (
-            <div className="space-y-4">
-              {/* Step Progress Indicator */}
-              <Card>
-                <CardContent className="py-4">
-                  <div className="flex items-center justify-between gap-2">
-                    {[
-                      { key: 'select', label: 'Select Features' },
-                      { key: 'configure', label: 'Configure' },
-                      { key: 'missing', label: 'Handle Missing Values' },
-                      { key: 'methods', label: 'Analysis Method' },
-                      { key: 'results', label: 'Results' },
-                    ].map((step, idx, arr) => (
-                      <React.Fragment key={step.key}>
-                        <div className="flex flex-col items-center">
-                          <div
-                            className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold transition-colors flex-shrink-0 ${
-                              multiStore.currentStep === step.key
-                                ? 'bg-red-600 text-white'
-                                : arr.findIndex((s) => s.key === multiStore.currentStep) > idx
-                                ? 'bg-red-200 text-red-700'
-                                : 'bg-gray-200 text-gray-500'
-                            }`}
-                          >
-                            {idx + 1}
-                          </div>
-                          <div
-                            className={`text-xs mt-2 text-center whitespace-nowrap ${
-                              multiStore.currentStep === step.key ? 'font-semibold' : 'text-muted-foreground'
-                            }`}
-                          >
-                            {step.label}
-                          </div>
-                        </div>
-                        {idx < arr.length - 1 && (
-                          <div className="h-1 bg-red-600 flex-1" />
-                        )}
-                      </React.Fragment>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Dynamic Step Content */}
-              {multiStore.currentStep === 'select' && <MultiColumnSelector />}
-              {multiStore.currentStep === 'configure' && <BatchVariableConfigurator />}
-              {multiStore.currentStep === 'missing' && <MissingValueHandler />}
-              {multiStore.currentStep === 'methods' && <PairTypeMethodSelector />}
-              {multiStore.currentStep === 'results' && (
-                multiStore.selectedColumns.length === 2 ? (
-                  // Show detailed results for 2 columns
-                  <TwoColumnResults />
-                ) : (
-                  // Show matrix for 3+ columns
-                  <CorrelationMatrixDisplay />
-                )
-              )}
-
-              {/* Info Alerts */}
-              {multiStore.currentStep === 'select' && (
-                <Alert>
-                  <Info className="h-4 w-4" />
-                  <AlertDescription>
-                    <strong>Tip:</strong> Select at least 2 columns. For 2 columns, standard pairwise analysis will be performed. For 3+ columns, a correlation matrix will be generated.
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {multiStore.currentStep === 'configure' && (
-                <Alert>
-                  <Info className="h-4 w-4" />
-                  <AlertDescription>
-                    <strong>Tip:</strong> For ordinal variables, ensure the ranking reflects the natural order
-                    of your categories (e.g., "Low" = 1, "Medium" = 2, "High" = 3).
-                  </AlertDescription>
-                </Alert>
+    <div className="bg-background w-full min-h-screen p-6">
+      <div className="mx-auto w-full space-y-4">
+        {/* Header */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-xl">Correlation Analysis</CardTitle>
+            <CardDescription className="text-sm">
+              Analyze correlations between multiple categorical variables using
+              statistical methods.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pb-3">
+            {/* Progress indicator */}
+            <div className="flex items-center justify-between gap-2 py-2">
+              {["select", "configure", "missing", "methods", "results"].map(
+                (step, idx, arr) => {
+                  const currentIndex = arr.indexOf(store.currentStep);
+                  const isActive = currentIndex === idx;
+                  const isComplete = currentIndex > idx;
+                  return (
+                    <React.Fragment key={step}>
+                      <div className="flex items-center gap-2 min-w-[100px]">
+                        <Badge
+                          variant={
+                            isActive
+                              ? "default"
+                              : isComplete
+                                ? "secondary"
+                                : "outline"
+                          }
+                          className="h-6 px-2 text-[0.7rem] uppercase tracking-wide"
+                        >
+                          {idx + 1}. {step}
+                        </Badge>
+                      </div>
+                      {idx < 4 && (
+                        <div className="flex-1 h-px bg-border" aria-hidden />
+                      )}
+                    </React.Fragment>
+                  );
+                },
               )}
             </div>
-          )}
-        </div>
-      </main>
+          </CardContent>
+        </Card>
 
-      {/* Detail Modal for multi-column */}
-      <CorrelationDetailModal />
+        {/* Error display */}
+        {store.error && (
+          <Card className="border-destructive/50 bg-destructive/5">
+            <CardContent className="py-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="text-destructive mt-0.5 flex-shrink-0" size={20} />
+                <div className="flex-1 space-y-2">
+                  <h4 className="font-semibold text-destructive">Error</h4>
+                  <p className="text-sm text-destructive/90 leading-relaxed whitespace-pre-wrap">{store.error}</p>
+                  <Button
+                    onClick={() => store.setError(null)}
+                    variant="outline"
+                    size="sm"
+                    className="mt-2 h-7 text-xs"
+                  >
+                    Dismiss
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Main content */}
+        <Card>
+          <CardContent className="p-6">
+            {/* Step 1: Column Selection */}
+            {store.currentStep === "select" && (
+              <div className="space-y-4">
+                <MultiColumnSelector
+                  availableColumns={store.availableColumns}
+                  selectedColumns={store.selectedColumns}
+                  onAddColumn={store.addColumn}
+                  onRemoveColumn={store.removeColumn}
+                  minColumns={2}
+                  maxColumns={10}
+                />
+
+                <div className="flex justify-between">
+                  <Button
+                    onClick={store.reset}
+                    variant="outline"
+                    className="flex items-center gap-2"
+                  >
+                    <RotateCcw size={14} />
+                    Reset
+                  </Button>
+                  <Button
+                    onClick={handleColumnSelection}
+                    disabled={
+                      store.selectedColumns.length < 2 || store.isLoading
+                    }
+                    className="flex items-center gap-2"
+                  >
+                    {store.isLoading && (
+                      <Loader2 className="animate-spin" size={16} />
+                    )}
+                    Next: Configure Variables
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Variable Configuration */}
+            {store.currentStep === "configure" && (
+              <div className="space-y-4">
+                <BatchVariableConfigurator
+                  columns={store.selectedColumns}
+                  categories={store.columnCategories}
+                  variableConfigs={store.variableConfigs}
+                  onConfigChange={store.setVariableConfig}
+                />
+
+                <div className="flex justify-between">
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => store.setCurrentStep("select")}
+                      variant="outline"
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      onClick={store.reset}
+                      variant="outline"
+                      className="flex items-center gap-2"
+                    >
+                      <RotateCcw size={14} />
+                      Reset
+                    </Button>
+                  </div>
+                  <Button
+                    onClick={handleConfigurationComplete}
+                    disabled={
+                      Object.keys(store.variableConfigs).length !==
+                      store.selectedColumns.length
+                    }
+                  >
+                    {store.hasMissingValues
+                      ? "Next: Handle Missing Values"
+                      : "Next: Select Methods"}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Missing Value Handling */}
+            {store.currentStep === "missing" && (
+              <div className="space-y-4">
+                <MissingValueHandler
+                  missingValueInfo={store.missingValueInfo}
+                  hasMissing={store.hasMissingValues}
+                  selectedMethod={store.selectedMissingValueMethod}
+                  onMethodChange={store.setMissingValueMethod}
+                />
+
+                <div className="flex justify-between">
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => store.setCurrentStep("configure")}
+                      variant="outline"
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      onClick={store.reset}
+                      variant="outline"
+                      className="flex items-center gap-2"
+                    >
+                      <RotateCcw size={14} />
+                      Reset
+                    </Button>
+                  </div>
+                  <Button onClick={handleMissingValueSelection}>
+                    Next: Select Methods
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 4: Method Selection */}
+            {store.currentStep === "methods" && (
+              <div className="space-y-4">
+                <PairTypeMethodSelector
+                  methodsByPairType={store.methodsByPairType}
+                  onMethodChange={store.setMethodForPairType}
+                />
+
+                <div className="flex justify-between">
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() =>
+                        store.setCurrentStep(
+                          store.hasMissingValues ? "missing" : "configure",
+                        )
+                      }
+                      variant="outline"
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      onClick={store.reset}
+                      variant="outline"
+                      className="flex items-center gap-2"
+                    >
+                      <RotateCcw size={14} />
+                      Reset
+                    </Button>
+                  </div>
+                  <Button
+                    onClick={handleAnalyze}
+                    disabled={store.isLoading}
+                    className="flex items-center gap-2"
+                  >
+                    {store.isLoading && (
+                      <Loader2 className="animate-spin" size={16} />
+                    )}
+                    Analyze Correlations
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Step 5: Results */}
+            {store.currentStep === "results" && store.matrixResult && (
+              <div className="space-y-4">
+                <CorrelationMatrixDisplay
+                  result={store.matrixResult}
+                  onCellClick={handleCellClick}
+                />
+
+                <div className="flex justify-between">
+                  <Button onClick={handleReset} variant="outline">
+                    New Analysis
+                  </Button>
+                  <Button
+                    onClick={() => store.setCurrentStep("methods")}
+                    variant="outline"
+                  >
+                    Change Methods
+                  </Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Detail Modal */}
+      {selectedCell && store.matrixResult && (
+        <CorrelationDetailModal
+          result={
+            store.matrixResult.pairDetails[
+              `${selectedCell.row_name}::${selectedCell.col_name}`
+            ] ||
+            store.matrixResult.pairDetails[
+              `${selectedCell.col_name}::${selectedCell.row_name}`
+            ]
+          }
+          onClose={() => setSelectedCell(null)}
+        />
+      )}
     </div>
   );
-}
+};

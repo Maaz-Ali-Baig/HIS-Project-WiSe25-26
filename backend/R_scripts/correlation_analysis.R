@@ -9,16 +9,16 @@ options(warn = -1)
 invisible(suppressMessages({
   # Load required libraries
   library(jsonlite)
-  
+
   # Try to load optional packages, continue if not available
   tryCatch({
     library(vcd)
   }, error = function(e) {})
-  
+
   tryCatch({
     library(DescTools)
   }, error = function(e) {})
-  
+
   tryCatch({
     library(psych)
   }, error = function(e) {})
@@ -35,7 +35,7 @@ handle_missing_values <- function(data1, data2, method = "remove", var1_type = N
   # Identify missing values (NA and empty strings)
   missing1 <- is.na(data1) | data1 == ""
   missing2 <- is.na(data2) | data2 == ""
-  
+
   if (method == "remove") {
     # Pairwise deletion: remove rows where EITHER column has missing values
     valid_indices <- !missing1 & !missing2
@@ -45,7 +45,7 @@ handle_missing_values <- function(data1, data2, method = "remove", var1_type = N
       removed = sum(!valid_indices)
     ))
   }
-  
+
   else if (method == "mode") {
     # Impute with mode (most frequent value)
     if (any(missing1)) {
@@ -62,7 +62,7 @@ handle_missing_values <- function(data1, data2, method = "remove", var1_type = N
       removed = 0
     ))
   }
-  
+
   else if (method == "median") {
     # For ordinal: impute with median category
     # For nominal: fall back to mode
@@ -93,29 +93,29 @@ handle_missing_values <- function(data1, data2, method = "remove", var1_type = N
       removed = 0
     ))
   }
-  
+
   else if (method == "missing_category") {
     # Replace with "Missing" category
     missing_cat_count1 <- sum(missing1)
     missing_cat_count2 <- sum(missing2)
-    
+
     if (any(missing1)) data1[missing1] <- "Missing"
     if (any(missing2)) data2[missing2] <- "Missing"
-    
+
     # For ordinal variables, we need to remove rows with "Missing" category from analysis
     # but track how many were categorized as missing
     rows_with_missing_category <- rep(FALSE, length(data1))
-    
+
     # If var1 is ordinal, mark rows with "Missing" for removal
     if (!is.null(var1_type) && var1_type == "ordinal" && any(missing1)) {
       rows_with_missing_category <- rows_with_missing_category | (data1 == "Missing")
     }
-    
+
     # If var2 is ordinal, mark rows with "Missing" for removal
     if (!is.null(var2_type) && var2_type == "ordinal" && any(missing2)) {
       rows_with_missing_category <- rows_with_missing_category | (data2 == "Missing")
     }
-    
+
     # Remove rows with "Missing" if either variable is ordinal
     if (any(rows_with_missing_category)) {
       data1 <- data1[!rows_with_missing_category]
@@ -124,7 +124,7 @@ handle_missing_values <- function(data1, data2, method = "remove", var1_type = N
     } else {
       removed_count <- 0
     }
-    
+
     return(list(
       data1 = data1,
       data2 = data2,
@@ -132,7 +132,7 @@ handle_missing_values <- function(data1, data2, method = "remove", var1_type = N
       missing_category_count = missing_cat_count1 + missing_cat_count2
     ))
   }
-  
+
   else {
     # Default to remove
     valid_indices <- !missing1 & !missing2
@@ -160,7 +160,7 @@ apply_ordering <- function(data, ordering) {
   if (is.null(ordering) || length(ordering) == 0) {
     return(as.numeric(factor(data)))
   }
-  
+
   # Create ordered factor based on provided ordering
   ordered_data <- sapply(data, function(x) {
     if (x %in% names(ordering)) {
@@ -169,7 +169,7 @@ apply_ordering <- function(data, ordering) {
       return(NA)
     }
   })
-  
+
   return(as.numeric(ordered_data))
 }
 
@@ -178,13 +178,13 @@ chi_square_test <- function(data1, data2) {
   tryCatch({
     contingency_table <- table(data1, data2)
     test_result <- chisq.test(contingency_table)
-    
+
     # Calculate Cramer's V as effect size
     chi_sq <- test_result$statistic
     n <- sum(contingency_table)
     min_dim <- min(nrow(contingency_table) - 1, ncol(contingency_table) - 1)
     cramers_v_value <- sqrt(chi_sq / (n * min_dim))
-    
+
     list(
       method_name = "Chi-square test of independence",
       result = list(
@@ -209,19 +209,19 @@ chi_square_test <- function(data1, data2) {
 phi_coefficient <- function(data1, data2) {
   tryCatch({
     contingency_table <- table(data1, data2)
-    
+
     # Check if 2x2 table
     if (nrow(contingency_table) != 2 || ncol(contingency_table) != 2) {
       return(create_error("Phi coefficient requires a 2x2 contingency table"))
     }
-    
+
     chi_sq <- chisq.test(contingency_table)$statistic
     n <- sum(contingency_table)
     phi <- sqrt(chi_sq / n)
-    
+
     # Calculate p-value from chi-square
     p_value <- chisq.test(contingency_table)$p.value
-    
+
     list(
       method_name = "Phi coefficient",
       result = list(
@@ -249,10 +249,10 @@ cramers_v <- function(data1, data2) {
     chi_sq <- chisq.test(contingency_table)$statistic
     n <- sum(contingency_table)
     min_dim <- min(nrow(contingency_table) - 1, ncol(contingency_table) - 1)
-    
+
     cramers_v_value <- sqrt(chi_sq / (n * min_dim))
     p_value <- chisq.test(contingency_table)$p.value
-    
+
     list(
       method_name = "Cramer's V",
       result = list(
@@ -262,7 +262,7 @@ cramers_v <- function(data1, data2) {
         effect_size_name = "Cramer's V",
         interpretation = paste0(
           "Cramer's V = ", round(cramers_v_value, 3), ". ",
-          ifelse(cramers_v_value < 0.1, "Weak", 
+          ifelse(cramers_v_value < 0.1, "Weak",
                  ifelse(cramers_v_value < 0.3, "Moderate", "Strong")),
           " association. ",
           ifelse(p_value < 0.05, "Significant (p < 0.05)", "Not significant (p >= 0.05)")
@@ -278,7 +278,7 @@ cramers_v <- function(data1, data2) {
 spearman_correlation <- function(data1, data2) {
   tryCatch({
     test_result <- cor.test(data1, data2, method = "spearman", exact = FALSE)
-    
+
     list(
       method_name = "Spearman's rank correlation",
       result = list(
@@ -288,7 +288,7 @@ spearman_correlation <- function(data1, data2) {
         effect_size_name = "Spearman's ρ",
         interpretation = paste0(
           "Spearman's ρ = ", round(test_result$estimate, 3), ". ",
-          ifelse(abs(test_result$estimate) < 0.3, "Weak", 
+          ifelse(abs(test_result$estimate) < 0.3, "Weak",
                  ifelse(abs(test_result$estimate) < 0.7, "Moderate", "Strong")),
           " ", ifelse(test_result$estimate > 0, "positive", "negative"), " correlation. ",
           ifelse(test_result$p.value < 0.05, "Significant (p < 0.05)", "Not significant (p >= 0.05)")
@@ -304,7 +304,7 @@ spearman_correlation <- function(data1, data2) {
 kendall_tau <- function(data1, data2) {
   tryCatch({
     test_result <- cor.test(data1, data2, method = "kendall")
-    
+
     list(
       method_name = "Kendall's tau-b",
       result = list(
@@ -315,7 +315,7 @@ kendall_tau <- function(data1, data2) {
         effect_size_name = "Kendall's τb",
         interpretation = paste0(
           "Kendall's τb = ", round(test_result$estimate, 3), ". ",
-          ifelse(abs(test_result$estimate) < 0.3, "Weak", 
+          ifelse(abs(test_result$estimate) < 0.3, "Weak",
                  ifelse(abs(test_result$estimate) < 0.7, "Moderate", "Strong")),
           " ", ifelse(test_result$estimate > 0, "positive", "negative"), " association. ",
           ifelse(test_result$p.value < 0.05, "Significant (p < 0.05)", "Not significant (p >= 0.05)")
@@ -336,12 +336,12 @@ somers_d <- function(data1, data2) {
     discordant <- 0
     ties_x <- 0
     ties_y <- 0
-    
+
     for (i in 1:(n-1)) {
       for (j in (i+1):n) {
         x_diff <- sign(data1[i] - data1[j])
         y_diff <- sign(data2[i] - data2[j])
-        
+
         if (x_diff * y_diff > 0) {
           concordant <- concordant + 1
         } else if (x_diff * y_diff < 0) {
@@ -353,7 +353,7 @@ somers_d <- function(data1, data2) {
         }
       }
     }
-    
+
     # Somers' D (asymmetric: d(Y|X))
     denominator <- concordant + discordant + ties_y
     somers_d_value <- if (denominator > 0) {
@@ -361,13 +361,13 @@ somers_d <- function(data1, data2) {
     } else {
       0
     }
-    
+
     # Approximate p-value using normal approximation
     n_pairs <- n * (n - 1) / 2
     se <- sqrt((4 * n + 10) / (9 * n * (n - 1)))
     z_value <- somers_d_value / se
     p_value <- 2 * pnorm(-abs(z_value))
-    
+
     list(
       method_name = "Somers' D",
       result = list(
@@ -377,7 +377,7 @@ somers_d <- function(data1, data2) {
         effect_size_name = "Somers' D",
         interpretation = paste0(
           "Somers' D = ", round(somers_d_value, 3), ". ",
-          ifelse(abs(somers_d_value) < 0.3, "Weak", 
+          ifelse(abs(somers_d_value) < 0.3, "Weak",
                  ifelse(abs(somers_d_value) < 0.7, "Moderate", "Strong")),
           " asymmetric association. ",
           ifelse(p_value < 0.05, "Significant (p < 0.05)", "Not significant (p >= 0.05)")
@@ -393,7 +393,7 @@ somers_d <- function(data1, data2) {
 pearson_ordinal <- function(data1, data2) {
   tryCatch({
     test_result <- cor.test(data1, data2, method = "pearson")
-    
+
     list(
       method_name = "Pearson correlation on ordinal scores",
       result = list(
@@ -404,7 +404,7 @@ pearson_ordinal <- function(data1, data2) {
         effect_size_name = "Pearson r",
         interpretation = paste0(
           "Pearson r = ", round(test_result$estimate, 3), ". ",
-          ifelse(abs(test_result$estimate) < 0.3, "Weak", 
+          ifelse(abs(test_result$estimate) < 0.3, "Weak",
                  ifelse(abs(test_result$estimate) < 0.7, "Moderate", "Strong")),
           " ", ifelse(test_result$estimate > 0, "positive", "negative"), " linear relationship. ",
           ifelse(test_result$p.value < 0.05, "Significant (p < 0.05)", "Not significant (p >= 0.05)")
@@ -424,20 +424,20 @@ anova_eta <- function(nominal_data, ordinal_data) {
       group = factor(nominal_data),
       value = ordinal_data
     )
-    
+
     # Perform ANOVA
     anova_result <- aov(value ~ group, data = df)
     anova_summary <- summary(anova_result)
-    
+
     # Calculate eta squared
     ss_between <- anova_summary[[1]]$"Sum Sq"[1]
     ss_total <- sum(anova_summary[[1]]$"Sum Sq")
     eta_squared <- ss_between / ss_total
-    
+
     # Get F-statistic and p-value
     f_statistic <- anova_summary[[1]]$"F value"[1]
     p_value <- anova_summary[[1]]$"Pr(>F)"[1]
-    
+
     list(
       method_name = "One-way ANOVA with eta squared",
       result = list(
@@ -451,13 +451,13 @@ anova_eta <- function(nominal_data, ordinal_data) {
         df_between = as.numeric(anova_summary[[1]]$Df[1]),
         df_within = as.numeric(anova_summary[[1]]$Df[2]),
         interpretation = paste0(
-          "F(", anova_summary[[1]]$Df[1], ", ", anova_summary[[1]]$Df[2], ") = ", 
+          "F(", anova_summary[[1]]$Df[1], ", ", anova_summary[[1]]$Df[2], ") = ",
           round(f_statistic, 2), ", p = ", round(p_value, 4), ". ",
           "η² = ", round(eta_squared, 3), " (",
-          ifelse(eta_squared < 0.06, "small", 
+          ifelse(eta_squared < 0.06, "small",
                  ifelse(eta_squared < 0.14, "medium", "large")),
           " effect size). ",
-          ifelse(p_value < 0.05, 
+          ifelse(p_value < 0.05,
                  "Significant group differences detected (p < 0.05)",
                  "No significant group differences (p >= 0.05)")
         )
@@ -476,19 +476,19 @@ kruskal_wallis <- function(nominal_data, ordinal_data) {
       group = factor(nominal_data),
       value = ordinal_data
     )
-    
+
     # Perform Kruskal-Wallis test
     kw_result <- kruskal.test(value ~ group, data = df)
-    
+
     # Calculate epsilon squared (effect size)
     n <- length(ordinal_data)
     k <- length(unique(nominal_data))
     h_statistic <- as.numeric(kw_result$statistic)
     epsilon_squared <- (h_statistic - k + 1) / (n - k)
-    
+
     # Ensure epsilon squared is between 0 and 1
     epsilon_squared <- max(0, min(1, epsilon_squared))
-    
+
     list(
       method_name = "Kruskal-Wallis test with epsilon squared",
       result = list(
@@ -500,13 +500,13 @@ kruskal_wallis <- function(nominal_data, ordinal_data) {
         effect_size_name = "ε²",
         df = as.numeric(kw_result$parameter),
         interpretation = paste0(
-          "H(", kw_result$parameter, ") = ", round(kw_result$statistic, 2), 
+          "H(", kw_result$parameter, ") = ", round(kw_result$statistic, 2),
           ", p = ", round(kw_result$p.value, 4), ". ",
           "ε² = ", round(epsilon_squared, 3), " (",
-          ifelse(epsilon_squared < 0.04, "small", 
+          ifelse(epsilon_squared < 0.04, "small",
                  ifelse(epsilon_squared < 0.16, "medium", "large")),
           " effect size). ",
-          ifelse(kw_result$p.value < 0.05, 
+          ifelse(kw_result$p.value < 0.05,
                  "Significant group differences detected (p < 0.05)",
                  "No significant group differences (p >= 0.05)")
         )
@@ -522,20 +522,20 @@ tryCatch({
   # Read JSON input from stdin
   input_json <- readLines("stdin", warn = FALSE)
   input_data <- fromJSON(input_json)
-  
+
   # Extract variables
   var1 <- input_data$variable1
   var2 <- input_data$variable2
   method <- input_data$method
   missing_method <- if (!is.null(input_data$missing_method)) input_data$missing_method else "remove"
-  
+
   # Handle missing values using specified method
   cleaned <- handle_missing_values(var1$data, var2$data, missing_method, var1$type, var1$ordering, var2$type, var2$ordering)
   data1_clean <- cleaned$data1
   data2_clean <- cleaned$data2
   removed_rows <- cleaned$removed
   missing_category_count <- if (!is.null(cleaned$missing_category_count)) cleaned$missing_category_count else 0
-  
+
   # Update ordering if it was modified (e.g., by missing_category method)
   if (!is.null(cleaned$ordering1)) {
     var1$ordering <- cleaned$ordering1
@@ -543,27 +543,27 @@ tryCatch({
   if (!is.null(cleaned$ordering2)) {
     var2$ordering <- cleaned$ordering2
   }
-  
+
   # Check if enough data remains
   if (length(data1_clean) < 3) {
     output <- create_error("Insufficient data after removing missing values (need at least 3 observations)")
     cat(toJSON(output, auto_unbox = TRUE))
     quit(status = 1)
   }
-  
+
   # Apply ordinal ordering if needed
   if (var1$type == "ordinal") {
     data1_processed <- apply_ordering(data1_clean, var1$ordering)
   } else {
     data1_processed <- data1_clean
   }
-  
+
   if (var2$type == "ordinal") {
     data2_processed <- apply_ordering(data2_clean, var2$ordering)
   } else {
     data2_processed <- data2_clean
   }
-  
+
   # Execute the appropriate method
   result <- switch(method,
     "chi_square" = chi_square_test(data1_processed, data2_processed),
@@ -591,17 +591,17 @@ tryCatch({
     },
     create_error(paste("Unknown method:", method))
   )
-  
+
   # Add metadata to result
   if (!"error" %in% names(result)) {
     result$sample_size <- length(data1_clean)
     result$removed_rows <- removed_rows
     result$missing_category_rows <- missing_category_count
   }
-  
+
   # Output result as JSON
   cat(toJSON(result, auto_unbox = TRUE))
-  
+
 }, error = function(e) {
   # Handle any unexpected errors
   error_output <- create_error(paste("Unexpected error:", e$message))

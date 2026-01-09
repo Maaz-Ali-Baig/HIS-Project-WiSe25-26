@@ -11,7 +11,7 @@ const backendDir = path.join(__dirname, '..', 'backend');
 const frontendDir = path.join(__dirname, '..', 'frontend', 'vite-project');
 
 // Check if backend venv exists
-const venvPath = path.join(backendDir, 'venv');
+const venvPath = path.join(backendDir, 'venv311');
 if (!fs.existsSync(venvPath)) {
     console.log('Backend virtual environment not found!');
     console.log('Please run: npm run install:backend');

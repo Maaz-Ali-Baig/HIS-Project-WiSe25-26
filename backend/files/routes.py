@@ -3,7 +3,7 @@
 import csv
 import io
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import aiofiles
 from database.db import (
@@ -19,6 +19,7 @@ from pydantic import BaseModel, Field
 
 from .r_integration import (
     handle_binning,
+    handle_data_reduction,
     handle_encoding,
     handle_missing_values,
     handle_text_transformation,
@@ -985,6 +986,237 @@ async def handle_text_transformation_endpoint(
         )
 
 
+
+class DataReductionSummary(BaseModel):
+    """Summary for data reduction output."""
+
+    method: str
+    components: int
+    inputColumns: int
+    outputColumns: int
+    varianceExplained: Optional[List[float]] = None
+    totalVariance: Optional[float] = None
+
+
+class DataReductionResponse(FileDataResponse):
+    """Response model for data reduction."""
+
+    summary: Optional[DataReductionSummary] = None
+
+
+class HandleDataReductionRequest(BaseModel):
+    """Request model for data reduction operations."""
+
+    userId: str
+    fileId: str
+    selected_columns: List[str]
+    method: str = "auto"  # 'auto', 'mca', 'famd'
+    n_components: int = Field(..., ge=2, le=100)
+    rare_threshold: int = 5
+    max_cardinality: int = 200
+    sample_size: Optional[int] = None
+
+
+@router.post("/data-reduction", response_model=DataReductionResponse)
+async def handle_data_reduction_endpoint(
+    request: HandleDataReductionRequest,
+):
+    """
+    Reduce categorical/mixed data into numeric components using MCA/FAMD.
+
+    Args:
+        request: HandleDataReductionRequest with userId, fileId, columns, and parameters
+
+    Returns:
+        DataReductionResponse with updated data and summary
+
+    Raises:
+        HTTPException: If file doesn't exist, R execution fails, or validation fails
+    """
+    user_id = request.userId
+    file_id = request.fileId
+    selected_columns = request.selected_columns
+    method = request.method
+    n_components = request.n_components
+    rare_threshold = request.rare_threshold
+    max_cardinality = request.max_cardinality
+    sample_size = request.sample_size
+
+    # Validate user exists
+    user = get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Attempt to migrate legacy file if necessary
+    migrate_legacy_file(user_id, file_id)
+
+    # Build file paths
+    file_dir = FILES_DIR / user_id / file_id
+    selected_path = file_dir / "selected.csv"
+
+    # Validate file existence
+    if not selected_path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+
+    # Get metadata
+    metadata = get_file_metadata(user_id, file_id)
+    if not metadata:
+        raise HTTPException(status_code=404, detail="File metadata not found")
+
+    # Read current columns from selected.csv
+    try:
+        async with aiofiles.open(selected_path, "r", encoding="utf-8") as f:
+            content = await f.read()
+
+        csv_reader = csv.DictReader(io.StringIO(content))
+        current_columns = list(csv_reader.fieldnames) if csv_reader.fieldnames else []
+        rows = list(csv_reader)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to read file: {str(e)}")
+
+    # Validate columns exist
+    if not selected_columns or len(selected_columns) == 0:
+        raise HTTPException(
+            status_code=400, detail="No columns selected for data reduction"
+        )
+
+    if "id" in selected_columns:
+        raise HTTPException(
+            status_code=400, detail="Cannot apply data reduction to 'id' column"
+        )
+
+    for col in selected_columns:
+        if col not in current_columns:
+            raise HTTPException(
+                status_code=400, detail=f"Column '{col}' does not exist in the file"
+            )
+
+    method_value = (method or "auto").lower()
+    if method_value not in {"auto", "mca", "famd"}:
+        raise HTTPException(
+            status_code=400, detail="Invalid method. Use 'auto', 'mca', or 'famd'"
+        )
+
+    # Detect numeric columns in selection (sample for performance)
+    numeric_columns = set()
+    sample_rows = rows[:50]
+    for col in selected_columns:
+        values = []
+        for row in sample_rows:
+            value = row.get(col, "")
+            if value is None:
+                continue
+            value_str = str(value).strip()
+            if value_str == "":
+                continue
+            values.append(value_str)
+
+        if not values:
+            continue
+
+        numeric_count = 0
+        for value in values:
+            try:
+                float(value.replace(",", ""))
+                numeric_count += 1
+            except ValueError:
+                continue
+
+        if numeric_count / len(values) >= 0.8:
+            numeric_columns.add(col)
+
+    if numeric_columns and len(numeric_columns) == len(selected_columns):
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Numeric-only data detected. Data reduction is intended for qualitative data. "
+                "Please select categorical columns or handle numeric-only data separately."
+            ),
+        )
+
+    if method_value == "mca" and numeric_columns:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "MCA only supports categorical data. Remove numeric columns or switch to Auto/FAMD."
+            ),
+        )
+
+    if sample_size is not None and sample_size <= 0:
+        sample_size = None
+
+    # Execute R script to perform data reduction
+    try:
+        summary = handle_data_reduction(
+            selected_path,
+            selected_columns,
+            method_value,
+            n_components,
+            rare_threshold,
+            max_cardinality,
+            sample_size,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unexpected error during data reduction: {str(e)}",
+        )
+
+    # Update timestamp in database
+    update_file_timestamp(user_id, file_id)
+
+    # Read updated CSV and return response
+    try:
+        async with aiofiles.open(selected_path, "r", encoding="utf-8") as f:
+            updated_content = await f.read()
+
+        updated_reader = csv.DictReader(io.StringIO(updated_content))
+        updated_columns = (
+            list(updated_reader.fieldnames) if updated_reader.fieldnames else []
+        )
+        updated_rows = list(updated_reader)
+
+        # Get updated metadata
+        metadata_updated = get_file_metadata(user_id, file_id)
+        selection_ranges = (
+            metadata_updated.get("selected_columns", []) if metadata_updated else []
+        )
+        total_columns = (
+            len(metadata["columns"])
+            if metadata and metadata["columns"]
+            else len(updated_columns)
+        )
+
+        summary_payload = None
+        if summary:
+            summary_payload = DataReductionSummary(
+                method=summary.get("method", method_value),
+                components=int(summary.get("components", n_components)),
+                inputColumns=int(summary.get("inputColumns", len(selected_columns))),
+                outputColumns=int(summary.get("outputColumns", len(updated_columns))),
+                varianceExplained=summary.get("varianceExplained"),
+                totalVariance=summary.get("totalVariance"),
+            )
+
+        return DataReductionResponse(
+            columns=updated_columns,
+            rows=updated_rows,
+            updated_at=metadata_updated["updated_at"] if metadata_updated else "",
+            selectionRanges=selection_ranges or [],
+            totalColumns=total_columns,
+            modifiedCells=[],
+            summary=summary_payload,
+        )
+
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to read updated file: {str(e)}"
+        )
+
+
 class HandleBinningRequest(BaseModel):
     """Request model for categorical binning operations."""
 
@@ -1381,3 +1613,12 @@ async def get_file_stats(
         raise HTTPException(
             status_code=500, detail=f"Failed to calculate file statistics: {str(e)}"
         )
+
+
+
+
+
+
+
+
+

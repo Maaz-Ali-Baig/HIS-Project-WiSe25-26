@@ -18,6 +18,7 @@ import { HandleMissingValuesPanel } from "../components/HandleMissingValuesPanel
 import { BinningPanel } from "../components/BinningPanel";
 import { DataEncodingPanel } from "../components/DataEncodingPanel";
 import { TextTransformationPanel } from "../components/TextTransformationPanel";
+import { DataReductionPanel } from "../components/DataReductionPanel";
 
 export function PreProcessingPage() {
   const navigate = useNavigate();
@@ -205,6 +206,18 @@ export function PreProcessingPage() {
           onSuccess={() => refetchData()}
         />
       </ActionSidebarItem>,
+      <ActionSidebarItem
+        title="Data Reduction"
+        key="data-reduction"
+        tooltip="Reduce wide qualitative data into compact numeric components"
+      >
+        <DataReductionPanel
+          columns={nonDateTimeColumns}
+          userId={user.id}
+          fileId={fileId}
+          onSuccess={() => refetchData()}
+        />
+      </ActionSidebarItem>,
     );
   }
 
@@ -271,3 +284,8 @@ export function PreProcessingPage() {
     </FileLayout>
   );
 }
+
+
+
+
+

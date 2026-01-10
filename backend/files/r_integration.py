@@ -1,11 +1,21 @@
 """R integration helper for missing values handling."""
 
+import json
+import tempfile
+
 import os
 import subprocess
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from fastapi import HTTPException
+
+if os.name == "nt":
+    r_home = os.environ.get("R_HOME")
+    if r_home:
+        r_bin = Path(r_home) / "bin" / "x64"
+        if r_bin.exists():
+            os.add_dll_directory(str(r_bin))
 
 # Initialize rpy2 once at module load to avoid context variable issues
 try:
@@ -463,3 +473,125 @@ def handle_text_transformation(
             status_code=500, 
             detail=f"Failed to transform text: {error_msg}"
         )
+
+
+
+def handle_data_reduction(
+    csv_path: Path,
+    selected_columns: List[str],
+    method: str,
+    n_components: int,
+    rare_threshold: Optional[int] = 5,
+    max_cardinality: Optional[int] = 200,
+    sample_size: Optional[int] = None,
+) -> dict:
+    """
+    Execute R script to perform data reduction (MCA/FAMD).
+
+    Args:
+        csv_path: Path to the selected.csv file (will be read and written)
+        selected_columns: List of column names to reduce
+        method: Reduction method (auto, mca, famd)
+        n_components: Number of components to retain
+        rare_threshold: Min frequency to keep category (others -> Other)
+        max_cardinality: Skip columns with more unique values than this
+        sample_size: Optional row sample size for faster fitting
+
+    Returns:
+        Summary dict from R execution
+
+    Raises:
+        HTTPException: If R execution fails or environment is invalid
+    """
+    validate_r_environment()
+
+    summary_path = None
+
+    try:
+        r_script_path = Path(__file__).parent.parent / "R_scripts" / "data_reduction.R"
+
+        if not r_script_path.exists():
+            raise HTTPException(
+                status_code=500, detail=f"R script not found at {r_script_path}"
+            )
+
+        robjects.r.source(str(r_script_path))
+        reduce_data_csv_r = robjects.r["reduce_data_csv"]
+
+        input_csv = str(csv_path.absolute())
+        output_csv = str(csv_path.absolute())
+        columns_r = StrVector(selected_columns)
+
+        method_value = (method or "auto").lower()
+        rare_value = rare_threshold if rare_threshold is not None else 5
+        max_card_value = max_cardinality if max_cardinality is not None else 200
+        sample_value = sample_size if sample_size is not None else robjects.NULL
+
+        fd, summary_path = tempfile.mkstemp(suffix=".json")
+        os.close(fd)
+
+        reduce_data_csv_r(
+            input_csv,
+            output_csv,
+            columns_r,
+            method_value,
+            int(n_components),
+            int(rare_value),
+            int(max_card_value),
+            sample_value,
+            summary_path,
+        )
+
+        if summary_path and os.path.exists(summary_path):
+            with open(summary_path, "r", encoding="utf-8") as handle:
+                summary = json.load(handle)
+        else:
+            summary = {}
+
+        return summary
+
+    except ImportError:
+        raise HTTPException(
+            status_code=500,
+            detail="rpy2 is not installed. Please install it with: pip install rpy2",
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        error_msg = str(e)
+        lower_msg = error_msg.lower()
+
+        if "numeric-only" in lower_msg:
+            raise HTTPException(status_code=400, detail=error_msg)
+        if "factominer" in lower_msg:
+            raise HTTPException(
+                status_code=500,
+                detail="R package 'FactoMineR' is required. Please run: install.packages('FactoMineR')",
+            )
+        if "jsonlite" in lower_msg:
+            raise HTTPException(
+                status_code=500,
+                detail="R package 'jsonlite' is required. Please run: install.packages('jsonlite')",
+            )
+        if "R_HOME" in error_msg or "not found" in lower_msg:
+            raise HTTPException(
+                status_code=500,
+                detail="R is not properly configured. Please ensure R_HOME environment variable is set and R is in PATH",
+            )
+
+        raise HTTPException(
+            status_code=500, detail=f"Failed to execute data reduction: {error_msg}"
+        )
+    finally:
+        if summary_path and os.path.exists(summary_path):
+            try:
+                os.remove(summary_path)
+            except OSError:
+                pass
+
+
+
+
+
+
+

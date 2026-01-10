@@ -212,6 +212,54 @@ export async function handleTextTransformation({
   });
 }
 
+export interface HandleDataReductionParams {
+  userId: string;
+  fileId: string;
+  selected_columns: string[];
+  method: "auto" | "mca" | "famd";
+  n_components: number;
+  rare_threshold?: number;
+  max_cardinality?: number;
+  sample_size?: number;
+}
+
+export interface DataReductionSummary {
+  method: string;
+  components: number;
+  inputColumns: number;
+  outputColumns: number;
+  varianceExplained?: number[] | null;
+  totalVariance?: number | null;
+}
+
+export interface DataReductionResponse extends FileDataResponse {
+  summary?: DataReductionSummary;
+}
+
+export async function handleDataReduction({
+  userId,
+  fileId,
+  selected_columns,
+  method,
+  n_components,
+  rare_threshold,
+  max_cardinality,
+  sample_size,
+}: HandleDataReductionParams): Promise<DataReductionResponse> {
+  return apiFetch<DataReductionResponse>("/api/files/data-reduction", {
+    method: "POST",
+    body: JSON.stringify({
+      userId,
+      fileId,
+      selected_columns,
+      method,
+      n_components,
+      rare_threshold,
+      max_cardinality,
+      sample_size,
+    }),
+  });
+}
 export interface FileStatsResponse {
   total_rows: number;
   total_columns: number;
@@ -241,3 +289,5 @@ export async function getFileStats({
     method: "GET",
   });
 }
+
+

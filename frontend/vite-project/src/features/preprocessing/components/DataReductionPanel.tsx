@@ -21,6 +21,8 @@ interface ReductionSummary {
   components: number;
   inputColumns: number;
   outputColumns: number;
+  originalColumns?: number | null;
+  drColumns?: number | null;
   varianceExplained?: number[] | null;
   totalVariance?: number | null;
 }
@@ -40,6 +42,7 @@ export function DataReductionPanel({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [summary, setSummary] = useState<ReductionSummary | null>(null);
+  const [errorHint, setErrorHint] = useState<string | null>(null);
 
   const { data: fileData } = useQuery({
     queryKey: ["fileData", userId, fileId],
@@ -69,6 +72,26 @@ export function DataReductionPanel({
   }, [fileData]);
 
   const selectableColumns = (columns || []).filter((col) => col !== "id");
+
+  const getErrorHint = (message: string) => {
+    const lower = message.toLowerCase();
+    if (lower.includes("missing values")) {
+      return "Tip: Run Handle Missing Values first (median for numeric, mode or missing-category for categorical).";
+    }
+    if (lower.includes("no usable columns")) {
+      return "Tip: Reduce high-cardinality protection or choose different columns.";
+    }
+    if (lower.includes("mca only supports")) {
+      return "Tip: Remove numeric columns or switch to Auto/FAMD.";
+    }
+    if (lower.includes("numeric-only")) {
+      return "Tip: Select categorical columns or use a numeric-only workflow.";
+    }
+    if (lower.includes("factominer")) {
+      return "Tip: Install the R package FactoMineR and restart the backend.";
+    }
+    return null;
+  };
 
   const handleApply = async () => {
     if (selectedColumns.length === 0) {
@@ -109,6 +132,7 @@ export function DataReductionPanel({
     }
 
     setIsLoading(true);
+    setErrorHint(null);
     setSummary(null);
 
     try {
@@ -142,6 +166,7 @@ export function DataReductionPanel({
       toast.error("Failed to apply data reduction", {
         description: errorMessage,
       });
+      setErrorHint(getErrorHint(errorMessage));
     } finally {
       setIsLoading(false);
     }
@@ -332,10 +357,24 @@ export function DataReductionPanel({
             <span className="text-foreground">{summary.components}</span>
           </p>
           <p>
-            Columns: {" "}
+            Selected columns: {" "}
+            <span className="text-foreground">{summary.inputColumns}</span>
+          </p>
+          <p>
+            Original columns: {" "}
             <span className="text-foreground">
-              {summary.inputColumns} to {summary.outputColumns}
+              {summary.originalColumns ?? "-"}
             </span>
+          </p>
+          <p>
+            DR columns: {" "}
+            <span className="text-foreground">
+              {summary.drColumns ?? summary.components}
+            </span>
+          </p>
+          <p>
+            Total columns: {" "}
+            <span className="text-foreground">{summary.outputColumns}</span>
           </p>
           {summary.totalVariance !== null && summary.totalVariance !== undefined && (
             <p>
@@ -356,6 +395,12 @@ export function DataReductionPanel({
         </div>
       )}
 
+      {errorHint && (
+        <div className="text-xs text-amber-600">
+          {errorHint}
+        </div>
+      )}
+
       <Button
         onClick={handleApply}
         disabled={
@@ -371,6 +416,8 @@ export function DataReductionPanel({
     </div>
   );
 }
+
+
 
 
 

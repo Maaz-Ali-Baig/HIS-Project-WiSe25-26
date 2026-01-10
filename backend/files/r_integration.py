@@ -561,6 +561,41 @@ def handle_data_reduction(
         error_msg = str(e)
         lower_msg = error_msg.lower()
 
+        if "missing" in lower_msg and ("pca" in lower_msg or "imputepca" in lower_msg):
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Missing values detected in numeric columns. Run Handle Missing Values first "
+                    "(median for numeric, mode or missing-category for categorical), then retry."
+                ),
+            )
+        if "infinite or missing values" in lower_msg:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "Missing values detected in numeric columns. Run Handle Missing Values first "
+                    "(median for numeric, mode or missing-category for categorical), then retry."
+                ),
+            )
+        if "no columns available" in lower_msg:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    "No usable columns after filtering. Reduce high-cardinality protection or "
+                    "select different columns."
+                ),
+            )
+        if "no components produced" in lower_msg:
+            raise HTTPException(
+                status_code=400,
+                detail="No components produced. Reduce k or adjust column selection.",
+            )
+        if "mca" in lower_msg and "categorical" in lower_msg:
+            raise HTTPException(
+                status_code=400,
+                detail="MCA only supports categorical data. Remove numeric columns or use FAMD.",
+            )
+
         if "numeric-only" in lower_msg:
             raise HTTPException(status_code=400, detail=error_msg)
         if "factominer" in lower_msg:
@@ -573,10 +608,12 @@ def handle_data_reduction(
                 status_code=500,
                 detail="R package 'jsonlite' is required. Please run: install.packages('jsonlite')",
             )
-        if "R_HOME" in error_msg or "not found" in lower_msg:
+        if "r_home" in lower_msg or "not found" in lower_msg:
             raise HTTPException(
                 status_code=500,
-                detail="R is not properly configured. Please ensure R_HOME environment variable is set and R is in PATH",
+                detail=(
+                    "R is not properly configured. Ensure R_HOME is set and R is on PATH, then restart the backend."
+                ),
             )
 
         raise HTTPException(

@@ -228,6 +228,8 @@ export interface DataReductionSummary {
   components: number;
   inputColumns: number;
   outputColumns: number;
+  originalColumns?: number | null;
+  drColumns?: number | null;
   varianceExplained?: number[] | null;
   totalVariance?: number | null;
 }
@@ -289,5 +291,6 @@ export async function getFileStats({
     method: "GET",
   });
 }
+
 
 

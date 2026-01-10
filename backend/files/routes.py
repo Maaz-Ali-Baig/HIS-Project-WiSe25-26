@@ -994,6 +994,8 @@ class DataReductionSummary(BaseModel):
     components: int
     inputColumns: int
     outputColumns: int
+    originalColumns: Optional[int] = None
+    drColumns: Optional[int] = None
     varianceExplained: Optional[List[float]] = None
     totalVariance: Optional[float] = None
 
@@ -1196,6 +1198,8 @@ async def handle_data_reduction_endpoint(
                 method=summary.get("method", method_value),
                 components=int(summary.get("components", n_components)),
                 inputColumns=int(summary.get("inputColumns", len(selected_columns))),
+                originalColumns=summary.get("originalColumns"),
+                drColumns=summary.get("drColumns"),
                 outputColumns=int(summary.get("outputColumns", len(updated_columns))),
                 varianceExplained=summary.get("varianceExplained"),
                 totalVariance=summary.get("totalVariance"),
@@ -1613,6 +1617,7 @@ async def get_file_stats(
         raise HTTPException(
             status_code=500, detail=f"Failed to calculate file statistics: {str(e)}"
         )
+
 
 
 

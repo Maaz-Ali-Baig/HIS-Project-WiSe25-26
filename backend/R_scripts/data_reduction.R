@@ -155,11 +155,12 @@ reduce_data_csv <- function(
         var_explained <- as.numeric(round(perc, 2))
         total_var <- as.numeric(round(sum(perc), 2))
     }
-
     summary <- list(
         method = method_used,
         components = k,
         inputColumns = length(columns),
+        originalColumns = ncol(df),
+        drColumns = k,
         outputColumns = ncol(output_df),
         varianceExplained = var_explained,
         totalVariance = total_var
@@ -171,6 +172,8 @@ reduce_data_csv <- function(
 
     return(summary)
 }
+
+
 
 
 

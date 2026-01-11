@@ -51,13 +51,13 @@ const getItems = (fileId?: string) => [
   },
   {
     title: "Visualization",
-    url: "/visualization",
+    url: fileId ? `/${fileId}/visualization` : "/visualization",
     icon: BarChart2,
     disabled: !fileId,
   },
   {
     title: "Report",
-    url: "/report",
+    url: fileId ? `/${fileId}/report` : "/report",
     icon: FileText,
     disabled: !fileId,
   },

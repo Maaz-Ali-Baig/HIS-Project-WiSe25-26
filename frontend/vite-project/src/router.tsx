@@ -4,6 +4,8 @@ import { RegisterPage } from "./features/auth/pages/RegisterPage";
 import { HomePage } from "./features/home/pages/HomePage";
 import { PreProcessingPage } from "./features/preprocessing/pages/PreProcessingPage";
 import { CorrelationAnalysisPage } from "./features/home/pages/CorrelationAnalysisPage";
+import { VisualizationPage } from "./features/home/pages/VisualizationPage";
+import { ReportPage } from "./features/home/pages/ReportPage";
 import { ProtectedRoute } from "./features/auth/components/ProtectedRoute";
 import { MainLayout } from "./components/layout/MainLayout";
 import { RootLayout } from "./components/layout/RootLayout";
@@ -48,6 +50,14 @@ export const router = createBrowserRouter(
             {
               path: ":fileId/correlation",
               element: <CorrelationAnalysisPage />,
+            },
+            {
+              path: ":fileId/visualization",
+              element: <VisualizationPage />,
+            },
+            {
+              path: ":fileId/report",
+              element: <ReportPage />,
             },
           ],
         },

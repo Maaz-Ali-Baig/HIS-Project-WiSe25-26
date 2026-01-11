@@ -25,6 +25,13 @@ export function TopNav({ active }: TopNavProps) {
     navigate('/login');
   };
 
+  const buildPath = (suffix: string) => {
+    if (!fileId) {
+      return "/";
+    }
+    return `/${fileId}/${suffix}`;
+  };
+
   const pillClass = (key: NavKey) =>
     key === active
       ? 'rounded-full bg-white px-6 py-2 text-sm font-semibold text-blue-700 shadow-lg'
@@ -57,35 +64,35 @@ export function TopNav({ active }: TopNavProps) {
           <button
             type="button"
             className={pillClass('home')}
-            onClick={() => navigate(fileId ? `/${fileId}` : '/')}
+            onClick={() => navigate(fileId ? `/${fileId}/load-data` : '/')}
           >
             Selection and Preview
           </button>
           <button
             type="button"
             className={pillClass('transform')}
-            onClick={() => navigate('/transform')}
+            onClick={() => navigate(buildPath('pre-processing'))}
           >
             Data Transformation
           </button>
           <button
             type="button"
             className={pillClass('correlation')}
-            onClick={() => navigate('/correlation')}
+            onClick={() => navigate(buildPath('correlation'))}
           >
             Correlation Analysis
           </button>
           <button
             type="button"
             className={pillClass('visualization')}
-            onClick={() => navigate('/visualization')}
+            onClick={() => navigate(buildPath('visualization'))}
           >
             Visualization
           </button>
           <button
             type="button"
             className={pillClass('report')}
-            onClick={() => navigate('/report')}
+            onClick={() => navigate(buildPath('report'))}
           >
             Report
           </button>

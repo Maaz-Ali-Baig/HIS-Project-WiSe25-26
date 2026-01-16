@@ -340,9 +340,6 @@ export function BinningPanel({
             {selectedColumns.length !== 1 ? "s" : ""} selected
           </p>
         )}
-        <p className="text-xs text-amber-600">
-          ⚠️ Only select text/categorical columns. Numeric columns will be rejected.
-        </p>
       </div>
 
       {/* Apply Button */}

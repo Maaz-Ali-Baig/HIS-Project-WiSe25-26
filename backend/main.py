@@ -5,6 +5,7 @@ import sys
 
 from auth.routes import router as auth_router
 from correlation.routes import router as correlation_router
+from visualization.routes import router as visualization_router
 from database.db import init_db
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -49,6 +50,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(files_router)
 app.include_router(correlation_router)
+app.include_router(visualization_router)
 
 # Mount static files directory for serving uploaded CSV files
 FILES_DIR = Path(__file__).parent / "files"

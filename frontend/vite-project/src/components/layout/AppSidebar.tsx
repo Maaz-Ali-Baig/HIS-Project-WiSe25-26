@@ -51,7 +51,7 @@ const getItems = (fileId?: string) => [
   },
   {
     title: "Visualization",
-    url: "/visualization",
+    url: fileId ? `/${fileId}/visualization` : "/visualization",
     icon: BarChart2,
     disabled: !fileId,
   },

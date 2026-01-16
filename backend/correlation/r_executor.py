@@ -78,25 +78,31 @@ def execute_r_script(
 
     # Execute R script
     try:
+        import os
+        env = os.environ.copy()
+        env['PYTHONIOENCODING'] = 'utf-8'
+        
         result = subprocess.run(
             [rscript_cmd, "--vanilla", str(script_path)],
-            input=json_input,
+            input=json_input.encode('utf-8'),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True,
             timeout=timeout,
             check=False,  # Don't raise on non-zero exit
+            env=env,
         )
 
+        # Decode output with UTF-8, replacing any problematic characters
+        stdout_text = result.stdout.decode('utf-8', errors='replace') if result.stdout else ""
+        stderr_text = result.stderr.decode('utf-8', errors='replace') if result.stderr else ""
+        
         # Check for execution errors
         if result.returncode != 0:
-            error_msg = result.stderr.strip() if result.stderr else "Unknown R error"
+            error_msg = stderr_text.strip() if stderr_text else "Unknown R error"
             return {"error": f"R script failed: {error_msg}"}
 
         # Parse JSON output
-        stdout_text = result.stdout or ""
         if not stdout_text.strip():
-            stderr_text = result.stderr or ""
             error_detail = stderr_text.strip() if stderr_text else "No output or error message"
             return {"error": f"R script produced no output. Details: {error_detail}"}
 

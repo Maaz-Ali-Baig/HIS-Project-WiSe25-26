@@ -484,6 +484,7 @@ def handle_data_reduction(
     rare_threshold: Optional[int] = 5,
     max_cardinality: Optional[int] = 200,
     sample_size: Optional[int] = None,
+    dr_table_path: Optional[Path] = None,
 ) -> dict:
     """
     Execute R script to perform data reduction (MCA/FAMD).
@@ -496,9 +497,10 @@ def handle_data_reduction(
         rare_threshold: Min frequency to keep category (others -> Other)
         max_cardinality: Skip columns with more unique values than this
         sample_size: Optional row sample size for faster fitting
+        dr_table_path: Optional path to save DR results table separately
 
     Returns:
-        Summary dict from R execution
+        Summary dict from R execution with comprehensive explainability
 
     Raises:
         HTTPException: If R execution fails or environment is invalid
@@ -530,6 +532,9 @@ def handle_data_reduction(
         fd, summary_path = tempfile.mkstemp(suffix=".json")
         os.close(fd)
 
+        # Handle optional dr_table_path
+        dr_table_value = str(dr_table_path.absolute()) if dr_table_path else robjects.NULL
+
         reduce_data_csv_r(
             input_csv,
             output_csv,
@@ -540,6 +545,7 @@ def handle_data_reduction(
             int(max_card_value),
             sample_value,
             summary_path,
+            dr_table_value,
         )
 
         if summary_path and os.path.exists(summary_path):

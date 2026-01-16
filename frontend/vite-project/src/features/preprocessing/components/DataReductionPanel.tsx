@@ -6,26 +6,16 @@ import { MultiSelect } from "@/components/ui/multi-select";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { getFileData } from "../../home/api/uploads";
+import type { DataReductionSummary } from "../../home/api/uploads";
 
 interface DataReductionPanelProps {
   columns: string[];
   userId: string;
   fileId: string;
-  onSuccess?: () => void;
+  onSuccess?: (summary?: DataReductionSummary) => void;
 }
 
 type ReductionMethod = "auto" | "mca" | "famd";
-
-interface ReductionSummary {
-  method: string;
-  components: number;
-  inputColumns: number;
-  outputColumns: number;
-  originalColumns?: number | null;
-  drColumns?: number | null;
-  varianceExplained?: number[] | null;
-  totalVariance?: number | null;
-}
 
 export function DataReductionPanel({
   columns,
@@ -41,7 +31,7 @@ export function DataReductionPanel({
   const [sampleSize, setSampleSize] = useState<number>(0);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [summary, setSummary] = useState<ReductionSummary | null>(null);
+  const [summary, setSummary] = useState<DataReductionSummary | null>(null);
   const [errorHint, setErrorHint] = useState<string | null>(null);
 
   const { data: fileData } = useQuery({
@@ -158,7 +148,7 @@ export function DataReductionPanel({
       });
 
       if (onSuccess) {
-        onSuccess();
+        onSuccess(result.summary);
       }
     } catch (error) {
       const errorMessage =
@@ -350,11 +340,11 @@ export function DataReductionPanel({
       {summary && (
         <div className="rounded-md border p-3 text-xs text-muted-foreground">
           <p>
-            Method: <span className="text-foreground">{summary.method}</span>
+            Method: <span className="text-foreground">{summary.methodUsed || summary.method}</span>
           </p>
           <p>
             Components: {" "}
-            <span className="text-foreground">{summary.components}</span>
+            <span className="text-foreground">{summary.componentsProduced || summary.components}</span>
           </p>
           <p>
             Selected columns: {" "}
@@ -369,7 +359,7 @@ export function DataReductionPanel({
           <p>
             DR columns: {" "}
             <span className="text-foreground">
-              {summary.drColumns ?? summary.components}
+              {summary.drColumns ?? (summary.componentsProduced || summary.components)}
             </span>
           </p>
           <p>

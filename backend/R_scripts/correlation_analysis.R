@@ -158,6 +158,7 @@ clean_data <- function(data1, data2) {
 # Helper function to apply ordinal ordering
 apply_ordering <- function(data, ordering) {
   if (is.null(ordering) || length(ordering) == 0) {
+    # If no ordering provided, create natural ordering from unique values
     return(as.numeric(factor(data)))
   }
 
@@ -166,11 +167,22 @@ apply_ordering <- function(data, ordering) {
     if (x %in% names(ordering)) {
       return(ordering[[x]])
     } else {
+      # If value not in ordering, return NA (will be handled later)
       return(NA)
     }
   })
+  
+  # Convert to numeric
+  numeric_data <- as.numeric(ordered_data)
+  
+  # Check if we have NAs from unmapped values
+  if (any(is.na(numeric_data))) {
+    # Get unique values not in ordering
+    unmapped_vals <- unique(data[is.na(numeric_data)])
+    warning(paste("Some values not found in ordering:", paste(unmapped_vals, collapse = ", ")))
+  }
 
-  return(as.numeric(ordered_data))
+  return(numeric_data)
 }
 
 # Chi-square test of independence
@@ -277,7 +289,22 @@ cramers_v <- function(data1, data2) {
 # Spearman's rank correlation
 spearman_correlation <- function(data1, data2) {
   tryCatch({
-    test_result <- cor.test(data1, data2, method = "spearman", exact = FALSE)
+    # Remove any remaining NAs that might have been introduced
+    valid_indices <- !is.na(data1) & !is.na(data2)
+    data1_clean <- data1[valid_indices]
+    data2_clean <- data2[valid_indices]
+    
+    # Check if we have enough data
+    if (length(data1_clean) < 3) {
+      return(create_error("Insufficient data for Spearman correlation (need at least 3 valid observations)"))
+    }
+    
+    # Check if there's any variation in the data
+    if (length(unique(data1_clean)) < 2 || length(unique(data2_clean)) < 2) {
+      return(create_error("Insufficient variation in data (need at least 2 distinct values in each variable)"))
+    }
+    
+    test_result <- cor.test(data1_clean, data2_clean, method = "spearman", exact = FALSE)
 
     list(
       method_name = "Spearman's rank correlation",
@@ -554,12 +581,26 @@ tryCatch({
   # Apply ordinal ordering if needed
   if (var1$type == "ordinal") {
     data1_processed <- apply_ordering(data1_clean, var1$ordering)
+    # Check for NAs introduced by ordering
+    if (any(is.na(data1_processed))) {
+      na_count <- sum(is.na(data1_processed))
+      output <- create_error(paste0("Variable 1 ordering failed: ", na_count, " values could not be mapped to the provided ordering. Check category names."))
+      cat(toJSON(output, auto_unbox = TRUE))
+      quit(status = 1)
+    }
   } else {
     data1_processed <- data1_clean
   }
 
   if (var2$type == "ordinal") {
     data2_processed <- apply_ordering(data2_clean, var2$ordering)
+    # Check for NAs introduced by ordering
+    if (any(is.na(data2_processed))) {
+      na_count <- sum(is.na(data2_processed))
+      output <- create_error(paste0("Variable 2 ordering failed: ", na_count, " values could not be mapped to the provided ordering. Check category names."))
+      cat(toJSON(output, auto_unbox = TRUE))
+      quit(status = 1)
+    }
   } else {
     data2_processed <- data2_clean
   }

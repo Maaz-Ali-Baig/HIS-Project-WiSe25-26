@@ -34,11 +34,21 @@ HIS-Project-WiSe25-26/
 
 ### First Time Setup
 
-#### Option 1: Install All Dependencies at Once
+**Prerequisites:**
+- Node.js (v18+)
+- Python (v3.9+)
+- R (v4.0+) - [Download from CRAN](https://cran.r-project.org/)
+
+#### Option 1: Install All Dependencies at Once (Recommended)
 
 ```bash
 npm run install:all
 ```
+
+This will install:
+- Frontend dependencies (React, Vite, etc.)
+- Backend dependencies (FastAPI, rpy2, etc.)
+- R packages (FactoMineR, VIM, etc.)
 
 #### Option 2: Install Separately
 
@@ -53,6 +63,22 @@ npm run install:frontend
 ```bash
 npm run install:backend
 ```
+
+**R Packages (Required for Data Processing):**
+
+```bash
+# Install all required R packages
+Rscript backend/R_scripts/install_packages.R
+```
+
+Required R packages:
+- `jsonlite` - JSON parsing
+- `FactoMineR` - Dimensionality reduction (MCA/FAMD)
+- `dplyr`, `readr` - Data manipulation
+- `VIM` - Missing value imputation
+- `vcd`, `DescTools`, `psych` - Statistical analysis
+- `reticulate` - Python integration
+- `cluster` - Clustering algorithms
 
 ### Starting the Application
 

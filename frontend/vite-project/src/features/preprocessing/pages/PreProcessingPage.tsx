@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthStore } from "../../../store/auth";
 import { useFileStore } from "../../../store/fileStore";
@@ -11,6 +11,7 @@ import {
 } from "../../../components/ui/alert";
 import { DataTable } from "../../../components/DataTable";
 import { getFileData } from "../../home/api/uploads";
+import type { DataReductionSummary } from "../../home/api/uploads";
 import { Loader2, AlertCircle } from "lucide-react";
 import { FileLayout } from "../../../components/layout/FileLayout";
 import { ActionSidebarItem } from "../../../components/layout/ActionSidebarItem";
@@ -19,6 +20,8 @@ import { BinningPanel } from "../components/BinningPanel";
 import { DataEncodingPanel } from "../components/DataEncodingPanel";
 import { TextTransformationPanel } from "../components/TextTransformationPanel";
 import { DataReductionPanel } from "../components/DataReductionPanel";
+import { DataReductionSummaryView } from "../components/DataReductionSummaryView";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui/tabs";
 
 export function PreProcessingPage() {
   const navigate = useNavigate();
@@ -26,6 +29,8 @@ export function PreProcessingPage() {
   const { user } = useAuthStore();
 
   const { setFile, modifiedCells } = useFileStore();
+  const [activeTab, setActiveTab] = useState<string>("pre-processed");
+  const [dataReductionSummary, setDataReductionSummary] = useState<DataReductionSummary | null>(null);
 
   // Redirect if no fileId
   useEffect(() => {
@@ -57,7 +62,8 @@ export function PreProcessingPage() {
       console.log("📊 File data loaded:", {
         columns: fileData.columns.length,
         rows: fileData.rows.length,
-        modifiedCells: fileData.modifiedCells
+        modifiedCells: fileData.modifiedCells,
+        hasSummary: !!fileData.summary
       });
       setFile(
         fileId,
@@ -69,6 +75,11 @@ export function PreProcessingPage() {
         fileData.totalColumns || fileData.columns.length,
         fileData.modifiedCells || [],
       );
+      
+      // Set data reduction summary if present in response
+      if (fileData.summary) {
+        setDataReductionSummary(fileData.summary);
+      }
     }
   }, [fileData, fileId, user?.id, setFile]);
 
@@ -215,7 +226,13 @@ export function PreProcessingPage() {
           columns={nonDateTimeColumns}
           userId={user.id}
           fileId={fileId}
-          onSuccess={() => refetchData()}
+          onSuccess={(summary) => {
+            refetchData();
+            if (summary) {
+              setDataReductionSummary(summary);
+              setActiveTab("data-reduction");
+            }
+          }}
         />
       </ActionSidebarItem>,
     );
@@ -270,14 +287,58 @@ export function PreProcessingPage() {
 
         {fileData && !isLoadingData && !dataError && (
           <div className="flex-1 min-h-0 px-6">
-            <div className="h-[calc(100vh-200px)] border rounded-lg overflow-hidden">
-              <DataTable
-                columns={fileData.columns}
-                rows={fileData.rows}
-                readOnly={true}
-                modifiedCells={modifiedCells}
-              />
-            </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-[calc(100vh-200px)]">
+              <TabsList className="flex-shrink-0">
+                <TabsTrigger value="pre-processed">Pre-Processed Table</TabsTrigger>
+                <TabsTrigger value="data-reduction">Data Reduction</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="pre-processed" className="mt-4 border rounded-lg flex-1 min-h-0 overflow-auto">
+                <DataTable
+                  columns={fileData.columns.filter(col => !col.match(/^DR\d+$/))}
+                  rows={fileData.rows}
+                  readOnly={true}
+                  modifiedCells={modifiedCells}
+                />
+              </TabsContent>
+              
+              <TabsContent value="data-reduction" className="mt-4 flex-1 min-h-0 overflow-y-auto">
+                {(() => {
+                  const drColumns = fileData.columns.filter(col => col.match(/^DR\d+$/));
+                  const hasDRColumns = drColumns.length > 0;
+                  
+                  return hasDRColumns ? (
+                    <div className="space-y-4">
+                      {/* Data Table at the top */}
+                      <div className="border rounded-lg overflow-auto" style={{ height: '30vh' }}>
+                        <DataTable
+                          columns={drColumns}
+                          rows={fileData.rows}
+                          readOnly={true}
+                          modifiedCells={modifiedCells}
+                        />
+                      </div>
+                      
+                      {/* Summary below - fixed, not scrollable */}
+                      {dataReductionSummary && (
+                        <div>
+                          <DataReductionSummaryView summary={dataReductionSummary} />
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="h-full flex items-center justify-center border rounded-lg bg-muted/30">
+                      <div className="text-center space-y-2">
+                        <p className="text-muted-foreground">No data reduction has been applied yet.</p>
+                        <p className="text-sm text-muted-foreground">
+                          Use the "Data Reduction" panel on the right to perform dimensionality reduction.
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </TabsContent>
+            </Tabs>
           </div>
         )}
       </div>

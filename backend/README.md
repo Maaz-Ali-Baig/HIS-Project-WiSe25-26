@@ -28,6 +28,25 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+### 4. Install R packages
+
+The backend uses R for advanced data processing features. Install required R packages:
+
+```bash
+Rscript R_scripts/install_packages.R
+```
+
+This will automatically install all required R packages:
+- `jsonlite` - JSON parsing
+- `FactoMineR` - Dimensionality reduction (MCA/FAMD)
+- `dplyr`, `readr` - Data manipulation
+- `VIM` - Missing value imputation
+- `vcd`, `DescTools`, `psych` - Statistical analysis
+- `reticulate` - Python integration
+- `cluster` - Clustering algorithms
+
+**Note:** Make sure you have R installed on your system. Download from [https://cran.r-project.org/](https://cran.r-project.org/)
+
 ## Running the Server
 
 ### Development Mode

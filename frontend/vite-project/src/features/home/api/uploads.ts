@@ -20,6 +20,7 @@ export interface FileDataResponse {
   selectionRanges: Array<{ start: number; end: number }>;
   totalColumns: number;
   modifiedCells?: Array<{ rowId: string; column: string }>;
+  summary?: DataReductionSummary;
 }
 
 export interface GetFileDataParams {
@@ -223,15 +224,76 @@ export interface HandleDataReductionParams {
   sample_size?: number;
 }
 
+export interface DroppedColumn {
+  column: string;
+  reason: string;
+  uniqueLevels?: number;
+  threshold?: number;
+}
+
+export interface MissingHandling {
+  categoricalBlankOrNAReplacedWith?: string;
+}
+
+export interface RareLevelHandling {
+  rareThreshold?: number;
+  rareLevelsReplacedWith?: string;
+}
+
+export interface TopContributions {
+  [key: string]: string[];
+}
+
 export interface DataReductionSummary {
-  method: string;
-  components: number;
-  inputColumns: number;
-  outputColumns: number;
+  // Core method info
+  method?: string;
+  methodUsed?: string;
+  
+  // Component counts
+  components?: number;
+  componentsRequested?: number;
+  componentsProduced?: number;
+  
+  // Column counts
+  inputColumns?: number;
+  outputColumns?: number;
   originalColumns?: number | null;
   drColumns?: number | null;
+  
+  // Variance explained
   varianceExplained?: number[] | null;
   totalVariance?: number | null;
+  
+  // Row information
+  rowsInput?: number;
+  rowsOutput?: number;
+  rowsUsedForFit?: number;
+  sampleSizeUsed?: number;
+  seedUsed?: number | null;
+  
+  // Column details
+  selectedColumns?: string[];
+  keptColumns?: string[];
+  droppedColumns?: DroppedColumn[] | null;
+  outputMode?: string;
+  drColumnNames?: string[];
+  treatedAsNumeric?: string[];
+  treatedAsCategorical?: string[];
+  suspectedCodeColumns?: string[] | null;
+  
+  // Handling strategies
+  missingHandling?: MissingHandling | string | null;
+  rareLevelHandling?: RareLevelHandling | null;
+  rareThreshold?: number;
+  collapsedToOther?: { [key: string]: string[] } | null;
+  maxCardinality?: number;
+  
+  // Performance
+  runtimeSeconds?: number;
+  
+  // Interpretability
+  topContributions?: TopContributions | null;
+  topContributingVariables?: TopContributions | null;
 }
 
 export interface DataReductionResponse extends FileDataResponse {

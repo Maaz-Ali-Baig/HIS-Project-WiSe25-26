@@ -13,6 +13,9 @@ from database.db import (
     update_file_timestamp,
     upsert_file_metadata,
     validate_column_ranges,
+    store_dr_result,
+    get_dr_results,
+    get_dr_result_by_run_id,
 )
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 from pydantic import BaseModel, Field
@@ -53,6 +56,7 @@ class FileDataResponse(BaseModel):
     selectionRanges: List[Dict[str, int]] = []
     totalColumns: int = 0
     modifiedCells: List[Dict[str, str]] = []  # [{rowId, column}]
+    summary: Optional[Dict[str, Any]] = None  # Data reduction summary if available
     
     model_config = {"populate_by_name": True}
 
@@ -288,6 +292,56 @@ async def get_file_data(
         )
         
         modified_cells = metadata.get("modified_cells", []) if metadata else []
+        
+        # Get most recent DR summary if DR columns exist
+        summary = None
+        has_dr_columns = any(col.startswith("DR") and col[2:].isdigit() for col in current_columns)
+        print(f"🔍 Checking for DR columns: has_dr_columns={has_dr_columns}, columns={current_columns[:10]}")
+        
+        if has_dr_columns:
+            try:
+                from database.db import get_dr_results
+                dr_results = get_dr_results(userId, fileId, limit=1)
+                print(f"📊 DR results retrieved: {len(dr_results) if dr_results else 0} results")
+                
+                if dr_results:
+                    # Convert the database result to match DataReductionSummary format
+                    dr_data = dr_results[0]
+                    print(f"✅ Using DR result with method: {dr_data.get('methodUsed')}")
+                    summary = {
+                        "methodUsed": dr_data.get("methodUsed"),
+                        "componentsRequested": dr_data.get("componentsRequested"),
+                        "componentsProduced": dr_data.get("componentsProduced"),
+                        "inputColumns": dr_data.get("inputColumns"),
+                        "outputColumns": dr_data.get("outputColumns"),
+                        "originalColumns": dr_data.get("originalColumns"),
+                        "drColumns": dr_data.get("drColumns"),
+                        "varianceExplained": dr_data.get("varianceExplained"),
+                        "totalVariance": dr_data.get("totalVariance"),
+                        "rowsInput": dr_data.get("rowsInput"),
+                        "rowsOutput": dr_data.get("rowsOutput"),
+                        "sampleSizeUsed": dr_data.get("sampleSizeUsed"),
+                        "seedUsed": dr_data.get("seedUsed"),
+                        "selectedColumns": dr_data.get("selectedColumns"),
+                        "keptColumns": dr_data.get("keptColumns"),
+                        "droppedColumns": dr_data.get("droppedColumns"),
+                        "outputMode": dr_data.get("outputMode"),
+                        "treatedAsNumeric": dr_data.get("treatedAsNumeric"),
+                        "treatedAsCategorical": dr_data.get("treatedAsCategorical"),
+                        "suspectedCodeColumns": dr_data.get("suspectedCodeColumns"),
+                        "missingHandling": dr_data.get("missingHandling"),
+                        "rareThreshold": dr_data.get("rareThreshold"),
+                        "collapsedToOther": dr_data.get("collapsedToOther"),
+                        "maxCardinality": dr_data.get("maxCardinality"),
+                        "runtimeSeconds": dr_data.get("runtimeSeconds"),
+                        "topContributions": dr_data.get("topContributions"),
+                    }
+                else:
+                    print("⚠️ No DR results found in database")
+            except Exception as e:
+                print(f"❌ Error fetching DR summary: {str(e)}")
+                import traceback
+                traceback.print_exc()
 
         return FileDataResponse(
             columns=current_columns,
@@ -296,6 +350,7 @@ async def get_file_data(
             selectionRanges=selection_ranges or [],
             totalColumns=total_columns,
             modifiedCells=modified_cells,
+            summary=summary,
         )
 
     except UnicodeDecodeError:
@@ -988,16 +1043,51 @@ async def handle_text_transformation_endpoint(
 
 
 class DataReductionSummary(BaseModel):
-    """Summary for data reduction output."""
+    """Summary for data reduction output with comprehensive explainability."""
 
-    method: str
-    components: int
-    inputColumns: int
-    outputColumns: int
-    originalColumns: Optional[int] = None
-    drColumns: Optional[int] = None
+    # Basic run info
+    methodUsed: str
+    componentsRequested: int
+    componentsProduced: int
+    rowsInput: int
+    rowsOutput: int
+    outputMode: str
+    outputColumns: List[str]
+    
+    # Quality signal
     varianceExplained: Optional[List[float]] = None
     totalVariance: Optional[float] = None
+    
+    # Data decisions
+    selectedColumns: List[str]
+    keptColumns: List[str]
+    droppedColumns: Optional[Dict[str, str]] = None
+    
+    # Type handling
+    treatedAsNumeric: List[str]
+    treatedAsCategorical: List[str]
+    suspectedCodeColumns: Optional[List[str]] = None
+    
+    # Preprocessing stats
+    missingHandling: str
+    rareThreshold: int
+    collapsedToOther: Optional[Dict[str, int]] = None
+    maxCardinality: int
+    
+    # Performance + reproducibility
+    sampleSizeUsed: int
+    seedUsed: Optional[int] = None
+    runtimeSeconds: float
+    
+    # Explainability
+    topContributions: Optional[Dict[str, Any]] = None
+    
+    # Legacy fields for backward compatibility
+    method: Optional[str] = None
+    components: Optional[int] = None
+    inputColumns: Optional[int] = None
+    originalColumns: Optional[int] = None
+    drColumns: Optional[int] = None
 
 
 class DataReductionResponse(FileDataResponse):
@@ -1148,6 +1238,9 @@ async def handle_data_reduction_endpoint(
     if sample_size is not None and sample_size <= 0:
         sample_size = None
 
+    # Create DR table path for separate storage
+    dr_table_path = file_dir / "dr_results.csv"
+    
     # Execute R script to perform data reduction
     try:
         summary = handle_data_reduction(
@@ -1158,6 +1251,7 @@ async def handle_data_reduction_endpoint(
             rare_threshold,
             max_cardinality,
             sample_size,
+            dr_table_path,
         )
     except HTTPException:
         raise
@@ -1166,48 +1260,118 @@ async def handle_data_reduction_endpoint(
             status_code=500,
             detail=f"Unexpected error during data reduction: {str(e)}",
         )
+    
+    # Store DR results in database
+    try:
+        run_id = store_dr_result(user_id, file_id, summary)
+        summary['runId'] = run_id
+    except Exception as e:
+        print(f"Warning: Failed to store DR result in database: {str(e)}")
+        import traceback
+        traceback.print_exc()
 
     # Update timestamp in database
     update_file_timestamp(user_id, file_id)
 
-    # Read updated CSV and return response
+    # Read DR results table (separate from original data)
     try:
-        async with aiofiles.open(selected_path, "r", encoding="utf-8") as f:
-            updated_content = await f.read()
+        async with aiofiles.open(dr_table_path, "r", encoding="utf-8") as f:
+            dr_content = await f.read()
 
-        updated_reader = csv.DictReader(io.StringIO(updated_content))
-        updated_columns = (
-            list(updated_reader.fieldnames) if updated_reader.fieldnames else []
+        dr_reader = csv.DictReader(io.StringIO(dr_content))
+        dr_columns = (
+            list(dr_reader.fieldnames) if dr_reader.fieldnames else []
         )
-        updated_rows = list(updated_reader)
+        dr_rows = list(dr_reader)
 
         # Get updated metadata
         metadata_updated = get_file_metadata(user_id, file_id)
         selection_ranges = (
             metadata_updated.get("selected_columns", []) if metadata_updated else []
         )
-        total_columns = (
-            len(metadata["columns"])
-            if metadata and metadata["columns"]
-            else len(updated_columns)
-        )
+        total_columns = len(dr_columns)
 
         summary_payload = None
         if summary:
-            summary_payload = DataReductionSummary(
-                method=summary.get("method", method_value),
-                components=int(summary.get("components", n_components)),
-                inputColumns=int(summary.get("inputColumns", len(selected_columns))),
-                originalColumns=summary.get("originalColumns"),
-                drColumns=summary.get("drColumns"),
-                outputColumns=int(summary.get("outputColumns", len(updated_columns))),
-                varianceExplained=summary.get("varianceExplained"),
-                totalVariance=summary.get("totalVariance"),
-            )
+            try:
+                # Helper function to safely convert to int
+                def safe_int(value, default):
+                    if value is None:
+                        return default
+                    if isinstance(value, (int, float)):
+                        return int(value)
+                    if isinstance(value, str):
+                        try:
+                            return int(float(value))
+                        except (ValueError, TypeError):
+                            return default
+                    return default
+                
+                # Helper function to safely convert to float
+                def safe_float(value, default):
+                    if value is None:
+                        return default
+                    if isinstance(value, (int, float)):
+                        return float(value)
+                    if isinstance(value, str):
+                        try:
+                            return float(value)
+                        except (ValueError, TypeError):
+                            return default
+                    return default
+                
+                # Helper to ensure dict or None (R's empty list() becomes [] in Python)
+                def ensure_dict_or_none(value):
+                    if value is None:
+                        return None
+                    if isinstance(value, dict):
+                        return value if len(value) > 0 else None
+                    if isinstance(value, list):
+                        return None if len(value) == 0 else value
+                    return value
+                
+                summary_payload = DataReductionSummary(
+                    # New comprehensive fields
+                    methodUsed=summary.get("methodUsed", method_value),
+                    componentsRequested=safe_int(summary.get("componentsRequested"), n_components),
+                    componentsProduced=safe_int(summary.get("componentsProduced"), n_components),
+                    rowsInput=safe_int(summary.get("rowsInput"), len(dr_rows)),
+                    rowsOutput=safe_int(summary.get("rowsOutput"), len(dr_rows)),
+                    outputMode=summary.get("outputMode", "separate"),
+                    outputColumns=summary.get("outputColumns", []),
+                    varianceExplained=summary.get("varianceExplained"),
+                    totalVariance=summary.get("totalVariance"),
+                    selectedColumns=summary.get("selectedColumns", selected_columns),
+                    keptColumns=summary.get("keptColumns", []),
+                    droppedColumns=ensure_dict_or_none(summary.get("droppedColumns")),
+                    treatedAsNumeric=summary.get("treatedAsNumeric", []),
+                    treatedAsCategorical=summary.get("treatedAsCategorical", []),
+                    suspectedCodeColumns=summary.get("suspectedCodeColumns"),
+                    missingHandling=summary.get("missingHandling", ""),
+                    rareThreshold=safe_int(summary.get("rareThreshold"), rare_threshold),
+                    collapsedToOther=ensure_dict_or_none(summary.get("collapsedToOther")),
+                    maxCardinality=safe_int(summary.get("maxCardinality"), max_cardinality),
+                    sampleSizeUsed=safe_int(summary.get("sampleSizeUsed"), len(dr_rows)),
+                    seedUsed=summary.get("seedUsed"),
+                    runtimeSeconds=safe_float(summary.get("runtimeSeconds"), 0.0),
+                    topContributions=ensure_dict_or_none(summary.get("topContributions")),
+                    # Legacy fields
+                    method=summary.get("methodUsed", method_value),
+                    components=safe_int(summary.get("componentsProduced"), n_components),
+                    inputColumns=safe_int(summary.get("inputColumns"), len(selected_columns)),
+                    originalColumns=summary.get("originalColumns"),
+                    drColumns=summary.get("drColumns"),
+                )
+            except Exception as e:
+                print(f"Error creating summary payload: {str(e)}")
+                print(f"Summary data: {summary}")
+                import traceback
+                traceback.print_exc()
+                raise
 
         return DataReductionResponse(
-            columns=updated_columns,
-            rows=updated_rows,
+            columns=dr_columns,
+            rows=dr_rows,
             updated_at=metadata_updated["updated_at"] if metadata_updated else "",
             selectionRanges=selection_ranges or [],
             totalColumns=total_columns,
@@ -1217,8 +1381,151 @@ async def handle_data_reduction_endpoint(
 
     except Exception as e:
         raise HTTPException(
-            status_code=500, detail=f"Failed to read updated file: {str(e)}"
+            status_code=500, detail=f"Failed to read DR results: {str(e)}"
         )
+
+
+class DRResultsHistoryResponse(BaseModel):
+    """Response model for DR results history."""
+    results: List[Dict[str, Any]]
+
+
+@router.get("/data-reduction/history/{user_id}/{file_id}", response_model=DRResultsHistoryResponse)
+async def get_dr_history(
+    user_id: str,
+    file_id: str,
+    limit: int = Query(10, ge=1, le=50, description="Maximum number of results to return")
+):
+    """
+    Get dimensionality reduction results history for a file.
+    
+    Args:
+        user_id: User identifier
+        file_id: File identifier
+        limit: Maximum number of results to return (default 10, max 50)
+        
+    Returns:
+        List of DR results with comprehensive metadata
+    """
+    # Validate user exists
+    user = get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    try:
+        results = get_dr_results(user_id, file_id, limit)
+        return DRResultsHistoryResponse(results=results)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Failed to retrieve DR history: {str(e)}"
+        )
+
+
+class DRTableResponse(BaseModel):
+    """Response model for DR table data."""
+    columns: List[str]
+    rows: List[Dict[str, Any]]
+    runId: Optional[str] = None
+
+
+@router.get("/data-reduction/table/{user_id}/{file_id}", response_model=DRTableResponse)
+async def get_dr_table(
+    user_id: str,
+    file_id: str,
+    run_id: Optional[str] = Query(None, description="Specific run ID (latest if not provided)")
+):
+    """
+    Get the DR results table (DR1, DR2, ... columns only).
+    
+    Args:
+        user_id: User identifier
+        file_id: File identifier
+        run_id: Optional run ID (uses latest if not provided)
+        
+    Returns:
+        DR table with DR columns and comprehensive metadata
+    """
+    # Validate user exists
+    user = get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Build file paths
+    file_dir = FILES_DIR / user_id / file_id
+    dr_table_path = file_dir / "dr_results.csv"
+    
+    # Check if DR table exists
+    if not dr_table_path.exists():
+        raise HTTPException(
+            status_code=404, 
+            detail="No dimensionality reduction results found for this file"
+        )
+    
+    # Read DR table
+    try:
+        async with aiofiles.open(dr_table_path, "r", encoding="utf-8") as f:
+            content = await f.read()
+        
+        csv_reader = csv.DictReader(io.StringIO(content))
+        columns = list(csv_reader.fieldnames) if csv_reader.fieldnames else []
+        rows = list(csv_reader)
+        
+        # Get run_id from database if requested
+        result_run_id = None
+        if run_id:
+            result = get_dr_result_by_run_id(user_id, file_id, run_id)
+            if result:
+                result_run_id = result['runId']
+        else:
+            # Get latest run
+            results = get_dr_results(user_id, file_id, limit=1)
+            if results and len(results) > 0:
+                result_run_id = results[0]['runId']
+        
+        return DRTableResponse(
+            columns=columns,
+            rows=rows,
+            runId=result_run_id
+        )
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Failed to read DR table: {str(e)}"
+        )
+
+
+@router.get("/data-reduction/result/{user_id}/{file_id}/{run_id}")
+async def get_specific_dr_result(
+    user_id: str,
+    file_id: str,
+    run_id: str
+):
+    """
+    Get a specific dimensionality reduction result by run ID.
+    
+    Args:
+        user_id: User identifier
+        file_id: File identifier
+        run_id: Run identifier
+        
+    Returns:
+        DR result with comprehensive metadata and explainability
+    """
+    # Validate user exists
+    user = get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    result = get_dr_result_by_run_id(user_id, file_id, run_id)
+    if not result:
+        raise HTTPException(
+            status_code=404, 
+            detail="DR result not found"
+        )
+    
+    return result
 
 
 class HandleBinningRequest(BaseModel):

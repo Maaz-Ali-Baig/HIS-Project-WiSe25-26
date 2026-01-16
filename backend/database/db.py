@@ -66,6 +66,47 @@ def init_db():
         conn.commit()
         print("Migration complete: column_highlights column added")
 
+    # Create data_reduction_results table for storing DR transformations
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS data_reduction_results (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            file_id TEXT NOT NULL,
+            run_id TEXT NOT NULL,
+            method_used TEXT NOT NULL,
+            components_requested INTEGER NOT NULL,
+            components_produced INTEGER NOT NULL,
+            rows_input INTEGER NOT NULL,
+            rows_output INTEGER NOT NULL,
+            output_mode TEXT NOT NULL,
+            output_columns TEXT NOT NULL,
+            variance_explained TEXT,
+            total_variance REAL,
+            selected_columns TEXT NOT NULL,
+            kept_columns TEXT NOT NULL,
+            dropped_columns TEXT,
+            treated_as_numeric TEXT,
+            treated_as_categorical TEXT,
+            suspected_code_columns TEXT,
+            missing_handling TEXT,
+            rare_threshold INTEGER,
+            collapsed_to_other TEXT,
+            max_cardinality INTEGER,
+            sample_size_used INTEGER,
+            seed_used INTEGER,
+            runtime_seconds REAL,
+            top_contributions TEXT,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+    """)
+
+    # Create index on user_id and file_id for faster lookups
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_dr_user_file 
+        ON data_reduction_results(user_id, file_id)
+    """)
+
     conn.commit()
     conn.close()
     print(f"Database initialized at {DATABASE_PATH}")
@@ -277,3 +318,202 @@ def validate_column_ranges(ranges: list[dict], total_columns: int) -> tuple[bool
             return False, f"Ranges overlap: [{sorted_ranges[i]['start']}-{current_end}] and [{next_start}-{sorted_ranges[i+1]['end']}]"
 
     return True, None
+
+
+def store_dr_result(user_id: str, file_id: str, dr_data: dict) -> str:
+    """
+    Store dimensionality reduction result in the database.
+    
+    Args:
+        user_id: User identifier
+        file_id: File identifier
+        dr_data: Dictionary containing all DR metadata
+        
+    Returns:
+        The run_id of the stored result
+    """
+    import json
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    run_id = generate_uuid_v7()
+    created_at = datetime.utcnow().isoformat()
+    
+    cursor.execute("""
+        INSERT INTO data_reduction_results (
+            user_id, file_id, run_id, method_used, components_requested, 
+            components_produced, rows_input, rows_output, output_mode, output_columns,
+            variance_explained, total_variance, selected_columns, kept_columns,
+            dropped_columns, treated_as_numeric, treated_as_categorical, 
+            suspected_code_columns, missing_handling, rare_threshold, 
+            collapsed_to_other, max_cardinality, sample_size_used, seed_used,
+            runtime_seconds, top_contributions, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (
+        user_id, file_id, run_id,
+        dr_data.get('methodUsed'),
+        dr_data.get('componentsRequested'),
+        dr_data.get('componentsProduced'),
+        dr_data.get('rowsInput'),
+        dr_data.get('rowsOutput'),
+        dr_data.get('outputMode', 'append'),
+        json.dumps(dr_data.get('outputColumns', [])),
+        json.dumps(dr_data.get('varianceExplained', [])),
+        dr_data.get('totalVariance'),
+        json.dumps(dr_data.get('selectedColumns', [])),
+        json.dumps(dr_data.get('keptColumns', [])),
+        json.dumps(dr_data.get('droppedColumns', [])),
+        json.dumps(dr_data.get('treatedAsNumeric', [])),
+        json.dumps(dr_data.get('treatedAsCategorical', [])),
+        json.dumps(dr_data.get('suspectedCodeColumns', [])),
+        dr_data.get('missingHandling'),
+        dr_data.get('rareThreshold'),
+        json.dumps(dr_data.get('collapsedToOther', {})),
+        dr_data.get('maxCardinality'),
+        dr_data.get('sampleSizeUsed'),
+        dr_data.get('seedUsed'),
+        dr_data.get('runtimeSeconds'),
+        json.dumps(dr_data.get('topContributions', {})),
+        created_at
+    ))
+    
+    conn.commit()
+    conn.close()
+    
+    return run_id
+
+
+def get_dr_results(user_id: str, file_id: str, limit: int = 10) -> list[dict]:
+    """
+    Get dimensionality reduction results for a file.
+    
+    Args:
+        user_id: User identifier
+        file_id: File identifier
+        limit: Maximum number of results to return (most recent first)
+        
+    Returns:
+        List of DR result dictionaries
+    """
+    import json
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT * FROM data_reduction_results
+        WHERE user_id = ? AND file_id = ?
+        ORDER BY created_at DESC
+        LIMIT ?
+    """, (user_id, file_id, limit))
+    
+    rows = cursor.fetchall()
+    conn.close()
+    
+    results = []
+    for row in rows:
+        # Handle missingHandling - could be string or JSON
+        missing_handling = row['missing_handling']
+        if missing_handling:
+            try:
+                missing_handling = json.loads(missing_handling)
+            except (json.JSONDecodeError, TypeError):
+                # If it's not JSON, keep it as is (backward compatibility)
+                pass
+        
+        results.append({
+            'id': row['id'],
+            'runId': row['run_id'],
+            'methodUsed': row['method_used'],
+            'componentsRequested': row['components_requested'],
+            'componentsProduced': row['components_produced'],
+            'rowsInput': row['rows_input'],
+            'rowsOutput': row['rows_output'],
+            'outputMode': row['output_mode'],
+            'outputColumns': json.loads(row['output_columns']) if row['output_columns'] else [],
+            'varianceExplained': json.loads(row['variance_explained']) if row['variance_explained'] else [],
+            'totalVariance': row['total_variance'],
+            'selectedColumns': json.loads(row['selected_columns']) if row['selected_columns'] else [],
+            'keptColumns': json.loads(row['kept_columns']) if row['kept_columns'] else [],
+            'droppedColumns': json.loads(row['dropped_columns']) if row['dropped_columns'] else [],
+            'treatedAsNumeric': json.loads(row['treated_as_numeric']) if row['treated_as_numeric'] else [],
+            'treatedAsCategorical': json.loads(row['treated_as_categorical']) if row['treated_as_categorical'] else [],
+            'suspectedCodeColumns': json.loads(row['suspected_code_columns']) if row['suspected_code_columns'] else [],
+            'missingHandling': missing_handling,
+            'rareThreshold': row['rare_threshold'],
+            'collapsedToOther': json.loads(row['collapsed_to_other']) if row['collapsed_to_other'] else {},
+            'maxCardinality': row['max_cardinality'],
+            'sampleSizeUsed': row['sample_size_used'],
+            'seedUsed': row['seed_used'],
+            'runtimeSeconds': row['runtime_seconds'],
+            'topContributions': json.loads(row['top_contributions']) if row['top_contributions'] else [],
+            'createdAt': row['created_at']
+        })
+    
+    return results
+
+
+def get_dr_result_by_run_id(user_id: str, file_id: str, run_id: str) -> Optional[dict]:
+    """
+    Get a specific dimensionality reduction result by run_id.
+    
+    Args:
+        user_id: User identifier
+        file_id: File identifier
+        run_id: Run identifier
+        
+    Returns:
+        DR result dictionary or None
+    """
+    import json
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT * FROM data_reduction_results
+        WHERE user_id = ? AND file_id = ? AND run_id = ?
+    """, (user_id, file_id, run_id))
+    
+    row = cursor.fetchone()
+    conn.close()
+    
+    if not row:
+        return None
+    
+    # Handle missingHandling - could be string or JSON
+    missing_handling = row['missing_handling']
+    if missing_handling:
+        try:
+            missing_handling = json.loads(missing_handling)
+        except (json.JSONDecodeError, TypeError):
+            # If it's not JSON, keep it as is (backward compatibility)
+            pass
+    
+    return {
+        'id': row['id'],
+        'runId': row['run_id'],
+        'methodUsed': row['method_used'],
+        'componentsRequested': row['components_requested'],
+        'componentsProduced': row['components_produced'],
+        'rowsInput': row['rows_input'],
+        'rowsOutput': row['rows_output'],
+        'outputMode': row['output_mode'],
+        'outputColumns': json.loads(row['output_columns']) if row['output_columns'] else [],
+        'varianceExplained': json.loads(row['variance_explained']) if row['variance_explained'] else [],
+        'totalVariance': row['total_variance'],
+        'selectedColumns': json.loads(row['selected_columns']) if row['selected_columns'] else [],
+        'keptColumns': json.loads(row['kept_columns']) if row['kept_columns'] else [],
+        'droppedColumns': json.loads(row['dropped_columns']) if row['dropped_columns'] else [],
+        'treatedAsNumeric': json.loads(row['treated_as_numeric']) if row['treated_as_numeric'] else [],
+        'treatedAsCategorical': json.loads(row['treated_as_categorical']) if row['treated_as_categorical'] else [],
+        'suspectedCodeColumns': json.loads(row['suspected_code_columns']) if row['suspected_code_columns'] else [],
+        'missingHandling': missing_handling,
+        'rareThreshold': row['rare_threshold'],
+        'collapsedToOther': json.loads(row['collapsed_to_other']) if row['collapsed_to_other'] else {},
+        'maxCardinality': row['max_cardinality'],
+        'sampleSizeUsed': row['sample_size_used'],
+        'seedUsed': row['seed_used'],
+        'runtimeSeconds': row['runtime_seconds'],
+        'topContributions': json.loads(row['top_contributions']) if row['top_contributions'] else [],
+        'createdAt': row['created_at']
+    }
+

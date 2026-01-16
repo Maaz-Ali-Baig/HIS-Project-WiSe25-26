@@ -420,12 +420,36 @@ def get_dr_results(user_id: str, file_id: str, limit: int = 10) -> list[dict]:
                 # If it's not JSON, keep it as is (backward compatibility)
                 pass
         
+        # Safely access columns that may not exist
+        try:
+            input_columns = row['input_columns']
+        except (KeyError, IndexError):
+            input_columns = None
+            
+        try:
+            original_columns = row['original_columns']
+        except (KeyError, IndexError):
+            original_columns = None
+            
+        try:
+            dr_columns = row['dr_columns']
+        except (KeyError, IndexError):
+            dr_columns = None
+            
+        try:
+            dr_column_names = json.loads(row['dr_column_names']) if row['dr_column_names'] else None
+        except (KeyError, IndexError):
+            dr_column_names = None
+        
         results.append({
             'id': row['id'],
             'runId': row['run_id'],
             'methodUsed': row['method_used'],
             'componentsRequested': row['components_requested'],
             'componentsProduced': row['components_produced'],
+            'inputColumns': input_columns,
+            'originalColumns': original_columns,
+            'drColumns': dr_columns,
             'rowsInput': row['rows_input'],
             'rowsOutput': row['rows_output'],
             'outputMode': row['output_mode'],
@@ -446,6 +470,7 @@ def get_dr_results(user_id: str, file_id: str, limit: int = 10) -> list[dict]:
             'seedUsed': row['seed_used'],
             'runtimeSeconds': row['runtime_seconds'],
             'topContributions': json.loads(row['top_contributions']) if row['top_contributions'] else [],
+            'drColumnNames': dr_column_names,
             'createdAt': row['created_at']
         })
     

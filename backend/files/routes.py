@@ -305,37 +305,67 @@ async def get_file_data(
                 print(f"📊 DR results retrieved: {len(dr_results) if dr_results else 0} results")
                 
                 if dr_results:
-                    # Convert the database result to match DataReductionSummary format
                     dr_data = dr_results[0]
                     print(f"✅ Using DR result with method: {dr_data.get('methodUsed')}")
+                    print(f"📊 DR data keys: {list(dr_data.keys())}")
+                    
+                    # Convert dropped columns to proper format
+                    dropped_cols = None
+                    if dr_data.get("droppedColumns"):
+                        dropped_data = dr_data.get("droppedColumns")
+                        if isinstance(dropped_data, list):
+                            dropped_cols = dropped_data
+                    
+                    # Create missing handling info
+                    missing_info = None
+                    if dr_data.get("missingHandling"):
+                        missing_handling = dr_data.get("missingHandling")
+                        if isinstance(missing_handling, dict):
+                            missing_info = missing_handling
+                        elif isinstance(missing_handling, str):
+                            missing_info = {"categoricalBlankOrNAReplacedWith": missing_handling}
+                    
+                    # Create rare level handling info
+                    rare_info = None
+                    if dr_data.get("rareThreshold"):
+                        rare_info = {
+                            "rareThreshold": dr_data.get("rareThreshold"),
+                            "rareLevelsReplacedWith": "Other"
+                        }
+                    
+                    # Generate DR column names from actual columns if not in database
+                    dr_col_names = dr_data.get("drColumnNames")
+                    if not dr_col_names:
+                        # Extract DR columns from current columns
+                        dr_cols_in_data = [col for col in current_columns if col.startswith("DR") and col[2:].isdigit()]
+                        dr_col_names = sorted(dr_cols_in_data) if dr_cols_in_data else [f"DR{i+1}" for i in range(dr_data.get("componentsProduced", 0))]
+                    
+                    # Get counts from actual data
+                    components_produced = dr_data.get("componentsProduced") or len([col for col in current_columns if col.startswith("DR") and col[2:].isdigit()])
+                    input_columns = dr_data.get("inputColumns") or len(dr_data.get("selectedColumns", []))
+                    original_columns = dr_data.get("originalColumns") or (len(current_columns) - components_produced)
+                    output_columns = dr_data.get("outputColumns") or len(current_columns)
+                    
                     summary = {
-                        "methodUsed": dr_data.get("methodUsed"),
-                        "componentsRequested": dr_data.get("componentsRequested"),
-                        "componentsProduced": dr_data.get("componentsProduced"),
-                        "inputColumns": dr_data.get("inputColumns"),
-                        "outputColumns": dr_data.get("outputColumns"),
-                        "originalColumns": dr_data.get("originalColumns"),
-                        "drColumns": dr_data.get("drColumns"),
+                        "method": dr_data.get("methodUsed") or "unknown",
+                        "components": components_produced,
+                        "inputColumns": input_columns,
+                        "originalColumns": original_columns,
+                        "drColumns": dr_data.get("drColumns") or components_produced,
+                        "outputColumns": output_columns,
                         "varianceExplained": dr_data.get("varianceExplained"),
                         "totalVariance": dr_data.get("totalVariance"),
-                        "rowsInput": dr_data.get("rowsInput"),
-                        "rowsOutput": dr_data.get("rowsOutput"),
-                        "sampleSizeUsed": dr_data.get("sampleSizeUsed"),
-                        "seedUsed": dr_data.get("seedUsed"),
                         "selectedColumns": dr_data.get("selectedColumns"),
-                        "keptColumns": dr_data.get("keptColumns"),
-                        "droppedColumns": dr_data.get("droppedColumns"),
-                        "outputMode": dr_data.get("outputMode"),
-                        "treatedAsNumeric": dr_data.get("treatedAsNumeric"),
-                        "treatedAsCategorical": dr_data.get("treatedAsCategorical"),
-                        "suspectedCodeColumns": dr_data.get("suspectedCodeColumns"),
-                        "missingHandling": dr_data.get("missingHandling"),
-                        "rareThreshold": dr_data.get("rareThreshold"),
-                        "collapsedToOther": dr_data.get("collapsedToOther"),
-                        "maxCardinality": dr_data.get("maxCardinality"),
-                        "runtimeSeconds": dr_data.get("runtimeSeconds"),
-                        "topContributions": dr_data.get("topContributions"),
+                        "rowsInput": dr_data.get("rowsInput"),
+                        "rowsUsedForFit": dr_data.get("sampleSizeUsed"),
+                        "seedUsed": dr_data.get("seedUsed"),
+                        "droppedColumns": dropped_cols,
+                        "missingHandling": missing_info,
+                        "rareLevelHandling": rare_info,
+                        "drColumnNames": dr_col_names,
+                        "topContributingVariables": dr_data.get("topContributions") or dr_data.get("topContributingVariables"),
                     }
+                    print(f"📤 Summary being returned: {summary}")
                 else:
                     print("⚠️ No DR results found in database")
             except Exception as e:
@@ -1043,51 +1073,24 @@ async def handle_text_transformation_endpoint(
 
 
 class DataReductionSummary(BaseModel):
-    """Summary for data reduction output with comprehensive explainability."""
-
-    # Basic run info
-    methodUsed: str
-    componentsRequested: int
-    componentsProduced: int
-    rowsInput: int
-    rowsOutput: int
-    outputMode: str
-    outputColumns: List[str]
-    
-    # Quality signal
-    varianceExplained: Optional[List[float]] = None
-    totalVariance: Optional[float] = None
-    
-    # Data decisions
-    selectedColumns: List[str]
-    keptColumns: List[str]
-    droppedColumns: Optional[Dict[str, str]] = None
-    
-    # Type handling
-    treatedAsNumeric: List[str]
-    treatedAsCategorical: List[str]
-    suspectedCodeColumns: Optional[List[str]] = None
-    
-    # Preprocessing stats
-    missingHandling: str
-    rareThreshold: int
-    collapsedToOther: Optional[Dict[str, int]] = None
-    maxCardinality: int
-    
-    # Performance + reproducibility
-    sampleSizeUsed: int
-    seedUsed: Optional[int] = None
-    runtimeSeconds: float
-    
-    # Explainability
-    topContributions: Optional[Dict[str, Any]] = None
-    
-    # Legacy fields for backward compatibility
+    """Simplified summary of data reduction operation."""
     method: Optional[str] = None
     components: Optional[int] = None
     inputColumns: Optional[int] = None
     originalColumns: Optional[int] = None
     drColumns: Optional[int] = None
+    outputColumns: Optional[int] = None
+    varianceExplained: Optional[List[float]] = None
+    totalVariance: Optional[float] = None
+    selectedColumns: Optional[List[str]] = None
+    rowsInput: Optional[int] = None
+    rowsUsedForFit: Optional[int] = None
+    seedUsed: Optional[int] = None
+    droppedColumns: Optional[List[Dict[str, Any]]] = None
+    missingHandling: Optional[Dict[str, str]] = None
+    rareLevelHandling: Optional[Dict[str, Any]] = None
+    drColumnNames: Optional[List[str]] = None
+    topContributingVariables: Optional[Dict[str, Any]] = None
 
 
 class DataReductionResponse(FileDataResponse):
@@ -1295,7 +1298,7 @@ async def handle_data_reduction_endpoint(
         if summary:
             try:
                 # Helper function to safely convert to int
-                def safe_int(value, default):
+                def safe_int(value, default=None):
                     if value is None:
                         return default
                     if isinstance(value, (int, float)):
@@ -1305,6 +1308,12 @@ async def handle_data_reduction_endpoint(
                             return int(float(value))
                         except (ValueError, TypeError):
                             return default
+                    if isinstance(value, list):
+                        # If it's a list, return default (don't try to convert)
+                        return default
+                    if isinstance(value, dict):
+                        # If it's a dict, return default
+                        return default
                     return default
                 
                 # Helper function to safely convert to float
@@ -1330,37 +1339,52 @@ async def handle_data_reduction_endpoint(
                         return None if len(value) == 0 else value
                     return value
                 
+                # Convert dropped columns to proper format
+                dropped_cols = None
+                if summary.get("droppedColumns"):
+                    dropped_data = summary.get("droppedColumns")
+                    if isinstance(dropped_data, list):
+                        dropped_cols = dropped_data  # Keep as list of dicts, don't convert to Pydantic
+                
+                # Create missing handling info
+                missing_info = None
+                if summary.get("missingHandling"):
+                    missing_handling = summary.get("missingHandling")
+                    if isinstance(missing_handling, dict):
+                        missing_info = missing_handling  # Keep as dict
+                    elif isinstance(missing_handling, str):
+                        missing_info = {"categoricalBlankOrNAReplacedWith": missing_handling}
+                
+                # Create rare level handling info
+                rare_info = None
+                if summary.get("rareThreshold") or summary.get("rareLevelHandling"):
+                    rare_data = summary.get("rareLevelHandling", {})
+                    if isinstance(rare_data, dict) and rare_data:
+                        rare_info = rare_data  # Keep as dict
+                    else:
+                        rare_info = {
+                            "rareThreshold": safe_int(summary.get("rareThreshold"), rare_threshold),
+                            "rareLevelsReplacedWith": "Other"
+                        }
+                
                 summary_payload = DataReductionSummary(
-                    # New comprehensive fields
-                    methodUsed=summary.get("methodUsed", method_value),
-                    componentsRequested=safe_int(summary.get("componentsRequested"), n_components),
-                    componentsProduced=safe_int(summary.get("componentsProduced"), n_components),
-                    rowsInput=safe_int(summary.get("rowsInput"), len(dr_rows)),
-                    rowsOutput=safe_int(summary.get("rowsOutput"), len(dr_rows)),
-                    outputMode=summary.get("outputMode", "separate"),
-                    outputColumns=summary.get("outputColumns", []),
-                    varianceExplained=summary.get("varianceExplained"),
-                    totalVariance=summary.get("totalVariance"),
-                    selectedColumns=summary.get("selectedColumns", selected_columns),
-                    keptColumns=summary.get("keptColumns", []),
-                    droppedColumns=ensure_dict_or_none(summary.get("droppedColumns")),
-                    treatedAsNumeric=summary.get("treatedAsNumeric", []),
-                    treatedAsCategorical=summary.get("treatedAsCategorical", []),
-                    suspectedCodeColumns=summary.get("suspectedCodeColumns"),
-                    missingHandling=summary.get("missingHandling", ""),
-                    rareThreshold=safe_int(summary.get("rareThreshold"), rare_threshold),
-                    collapsedToOther=ensure_dict_or_none(summary.get("collapsedToOther")),
-                    maxCardinality=safe_int(summary.get("maxCardinality"), max_cardinality),
-                    sampleSizeUsed=safe_int(summary.get("sampleSizeUsed"), len(dr_rows)),
-                    seedUsed=summary.get("seedUsed"),
-                    runtimeSeconds=safe_float(summary.get("runtimeSeconds"), 0.0),
-                    topContributions=ensure_dict_or_none(summary.get("topContributions")),
-                    # Legacy fields
                     method=summary.get("methodUsed", method_value),
                     components=safe_int(summary.get("componentsProduced"), n_components),
                     inputColumns=safe_int(summary.get("inputColumns"), len(selected_columns)),
-                    originalColumns=summary.get("originalColumns"),
-                    drColumns=summary.get("drColumns"),
+                    originalColumns=safe_int(summary.get("originalColumns"), len(selected_columns)),
+                    drColumns=safe_int(summary.get("drColumns"), n_components),
+                    outputColumns=safe_int(summary.get("outputColumns"), len(selected_columns) + n_components),
+                    varianceExplained=summary.get("varianceExplained"),
+                    totalVariance=summary.get("totalVariance"),
+                    selectedColumns=summary.get("selectedColumns", selected_columns),
+                    rowsInput=safe_int(summary.get("rowsInput"), len(dr_rows)),
+                    rowsUsedForFit=safe_int(summary.get("sampleSizeUsed"), len(dr_rows)),
+                    seedUsed=summary.get("seedUsed"),
+                    droppedColumns=dropped_cols if dropped_cols else None,
+                    missingHandling=missing_info,
+                    rareLevelHandling=rare_info,
+                    drColumnNames=summary.get("drColumnNames", [f"DR{i+1}" for i in range(safe_int(summary.get("componentsProduced"), n_components))]),
+                    topContributingVariables=ensure_dict_or_none(summary.get("topContributions")) or ensure_dict_or_none(summary.get("topContributingVariables")),
                 )
             except Exception as e:
                 print(f"Error creating summary payload: {str(e)}")
@@ -1624,7 +1648,8 @@ async def handle_binning_endpoint(request: HandleBinningRequest):
                 status_code=400, detail=f"Column '{col}' does not exist in the file"
             )
 
-    # Validate columns are categorical (NOT numeric) - opposite of previous logic
+    # Check if columns contain numeric data (but allow it - they may have categorical meaning)
+    # Numeric columns will be converted to categorical by the R script
     if rows:
         numeric_columns = []
         for col in selected_columns:
@@ -1644,11 +1669,9 @@ async def handle_binning_endpoint(request: HandleBinningRequest):
             if numeric_count >= len(sample_values) * 0.8:
                 numeric_columns.append(col)
 
+        # Log warning but don't reject - numeric columns with categorical meaning are valid
         if numeric_columns:
-            raise HTTPException(
-                status_code=400,
-                detail=f"The following columns appear to be numeric. Categorical binning works on text/categorical data: {', '.join(numeric_columns)}",
-            )
+            print(f"Warning: The following columns appear numeric but will be treated as categorical: {', '.join(numeric_columns)}")
 
     # Validate n_bins range
     if n_bins < 1 or n_bins > 50:

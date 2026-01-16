@@ -7,9 +7,8 @@ interface DataReductionSummaryViewProps {
 }
 
 export function DataReductionSummaryView({ summary }: DataReductionSummaryViewProps) {
-  const methodName = summary.methodUsed || summary.method || "Unknown";
-  const componentsProduced = summary.componentsProduced || summary.components || 0;
-  const componentsRequested = summary.componentsRequested || summary.components || 0;
+  const methodName = summary.method || "Unknown";
+  const components = summary.components || 0;
 
   return (
     <div className="w-full p-4 space-y-4 bg-background">
@@ -35,14 +34,7 @@ export function DataReductionSummaryView({ summary }: DataReductionSummaryViewPr
               <CardTitle className="text-xs font-medium text-muted-foreground">Components</CardTitle>
             </CardHeader>
             <CardContent className="pb-3 px-3">
-              <div className="text-lg font-bold">
-                {componentsProduced}
-                {componentsRequested !== componentsProduced && (
-                  <span className="text-xs text-muted-foreground ml-2">
-                    (requested: {componentsRequested})
-                  </span>
-                )}
-              </div>
+              <div className="text-lg font-bold">{components}</div>
             </CardContent>
           </Card>
 
@@ -55,6 +47,7 @@ export function DataReductionSummaryView({ summary }: DataReductionSummaryViewPr
               <div className="text-xs space-y-0.5">
                 <div>Input: <span className="font-semibold">{summary.inputColumns || 0}</span></div>
                 <div>Original: <span className="font-semibold">{summary.originalColumns || 0}</span></div>
+                <div>DR Columns: <span className="font-semibold">{summary.drColumns || 0}</span></div>
                 <div>Total Output: <span className="font-semibold">{summary.outputColumns || 0}</span></div>
               </div>
             </CardContent>
@@ -95,20 +88,6 @@ export function DataReductionSummaryView({ summary }: DataReductionSummaryViewPr
                     Top 3: {summary.varianceExplained.slice(0, 3).map(v => v.toFixed(2)).join("%, ")}%
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Runtime Card */}
-          {summary.runtimeSeconds !== undefined && (
-            <Card>
-              <CardHeader className="pb-2 pt-3 px-3">
-                <CardTitle className="text-xs font-medium text-muted-foreground">Processing Time</CardTitle>
-              </CardHeader>
-              <CardContent className="pb-3 px-3">
-                <div className="text-lg font-bold">
-                  {summary.runtimeSeconds.toFixed(2)}s
-                </div>
               </CardContent>
             </Card>
           )}
@@ -180,25 +159,87 @@ export function DataReductionSummaryView({ summary }: DataReductionSummaryViewPr
         )}
 
         {/* Top Contributing Variables */}
-        {(summary.topContributions || summary.topContributingVariables) && (
+        {summary.topContributingVariables && Object.keys(summary.topContributingVariables).length > 0 && (
           <Card className="mb-3">
             <CardHeader className="pb-2 pt-3 px-3">
-              <CardTitle className="text-xs">Top Contributing Variables</CardTitle>
+              <CardTitle className="text-xs">Top Contributing Variables by Component</CardTitle>
             </CardHeader>
             <CardContent className="pb-3 px-3">
-              <div className="space-y-2">
-                {Object.entries(summary.topContributions || summary.topContributingVariables || {}).map(([component, variables]) => {
-                  // Ensure variables is an array
-                  const variablesArray = Array.isArray(variables) ? variables : [];
+              <div className="space-y-3">
+                {Object.entries(summary.topContributingVariables).map(([component, data]: [string, any]) => {
+                  // Handle both old format (array) and new format (object with numericVariables/categoricalVariables)
+                  const isNewFormat = data && typeof data === 'object' && !Array.isArray(data);
                   
                   return (
-                    <div key={component} className="border-b pb-2 last:border-b-0">
-                      <div className="font-medium text-xs mb-1.5">{component}</div>
-                      <div className="flex flex-wrap gap-1">
-                        {variablesArray.map((variable, idx) => (
-                          <Badge key={idx} variant="secondary" className="text-xs px-1.5 py-0">{variable}</Badge>
-                        ))}
-                      </div>
+                    <div key={component} className="border rounded-md p-2 bg-muted/30">
+                      <div className="font-semibold text-sm mb-2 text-primary">{component}</div>
+                      
+                      {isNewFormat ? (
+                        <div className="space-y-2">
+                          {/* Numeric Variables */}
+                          {data.numericVariables && (
+                            <div>
+                              <div className="text-xs font-medium text-muted-foreground mb-1">Numeric Variables:</div>
+                              <div className="space-y-1">
+                                {Array.isArray(data.numericVariables.name) ? (
+                                  data.numericVariables.name.map((name: string, idx: number) => (
+                                    <div key={idx} className="flex items-center gap-2 text-xs">
+                                      <Badge variant="default" className="text-xs px-1.5 py-0">{name}</Badge>
+                                      <span className="text-muted-foreground">
+                                        {data.numericVariables.contribution?.[idx]?.toFixed(2)}%
+                                      </span>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div className="text-xs text-muted-foreground">No data</div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Categorical Variables */}
+                          {data.categoricalVariables && (
+                            <div>
+                              <div className="text-xs font-medium text-muted-foreground mb-1">Categorical Variables:</div>
+                              <div className="space-y-1">
+                                {Array.isArray(data.categoricalVariables.name) ? (
+                                  data.categoricalVariables.name.map((name: string, idx: number) => (
+                                    <div key={idx} className="flex items-center gap-2 text-xs">
+                                      <Badge variant="secondary" className="text-xs px-1.5 py-0">{name}</Badge>
+                                      <span className="text-muted-foreground">
+                                        {data.categoricalVariables.contribution?.[idx]?.toFixed(2)}%
+                                      </span>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div className="text-xs text-muted-foreground">No data</div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Category Levels (quality representation) */}
+                          {data.categoryLevels && (
+                            <div>
+                              <div className="text-xs font-medium text-muted-foreground mb-1">Top Category Levels:</div>
+                              <div className="flex flex-wrap gap-1">
+                                {Array.isArray(data.categoryLevels.level) && data.categoryLevels.level.slice(0, 5).map((level: string, idx: number) => (
+                                  <Badge key={idx} variant="outline" className="text-xs px-1.5 py-0">
+                                    {level}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        // Old format - just array of variable names
+                        <div className="flex flex-wrap gap-1">
+                          {Array.isArray(data) && data.map((variable: string, idx: number) => (
+                            <Badge key={idx} variant="secondary" className="text-xs px-1.5 py-0">{variable}</Badge>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -236,38 +277,6 @@ export function DataReductionSummaryView({ summary }: DataReductionSummaryViewPr
           </Card>
         )}
 
-        {/* Column Treatment */}
-        {((summary.treatedAsNumeric && summary.treatedAsNumeric.length > 0) || 
-          (summary.treatedAsCategorical && summary.treatedAsCategorical.length > 0)) && (
-          <Card className="mb-3">
-            <CardHeader className="pb-2 pt-3 px-3">
-              <CardTitle className="text-xs">Column Treatment</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 pb-3 px-3">
-              {summary.treatedAsNumeric && Array.isArray(summary.treatedAsNumeric) && summary.treatedAsNumeric.length > 0 && (
-                <div>
-                  <div className="text-xs font-medium mb-1.5">Treated as Numeric ({summary.treatedAsNumeric.length})</div>
-                  <div className="flex flex-wrap gap-1">
-                    {summary.treatedAsNumeric.map((col, idx) => (
-                      <Badge key={idx} variant="outline" className="bg-blue-50 text-xs px-1.5 py-0">{col}</Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {summary.treatedAsCategorical && Array.isArray(summary.treatedAsCategorical) && summary.treatedAsCategorical.length > 0 && (
-                <div>
-                  <div className="text-xs font-medium mb-1.5">Treated as Categorical ({summary.treatedAsCategorical.length})</div>
-                  <div className="flex flex-wrap gap-1">
-                    {summary.treatedAsCategorical.map((col, idx) => (
-                      <Badge key={idx} variant="outline" className="bg-green-50 text-xs px-1.5 py-0">{col}</Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
         {/* Missing & Rare Level Handling */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
           {summary.missingHandling && (
@@ -276,37 +285,33 @@ export function DataReductionSummaryView({ summary }: DataReductionSummaryViewPr
                 <CardTitle className="text-xs">Missing Value Handling</CardTitle>
               </CardHeader>
               <CardContent className="pb-3 px-3">
-                {typeof summary.missingHandling === 'string' ? (
-                  <div className="text-xs">{summary.missingHandling}</div>
-                ) : (
-                  <div className="text-xs">
-                    {summary.missingHandling.categoricalBlankOrNAReplacedWith && (
-                      <div>
-                        Categorical blanks/NA replaced with:{" "}
-                        <Badge variant="secondary" className="text-xs px-1.5 py-0">
-                          {summary.missingHandling.categoricalBlankOrNAReplacedWith}
-                        </Badge>
-                      </div>
-                    )}
-                  </div>
-                )}
+                <div className="text-xs">
+                  {summary.missingHandling.categoricalBlankOrNAReplacedWith && (
+                    <div>
+                      Categorical blanks/NA replaced with:{" "}
+                      <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                        {summary.missingHandling.categoricalBlankOrNAReplacedWith}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           )}
 
-          {(summary.rareLevelHandling || summary.rareThreshold) && (
+          {summary.rareLevelHandling && (
             <Card>
               <CardHeader className="pb-2 pt-3 px-3">
                 <CardTitle className="text-xs">Rare Level Handling</CardTitle>
               </CardHeader>
               <CardContent className="pb-3 px-3">
                 <div className="text-xs space-y-0.5">
-                  {summary.rareThreshold && (
+                  {summary.rareLevelHandling.rareThreshold && (
                     <div>
-                      Threshold: <Badge variant="secondary" className="text-xs px-1.5 py-0">{summary.rareThreshold}</Badge>
+                      Threshold: <Badge variant="secondary" className="text-xs px-1.5 py-0">{summary.rareLevelHandling.rareThreshold}</Badge>
                     </div>
                   )}
-                  {summary.rareLevelHandling?.rareLevelsReplacedWith && (
+                  {summary.rareLevelHandling.rareLevelsReplacedWith && (
                     <div>
                       Replaced with: <Badge variant="secondary" className="text-xs px-1.5 py-0">{summary.rareLevelHandling.rareLevelsReplacedWith}</Badge>
                     </div>
@@ -316,55 +321,6 @@ export function DataReductionSummaryView({ summary }: DataReductionSummaryViewPr
             </Card>
           )}
         </div>
-
-        {/* Collapsed to Other */}
-        {summary.collapsedToOther && Object.keys(summary.collapsedToOther).length > 0 && (
-          <Card className="mb-3">
-            <CardHeader className="pb-2 pt-3 px-3">
-              <CardTitle className="text-xs">Collapsed Rare Categories</CardTitle>
-            </CardHeader>
-            <CardContent className="pb-3 px-3">
-              <div className="space-y-2">
-                {Object.entries(summary.collapsedToOther).map(([column, categories]) => {
-                  const categoriesArray = Array.isArray(categories) ? categories : [];
-                  return (
-                    <div key={column} className="border-b pb-2 last:border-b-0">
-                      <div className="font-medium text-xs mb-1.5">{column}</div>
-                      <div className="flex flex-wrap gap-1 text-[10px]">
-                        {categoriesArray.map((cat, idx) => (
-                          <Badge key={idx} variant="outline" className="text-[10px] px-1 py-0">{cat}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Additional Settings */}
-        {(summary.maxCardinality || summary.outputMode) && (
-          <Card>
-            <CardHeader className="pb-2 pt-3 px-3">
-              <CardTitle className="text-xs">Additional Settings</CardTitle>
-            </CardHeader>
-            <CardContent className="pb-3 px-3">
-              <div className="text-xs space-y-1.5">
-                {summary.outputMode && (
-                  <div>
-                    Output Mode: <Badge variant="secondary" className="text-xs px-1.5 py-0">{summary.outputMode}</Badge>
-                  </div>
-                )}
-                {summary.maxCardinality && (
-                  <div>
-                    Max Cardinality: <Badge variant="secondary" className="text-xs px-1.5 py-0">{summary.maxCardinality}</Badge>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
       </div>
     </div>
   );

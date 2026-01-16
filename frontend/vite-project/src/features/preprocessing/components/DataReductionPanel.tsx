@@ -31,7 +31,6 @@ export function DataReductionPanel({
   const [sampleSize, setSampleSize] = useState<number>(0);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [summary, setSummary] = useState<DataReductionSummary | null>(null);
   const [errorHint, setErrorHint] = useState<string | null>(null);
 
   const { data: fileData } = useQuery({
@@ -123,7 +122,6 @@ export function DataReductionPanel({
 
     setIsLoading(true);
     setErrorHint(null);
-    setSummary(null);
 
     try {
       const { handleDataReduction } = await import("../../home/api/uploads");
@@ -139,12 +137,8 @@ export function DataReductionPanel({
         sample_size: sampleSize > 0 ? sampleSize : undefined,
       });
 
-      if (result.summary) {
-        setSummary(result.summary);
-      }
-
       toast.success("Success", {
-        description: "Data reduction applied successfully.",
+        description: "Data reduction applied successfully. Switch to the Data Reduction tab to view results.",
       });
 
       if (onSuccess) {
@@ -334,54 +328,6 @@ export function DataReductionPanel({
               Optional: use a subset for faster preview (0 = full data).
             </p>
           </div>
-        </div>
-      )}
-
-      {summary && (
-        <div className="rounded-md border p-3 text-xs text-muted-foreground">
-          <p>
-            Method: <span className="text-foreground">{summary.methodUsed || summary.method}</span>
-          </p>
-          <p>
-            Components: {" "}
-            <span className="text-foreground">{summary.componentsProduced || summary.components}</span>
-          </p>
-          <p>
-            Selected columns: {" "}
-            <span className="text-foreground">{summary.inputColumns}</span>
-          </p>
-          <p>
-            Original columns: {" "}
-            <span className="text-foreground">
-              {summary.originalColumns ?? "-"}
-            </span>
-          </p>
-          <p>
-            DR columns: {" "}
-            <span className="text-foreground">
-              {summary.drColumns ?? (summary.componentsProduced || summary.components)}
-            </span>
-          </p>
-          <p>
-            Total columns: {" "}
-            <span className="text-foreground">{summary.outputColumns}</span>
-          </p>
-          {summary.totalVariance !== null && summary.totalVariance !== undefined && (
-            <p>
-              Total variance explained: {" "}
-              <span className="text-foreground">
-                {summary.totalVariance}%
-              </span>
-            </p>
-          )}
-          {summary.varianceExplained && summary.varianceExplained.length > 0 && (
-            <p>
-              Per-component variance: {" "}
-              <span className="text-foreground">
-                {summary.varianceExplained.slice(0, 6).join(", ")}%
-              </span>
-            </p>
-          )}
         </div>
       )}
 

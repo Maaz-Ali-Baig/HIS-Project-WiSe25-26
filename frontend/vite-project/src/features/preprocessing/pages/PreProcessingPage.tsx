@@ -180,7 +180,7 @@ export function PreProcessingPage() {
       <ActionSidebarItem
         title="Free Text Transformation"
         key="text-transformation"
-        tooltip="Transform free text into categorical themes using AI"
+        tooltipText="Transform free text into categorical themes using AI"
       >
         <TextTransformationPanel
           columns={freeTextColumns}
@@ -200,7 +200,7 @@ export function PreProcessingPage() {
       <ActionSidebarItem
         title="Categorical Binning"
         key="binning"
-        tooltip="Group values into meaningful bins (works on categorical and numeric columns)"
+        tooltipText="Group values into meaningful bins (works on categorical and numeric columns)"
       >
         <BinningPanel
           columns={binnableColumns}
@@ -220,7 +220,7 @@ export function PreProcessingPage() {
       <ActionSidebarItem
         title="Data Reduction"
         key="data-reduction"
-        tooltip="Reduce wide qualitative data into compact numeric components"
+        tooltipText="Reduce wide qualitative data into compact numeric components"
       >
         <DataReductionPanel
           columns={nonDateTimeColumns}

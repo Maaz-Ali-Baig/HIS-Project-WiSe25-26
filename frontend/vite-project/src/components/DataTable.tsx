@@ -196,6 +196,7 @@ export function DataTable({ columns, rows, readOnly = false, modifiedCells = [] 
         const columnWidth = calculateColumnWidth(col, rows);
 
         return {
+          id: col,
           accessorKey: col,
           header: ({ column }) => {
             return (

@@ -32,7 +32,20 @@ export async function apiFetch<T = any>(
     const error = await response.json().catch(() => ({
       detail: response.statusText,
     }));
-    throw new Error(error.detail || 'An error occurred');
+    
+    // Handle different error formats
+    let errorMessage = 'An error occurred';
+    if (typeof error.detail === 'string') {
+      errorMessage = error.detail;
+    } else if (error.detail && typeof error.detail === 'object') {
+      errorMessage = JSON.stringify(error.detail);
+    } else if (error.message) {
+      errorMessage = error.message;
+    } else if (typeof error === 'string') {
+      errorMessage = error;
+    }
+    
+    throw new Error(errorMessage);
   }
 
   return response.json();

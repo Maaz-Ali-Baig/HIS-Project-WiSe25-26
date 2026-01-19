@@ -12,6 +12,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from .r_executor import check_r_installation, execute_r_script
+from ordinal_scales import analyze_dataframe_columns, get_column_order
 
 router = APIRouter(prefix="/api/correlation", tags=["Correlation Analysis"])
 
@@ -153,15 +154,17 @@ async def get_columns(
     fileId: str = Query(..., description="File ID"),
 ):
     """
-    Get available columns and their unique categories
+    Get available columns, their unique categories, and detected ordinal scales
+    Excludes 'id' columns and datetime/timestamp columns
 
     Args:
         userId: User identifier
         fileId: File identifier
 
     Returns:
-        columns: List of column names
+        columns: List of column names (excluding id and datetime columns)
         categories: Dict mapping column names to their unique values
+        ordinal_info: Dict mapping column names to detected ordinal scale info
     """
     try:
         file_path = validate_file_exists(userId, fileId)
@@ -170,13 +173,64 @@ async def get_columns(
         if df.empty:
             raise HTTPException(status_code=400, detail="File is empty")
 
-        columns = df.columns.tolist()
+        # Helper function to detect datetime columns
+        def is_datetime_column(col_name: str, series: pd.Series) -> bool:
+            # Check column name patterns
+            datetime_patterns = ['date', 'time', 'timestamp', 'datetime', '_at', '_date', '_time', '_ts', '_dt']
+            if any(pattern in col_name.lower() for pattern in datetime_patterns):
+                # Sample values to verify
+                sample = series.dropna().astype(str).head(50)
+                if len(sample) == 0:
+                    return False
+                
+                # Check if values match datetime patterns
+                datetime_value_patterns = [
+                    r'^\d{4}-\d{2}-\d{2}$',                      # Date: 2024-01-15
+                    r'^\d{2}/\d{2}/\d{4}$',                      # Date: 01/15/2024
+                    r'^\d{2}-\d{2}-\d{4}$',                      # Date: 15-01-2024
+                    r'^\d{4}/\d{2}/\d{2}$',                      # Date: 2024/01/15
+                    r'^\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2}$',        # DateTime: 12-06-2024 13:39
+                    r'^\d{2}-\d{2}-\d{4}\s+\d{2}:\d{2}:\d{2}$',  # DateTime: 12-06-2024 13:39:45
+                    r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}',     # ISO timestamp
+                    r'^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}',   # Timestamp
+                    r'^\d{2}/\d{2}/\d{4}\s+\d{2}:\d{2}',         # DateTime: 01/15/2024 14:30
+                    r'^\d{2}:\d{2}:\d{2}$',                      # Time: 14:30:45
+                    r'^\d{2}:\d{2}$',                            # Time: 14:30
+                    r'^\d{13}$',                                 # Unix timestamp ms
+                    r'^\d{10}$',                                 # Unix timestamp sec
+                ]
+                
+                import re
+                match_count = sum(
+                    1 for val in sample 
+                    if any(re.match(pattern, val.strip()) for pattern in datetime_value_patterns)
+                )
+                return match_count / len(sample) > 0.5
+            return False
+
+        # Filter columns: exclude 'id' and datetime columns
+        columns = [
+            col for col in df.columns 
+            if col.lower() != 'id' and not is_datetime_column(col, df[col])
+        ]
+        
         categories = {
             col: sorted(df[col].dropna().astype(str).unique().tolist())
             for col in columns
         }
+        
+        # Detect ordinal scales (only for filtered columns)
+        ordinal_info = {
+            col: info 
+            for col, info in analyze_dataframe_columns(df).items()
+            if col in columns
+        }
 
-        return {"columns": columns, "categories": categories}
+        return {
+            "columns": columns, 
+            "categories": categories,
+            "ordinal_info": ordinal_info
+        }
 
     except pd.errors.EmptyDataError:
         raise HTTPException(status_code=400, detail="File is empty or corrupted")

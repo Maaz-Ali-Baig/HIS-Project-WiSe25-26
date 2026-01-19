@@ -178,19 +178,79 @@ async def upload_file(
         content = await file.read()
         content_str = content.decode("utf-8")
 
-        # Parse CSV to check for ID column
-        csv_reader = csv.DictReader(io.StringIO(content_str))
-        fieldnames = list(csv_reader.fieldnames) if csv_reader.fieldnames else []
-        rows = list(csv_reader)
-
-        # Add ID column if it doesn't exist
-        if "id" not in fieldnames:
+        # Parse CSV and detect if headers exist
+        csv_lines = content_str.strip().split('\n')
+        if not csv_lines:
+            raise HTTPException(status_code=400, detail="CSV file is empty")
+        
+        # Try to detect if first row is a header using csv.Sniffer
+        has_header = True
+        try:
+            sniffer = csv.Sniffer()
+            sample = '\n'.join(csv_lines[:min(5, len(csv_lines))])
+            has_header = sniffer.has_header(sample)
+        except:
+            # If sniffer fails, check if first row looks like data (all cells are numeric)
+            first_row_reader = csv.reader(io.StringIO(csv_lines[0]))
+            first_row = next(first_row_reader)
+            # Assume no header if all non-empty cells in first row are numeric
+            has_header = not all(
+                cell.strip().replace('.', '', 1).replace('-', '', 1).replace('+', '', 1).isdigit() 
+                for cell in first_row if cell.strip()
+            )
+        
+        # Read all rows as raw data
+        csv_reader = csv.reader(io.StringIO(content_str))
+        all_rows = list(csv_reader)
+        
+        if not all_rows:
+            raise HTTPException(status_code=400, detail="CSV file has no data")
+        
+        # Determine fieldnames and data rows
+        if has_header:
+            fieldnames = all_rows[0]
+            data_rows = all_rows[1:]
+        else:
+            # Generate column names efficiently for large datasets: Column1, Column2, etc.
+            num_columns = len(all_rows[0]) if all_rows else 0
+            # Use list comprehension with string formatting - optimized for 10,000+ columns
+            fieldnames = [f"Column{i}" for i in range(1, num_columns + 1)]
+            data_rows = all_rows
+        
+        # Ensure we have data rows
+        if not data_rows:
+            raise HTTPException(status_code=400, detail="CSV file has no data rows")
+        
+        # Add ID column if it doesn't exist (case-insensitive check)
+        fieldnames_lower = [f.lower() for f in fieldnames]
+        if "id" not in fieldnames_lower:
             fieldnames.insert(0, "id")
-            # Add sequential IDs to all rows
-            for idx, row in enumerate(rows, start=1):
-                row["id"] = str(idx)
+            has_id_prepended = True
+        else:
+            has_id_prepended = False
+        
+        # Convert rows to dictionaries and add IDs - optimized for large column counts
+        rows = []
+        id_str = str  # Local reference to str() for faster access
+        
+        for idx, row in enumerate(data_rows, start=1):
+            # Pre-allocate dict with ID
+            row_dict = {"id": id_str(idx)}
+            
+            # Optimize field iteration
+            if has_id_prepended:
+                # ID was added at position 0, so offset by 1
+                for i, field in enumerate(fieldnames[1:], start=0):
+                    row_dict[field] = row[i] if i < len(row) else ""
+            else:
+                # No offset needed
+                for i, field in enumerate(fieldnames):
+                    if field != "id":
+                        row_dict[field] = row[i] if i < len(row) else ""
+            
+            rows.append(row_dict)
 
-        # Write normalized CSV with ID column
+        # Write normalized CSV with headers and ID column
         output = io.StringIO()
         writer = csv.DictWriter(output, fieldnames=fieldnames)
         writer.writeheader()

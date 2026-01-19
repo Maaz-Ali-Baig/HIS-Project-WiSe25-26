@@ -12,7 +12,7 @@ import { MissingValueHandler } from '../components/MissingValueHandler';
 import { PairTypeMethodSelector } from '../components/PairTypeMethodSelector';
 import { CorrelationMatrixDisplay } from '../components/CorrelationMatrixDisplay';
 import { CorrelationDetailModal } from '../components/CorrelationDetailModal';
-import { getColumnInfo, checkCorrelationHealth } from '../api/correlation';
+import { getColumns, checkHealth } from '../api/correlation';
 
 export function MultiColumnCorrelationPage() {
   const {
@@ -54,7 +54,7 @@ export function MultiColumnCorrelationPage() {
 
         // Check if R is installed
         try {
-          const health = await checkCorrelationHealth();
+          const health = await checkHealth();
           setHealthCheck({
             checked: true,
             healthy: health.r_installed,
@@ -71,7 +71,7 @@ export function MultiColumnCorrelationPage() {
 
         // Load available columns
         try {
-          const columnInfo = await getColumnInfo(userId, fileId);
+          const columnInfo = await getColumns(userId, fileId);
           if (columnInfo.columns.length === 0) {
             setError('No columns found in the selected file. Please select a different file.');
           } else {

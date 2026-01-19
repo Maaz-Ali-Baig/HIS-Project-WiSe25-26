@@ -12,7 +12,7 @@ import {
 import { DataTable } from "../../../components/DataTable";
 import { getFileData } from "../../home/api/uploads";
 import type { DataReductionSummary } from "../../home/api/uploads";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, Download } from "lucide-react";
 import { FileLayout } from "../../../components/layout/FileLayout";
 import { ActionSidebarItem } from "../../../components/layout/ActionSidebarItem";
 import { HandleMissingValuesPanel } from "../components/HandleMissingValuesPanel";
@@ -22,6 +22,7 @@ import { TextTransformationPanel } from "../components/TextTransformationPanel";
 import { DataReductionPanel } from "../components/DataReductionPanel";
 import { DataReductionSummaryView } from "../components/DataReductionSummaryView";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui/tabs";
+import { filterAnalysisColumns } from "../../../lib/columnFilters";
 
 export function PreProcessingPage() {
   const navigate = useNavigate();
@@ -31,6 +32,48 @@ export function PreProcessingPage() {
   const { setFile, modifiedCells } = useFileStore();
   const [activeTab, setActiveTab] = useState<string>("pre-processed");
   const [dataReductionSummary, setDataReductionSummary] = useState<DataReductionSummary | null>(null);
+
+  // Download function to export data as CSV
+  const downloadAsCSV = () => {
+    if (!fileData) return;
+
+    const columns = activeTab === "data-reduction" 
+      ? fileData.columns.filter(col => col.match(/^DR\d+$/))
+      : fileData.columns.filter(col => !col.match(/^DR\d+$/));
+    
+    if (columns.length === 0) return;
+
+    // Create CSV header
+    const csvHeader = columns.join(',');
+    
+    // Create CSV rows
+    const csvRows = fileData.rows.map(row => {
+      return columns.map(col => {
+        const value = row[col];
+        // Handle values with commas, quotes, or newlines
+        if (value === null || value === undefined) return '';
+        const stringValue = String(value);
+        if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+          return `"${stringValue.replace(/"/g, '""')}"`;
+        }
+        return stringValue;
+      }).join(',');
+    });
+    
+    const csvContent = [csvHeader, ...csvRows].join('\n');
+    
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const fileName = activeTab === "data-reduction" 
+      ? `data_reduction_${Date.now()}.csv`
+      : `preprocessed_data_${Date.now()}.csv`;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   // Redirect if no fileId
   useEffect(() => {
@@ -91,80 +134,8 @@ export function PreProcessingPage() {
   const actions = [];
 
   if (fileData) {
-    // Helper function to detect if a column contains date/time data
-    const isDateTimeColumn = (col: string): boolean => {
-      const values = fileData.rows.map((row) => row[col]).filter((v) => v !== null && v !== undefined && v.trim() !== "");
-      
-      if (values.length === 0) return false;
-      
-      // Sample up to 50 values for performance
-      const sampleSize = Math.min(values.length, 50);
-      const sample = values.slice(0, sampleSize);
-      
-      // Common date/time patterns
-      const dateTimePatterns = [
-        /^\d{4}-\d{2}-\d{2}/, // ISO date: 2024-01-15
-        /^\d{2}\/\d{2}\/\d{4}/, // US date: 01/15/2024
-        /^\d{2}-\d{2}-\d{4}/, // Date: 15-01-2024
-        /^\d{4}\/\d{2}\/\d{2}/, // Date: 2024/01/15
-        /^\d{2}:\d{2}:\d{2}/, // Time: 14:30:45
-        /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/, // ISO timestamp: 2024-01-15T14:30:45
-        /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/, // Timestamp: 2024-01-15 14:30:45
-        /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/i, // Month names
-        /^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i, // Day names
-        /^\d{13}$/, // Unix timestamp milliseconds
-        /^\d{10}$/, // Unix timestamp seconds
-      ];
-      
-      // Check if most values match date/time patterns
-      let matchCount = 0;
-      for (const value of sample) {
-        if (dateTimePatterns.some(pattern => pattern.test(value))) {
-          matchCount++;
-        }
-      }
-      
-      // If more than 70% match, consider it a date/time column
-      return matchCount / sampleSize > 0.7;
-    };
-
-    // Analyze column types using same logic as DataSummary
-    const getColumnType = (col: string) => {
-      const values = fileData.rows.map((row) => row[col]);
-      const nonEmptyValues = values.filter((v) => v !== null && v !== undefined && v.trim() !== "");
-      const uniqueValues = new Set(nonEmptyValues);
-
-      // Determine type
-      if (nonEmptyValues.length === 0) return "Other";
-
-      // Check if numeric
-      const numericCount = nonEmptyValues.filter((v) => {
-        try {
-          return !isNaN(parseFloat(v.replace(/,/g, "")));
-        } catch {
-          return false;
-        }
-      }).length;
-
-      if (numericCount / nonEmptyValues.length >= 0.8) {
-        return "Numeric";
-      } else {
-        // Check if categorical (low unique ratio)
-        const uniqueRatio = uniqueValues.size / nonEmptyValues.length;
-        if (uniqueRatio < 0.5) {
-          return "Categorical";
-        } else if (nonEmptyValues.some((v) => v.length > 50)) {
-          return "Text";
-        } else {
-          return "Other";
-        }
-      }
-    };
-
     // Filter out date/time columns and 'id' column for preprocessing operations
-    const nonDateTimeColumns = fileData.columns.filter((col) => 
-      col !== "id" && !isDateTimeColumn(col)
-    );
+    const nonDateTimeColumns = filterAnalysisColumns(fileData.columns, fileData.rows);
 
     // Allow all non-date/time columns for binning (including numeric with categorical meaning)
     const binnableColumns = nonDateTimeColumns;
@@ -172,8 +143,13 @@ export function PreProcessingPage() {
     // Filter free text columns (only those categorized as "Text")
     const freeTextColumns = fileData.columns.filter((col) => {
       if (col === "id") return false;
-      const type = getColumnType(col);
-      return type === "Text";
+      
+      // Check if column contains long text (average length > 50 chars)
+      const values = fileData.rows.map((row) => row[col]).filter((v) => v !== null && v !== undefined && v.trim() !== "");
+      if (values.length === 0) return false;
+      
+      const avgLength = values.reduce((sum, v) => sum + v.length, 0) / values.length;
+      return avgLength > 50;
     });
 
     actions.push(
@@ -288,10 +264,21 @@ export function PreProcessingPage() {
         {fileData && !isLoadingData && !dataError && (
           <div className="flex-1 min-h-0 px-6">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-[calc(100vh-200px)]">
-              <TabsList className="flex-shrink-0">
-                <TabsTrigger value="pre-processed">Pre-Processed Table</TabsTrigger>
-                <TabsTrigger value="data-reduction">Data Reduction</TabsTrigger>
-              </TabsList>
+              <div className="flex items-center justify-between flex-shrink-0 mb-4">
+                <TabsList>
+                  <TabsTrigger value="pre-processed">Pre-Processed Table</TabsTrigger>
+                  <TabsTrigger value="data-reduction">Data Reduction</TabsTrigger>
+                </TabsList>
+                <Button 
+                  onClick={downloadAsCSV}
+                  variant="outline" 
+                  size="sm"
+                  disabled={activeTab === "data-reduction" && !fileData.columns.some(col => col.match(/^DR\d+$/))}
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download CSV
+                </Button>
+              </div>
               
               <TabsContent value="pre-processed" className="mt-4 border rounded-lg flex-1 min-h-0 overflow-auto">
                 <DataTable

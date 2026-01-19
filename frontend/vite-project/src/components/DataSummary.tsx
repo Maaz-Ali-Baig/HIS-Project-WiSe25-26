@@ -3,6 +3,7 @@ import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { ArrowUpDown } from "lucide-react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { isDateTimeColumn } from "../lib/columnFilters";
 
 interface DataSummaryProps {
   columns: string[];
@@ -34,77 +35,41 @@ export function DataSummary({ columns, rows }: DataSummaryProps) {
       if (nonEmptyValues.length === 0) {
         type = "Other";
       } else {
-        // Check for date/time column names first
-        const dateTimeColumnPatterns = [
-          /date/i, /time/i, /timestamp/i, /datetime/i, 
-          /_at$/i, /_on$/i, /created/i, /updated/i, 
-          /modified/i, /deleted/i, /ts$/i, /dt$/i
-        ];
-        
-        const isDateTimeColumnName = dateTimeColumnPatterns.some(pattern => 
-          pattern.test(column)
-        );
-        
-        // Check if numeric first (≥80% numeric values)
-        const numericCount = nonEmptyValues.filter((v) => {
-          try {
-            return !isNaN(parseFloat(v.replace(/,/g, "")));
-          } catch {
-            return false;
-          }
-        }).length;
-
-        const isNumeric = numericCount / nonEmptyValues.length >= 0.8;
-
-        // If column name suggests date/time and values are numeric, check for timestamps
-        if (isDateTimeColumnName && isNumeric) {
-          // Check if values look like Unix timestamps (10 or 13 digits)
-          const sampleSize = Math.min(50, nonEmptyValues.length);
-          const sample = nonEmptyValues.slice(0, sampleSize);
-          const timestampCount = sample.filter((v) => {
-            const numVal = parseFloat(v.replace(/,/g, ""));
-            // Unix timestamp in seconds (10 digits) or milliseconds (13 digits)
-            return /^\d{10}$/.test(v.trim()) || /^\d{13}$/.test(v.trim());
-          }).length;
-          
-          if (timestampCount / sampleSize >= 0.7) {
-            type = "Date/Time";
-          } else {
-            type = "Numeric";
-          }
-        } else if (isNumeric) {
-          type = "Numeric";
+        // Check if it's a date/time column using shared utility
+        if (isDateTimeColumn(column, rows)) {
+          type = "Date/Time";
         } else {
-          // Check if date/time by pattern (≥80% match date patterns)
-          const dateTimePatterns = [
-            /^\d{4}-\d{2}-\d{2}/, // YYYY-MM-DD
-            /^\d{2}\/\d{2}\/\d{4}/, // MM/DD/YYYY or DD/MM/YYYY
-            /^\d{2}-\d{2}-\d{4}/, // MM-DD-YYYY or DD-MM-YYYY
-            /^\d{4}\/\d{2}\/\d{2}/, // YYYY/MM/DD
-            /\d{2}:\d{2}:\d{2}/, // HH:MM:SS (time component)
-            /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/, // ISO 8601
-          ];
-          
-          const sampleSize = Math.min(100, nonEmptyValues.length);
-          const sample = nonEmptyValues.slice(0, sampleSize);
-          const dateTimeCount = sample.filter((v) =>
-            dateTimePatterns.some((pattern) => pattern.test(v))
-          ).length;
+          // Check if numeric first (≥80% numeric values)
+          const numericCount = nonEmptyValues.filter((v) => {
+            try {
+              const cleaned = v.replace(/,/g, "").trim();
+              return !isNaN(parseFloat(cleaned)) && /^[-+]?\d*\.?\d+([eE][-+]?\d+)?$/.test(cleaned);
+            } catch {
+              return false;
+            }
+          }).length;
 
-          if (dateTimeCount / sampleSize >= 0.8 || isDateTimeColumnName) {
-            type = "Date/Time";
+          const isNumeric = numericCount / nonEmptyValues.length >= 0.8;
+
+          if (isNumeric) {
+            type = "Numeric";
           } else {
-            // Check if text (average length > 50 chars)
+            // Check if text (average length > 25 chars)
             const avgLength = nonEmptyValues.reduce((sum, v) => sum + v.length, 0) / nonEmptyValues.length;
             
-            if (avgLength > 50) {
+            if (avgLength > 25) {
               type = "Text";
             } else {
-              // Check if categorical (low unique ratio)
+              // Check unique ratio to determine if categorical or other
               const uniqueRatio = uniqueValues.size / nonEmptyValues.length;
+              
+              // Categorical: limited set of values (unique ratio < 0.5)
+              // This means the column has repeated values, which is typical of categories
               if (uniqueRatio < 0.5) {
                 type = "Categorical";
               } else {
+                // High unique ratio (>= 0.5) suggests it's not categorical
+                // These could be IDs, codes, or other unique identifiers
                 type = "Other";
               }
             }

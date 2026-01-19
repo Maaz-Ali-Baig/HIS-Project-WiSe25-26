@@ -10,6 +10,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 from correlation.r_executor import check_r_installation, execute_r_script
+from ordinal_scales import analyze_dataframe_columns, get_column_order
 
 router = APIRouter(prefix="/api/visualization", tags=["Visualization"])
 
@@ -21,8 +22,22 @@ class PlotRequest(BaseModel):
     userId: str
     fileId: str
     chartType: Literal[
-        "pie",
+        # Univariate categorical
         "bar",
+        "topn_bar",
+        "pareto",
+        "cumulative_percent",
+        "ordered_bar",
+        # Bivariate categorical
+        "stacked_bar_100",
+        "grouped_bar",
+        "contingency_heatmap_percent",
+        "likert_diverging",
+        # Association analysis
+        "assoc_heatmap",
+        "assoc_target_bar",
+        # Legacy/numeric
+        "pie",
         "histogram",
         "qq",
         "qqline",
@@ -54,15 +69,36 @@ def validate_columns(
     x_column: Optional[str],
     y_column: Optional[str],
 ) -> None:
-    if chart_type in {"pie", "bar", "histogram", "qq", "qqline"}:
+    # Univariate charts requiring x_column
+    univariate_charts = {
+        "bar", "topn_bar", "pareto", "cumulative_percent", "ordered_bar",
+        "pie", "histogram", "qq", "qqline"
+    }
+    
+    # Bivariate charts requiring both x and y columns
+    bivariate_charts = {
+        "stacked_bar_100", "grouped_bar", "contingency_heatmap_percent",
+        "likert_diverging", "scatter", "stacked_bar"
+    }
+    
+    # Association charts don't require x/y (work on full dataset)
+    association_charts = {"assoc_heatmap", "assoc_target_bar"}
+    
+    if chart_type in univariate_charts:
         if not x_column:
             raise HTTPException(status_code=400, detail="xColumn is required")
-    if chart_type in {"scatter", "stacked_bar"}:
+    
+    if chart_type in bivariate_charts:
         if not x_column or not y_column:
             raise HTTPException(
                 status_code=400, detail="xColumn and yColumn are required"
             )
-
+    
+    if chart_type in association_charts:
+        # target_column validated in R script
+        pass
+    
+    # Validate columns exist
     for col in [x_column, y_column]:
         if col and col not in available_columns:
             raise HTTPException(
@@ -97,8 +133,54 @@ async def create_plot(request: PlotRequest):
         "options": request.options or {},
     }
 
-    result = execute_r_script(r_script_path, r_input)
+    # Increase timeout for association analysis (can be slower)
+    timeout = 300 if request.chartType in {"assoc_heatmap", "assoc_target_bar"} else 120
+
+    result = execute_r_script(r_script_path, r_input, timeout=timeout)
     if "error" in result:
         raise HTTPException(status_code=500, detail=result["error"])
 
     return result
+
+
+@router.get("/column-metadata/{userId}/{fileId}")
+async def get_column_metadata(userId: str, fileId: str):
+    """
+    Get metadata about columns including detected ordinal scales.
+    """
+    file_path = validate_file_exists(userId, fileId)
+    
+    try:
+        df = pd.read_csv(file_path)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to read file: {str(e)}")
+    
+    # Analyze columns for ordinal scales
+    ordinal_info = analyze_dataframe_columns(df)
+    
+    # Build metadata for all columns
+    metadata = {}
+    for col in df.columns:
+        if col == "id":
+            continue
+            
+        unique_values = df[col].dropna().unique()
+        unique_count = len(unique_values)
+        
+        col_meta = {
+            "name": col,
+            "unique_count": int(unique_count),
+            "has_missing": bool(df[col].isna().any()),
+            "missing_count": int(df[col].isna().sum())
+        }
+        
+        # Add ordinal info if detected
+        if col in ordinal_info:
+            col_meta["ordinal"] = ordinal_info[col]
+        
+        metadata[col] = col_meta
+    
+    return {
+        "columns": metadata,
+        "row_count": len(df)
+    }

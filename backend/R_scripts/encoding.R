@@ -29,15 +29,30 @@ encode_data_csv <- function(
   method <- match.arg(method)
 
   # Load required libraries
-  if (!requireNamespace("dplyr", quietly = TRUE)) {
-    stop("Package 'dplyr' is required. Please run install.packages('dplyr')")
-  }
-  if (!requireNamespace("readr", quietly = TRUE)) {
-    stop("Package 'readr' is required. Please run install.packages('readr')")
+  use_data_table <- requireNamespace("data.table", quietly = TRUE)
+  use_readr <- requireNamespace("readr", quietly = TRUE)
+  if (!use_data_table && !use_readr) {
+    stop("Package 'data.table' (preferred) or 'readr' is required.")
   }
 
-  library(dplyr)
-  library(readr)
+  read_csv_fast <- function(path) {
+    if (use_data_table) {
+      fread_args <- list(input = path, data.table = TRUE, showProgress = FALSE)
+      if ("check.names" %in% names(formals(data.table::fread))) {
+        fread_args$check.names <- FALSE
+      }
+      return(do.call(data.table::fread, fread_args))
+    }
+    readr::read_csv(path, show_col_types = FALSE)
+  }
+
+  write_csv_fast <- function(df, path) {
+    if (use_data_table) {
+      data.table::fwrite(df, path)
+    } else {
+      readr::write_csv(df, path)
+    }
+  }
 
   # Read CSV file
   if (!file.exists(input_csv)) {
@@ -45,7 +60,7 @@ encode_data_csv <- function(
   }
 
   df <- tryCatch({
-    read_csv(input_csv, show_col_types = FALSE)
+    read_csv_fast(input_csv)
   }, error = function(e) {
     stop(paste("Failed to read input CSV:", e$message))
   })
@@ -55,7 +70,7 @@ encode_data_csv <- function(
 
   if (is.null(columns) || length(columns) == 0) {
     # Auto-detect all categorical columns
-    cat_cols <- names(df)[sapply(df, is_cat_col)]
+    cat_cols <- names(df)[vapply(df, is_cat_col, logical(1))]
   } else {
     # Use specified columns (filter to those that exist)
     cat_cols <- columns[columns %in% names(df)]
@@ -65,12 +80,19 @@ encode_data_csv <- function(
     }
   }
 
+  data_obj <- if (use_data_table) data.table::as.data.table(df) else df
+
   # Helper functions for encoding (modified to accept cat_cols parameter)
 
   # Label Encoding
   label_encode <- function(df, cat_cols) {
     for (col in cat_cols) {
-      df[[paste0(col, "_label")]] <- as.integer(as.factor(df[[col]]))
+      new_col <- paste0(col, "_label")
+      if (use_data_table) {
+        df[, (new_col) := as.integer(factor(get(col)))]
+      } else {
+        df[[new_col]] <- as.integer(factor(df[[col]]))
+      }
     }
     df
   }
@@ -78,9 +100,11 @@ encode_data_csv <- function(
   # One-Hot Encoding
   onehot_encode <- function(df, cat_cols) {
     MAX_ONEHOT_LEVELS <- 50  # limit to prevent exploding columns
+    mm_list <- list()
 
     for (col in cat_cols) {
-      unique_levels <- length(unique(df[[col]]))
+      x <- df[[col]]
+      unique_levels <- if (use_data_table) data.table::uniqueN(x) else length(unique(x))
 
       # Skip unsafe columns
       if (unique_levels > MAX_ONEHOT_LEVELS) {
@@ -90,7 +114,11 @@ encode_data_csv <- function(
       }
 
       # Safe factor conversion
-      df[[col]] <- as.factor(df[[col]])
+      if (use_data_table) {
+        data.table::set(df, j = col, value = as.factor(x))
+      } else {
+        df[[col]] <- as.factor(x)
+      }
 
       # Safe formula (handles spaces / symbols)
       f <- as.formula(paste0("~ `", col, "` - 1"))
@@ -101,7 +129,16 @@ encode_data_csv <- function(
       # Safe names
       names(mm_df) <- make.names(names(mm_df), unique = TRUE)
 
-      df <- dplyr::bind_cols(df, mm_df)
+      mm_list[[col]] <- mm_df
+    }
+
+    if (length(mm_list) > 0) {
+      mm_all <- do.call(cbind, mm_list)
+      if (use_data_table) {
+        df <- data.table::as.data.table(cbind(df, mm_all))
+      } else {
+        df <- cbind(df, mm_all)
+      }
     }
 
     df
@@ -110,9 +147,15 @@ encode_data_csv <- function(
   # Ordinal Encoding
   ordinal_encode <- function(df, cat_cols) {
     for (col in cat_cols) {
-      levs <- sort(unique(df[[col]]))
+      x_chr <- as.character(df[[col]])
+      levs <- sort(unique(x_chr))
       mapping <- setNames(seq_along(levs), levs)
-      df[[paste0(col, "_ord")]] <- mapping[as.character(df[[col]])]
+      new_col <- paste0(col, "_ord")
+      if (use_data_table) {
+        df[, (new_col) := unname(mapping[x_chr])]
+      } else {
+        df[[new_col]] <- unname(mapping[x_chr])
+      }
     }
     df
   }
@@ -120,13 +163,23 @@ encode_data_csv <- function(
   # Frequency Encoding
   frequency_encode <- function(df, cat_cols) {
     for (col in cat_cols) {
-      tbl <- as.data.frame(table(df[[col]]), stringsAsFactors = FALSE)
-      names(tbl) <- c("value", "count")
-      map <- setNames(tbl$count, tbl$value)
+      x_chr <- as.character(df[[col]])
+      if (use_data_table) {
+        counts <- data.table::data.table(value = x_chr)[, .N, by = value]
+        map <- setNames(counts$N, counts$value)
+      } else {
+        tbl <- table(x_chr)
+        map <- setNames(as.integer(tbl), names(tbl))
+      }
 
       new_col <- paste0(col, "_freq")
-      df[[new_col]] <- map[as.character(df[[col]])]
-      df[[new_col]][is.na(df[[new_col]])] <- 0
+      if (use_data_table) {
+        df[, (new_col) := unname(map[x_chr])]
+        df[is.na(get(new_col)), (new_col) := 0L]
+      } else {
+        df[[new_col]] <- unname(map[x_chr])
+        df[[new_col]][is.na(df[[new_col]])] <- 0L
+      }
     }
     df
   }
@@ -142,22 +195,35 @@ encode_data_csv <- function(
         stop(paste("Target column", target_col, "not found in dataframe"))
       }
 
+      target_vals <- df[[target_col]]
+      global_mean <- mean(target_vals, na.rm = TRUE)
+
       # Loop over categorical columns
       for (col in cat_cols) {
-        means <- df %>%
-          group_by(.data[[col]]) %>%
-          summarize(mean_target = mean(.data[[target_col]], na.rm = TRUE),
-                    .groups = "drop")
-
-        lookup <- setNames(means$mean_target, as.character(means[[col]]))
+        x_chr <- as.character(df[[col]])
+        if (use_data_table) {
+          means <- data.table::data.table(value = x_chr, target = target_vals)[
+            , .(mean_target = mean(target, na.rm = TRUE)), by = value
+          ]
+          lookup <- setNames(means$mean_target, means$value)
+        } else {
+          lookup <- tapply(target_vals, x_chr, mean, na.rm = TRUE)
+        }
 
         new_col <- paste0(col, "_target_", target_col)
 
-        df[[new_col]] <- lookup[as.character(df[[col]])]
+        if (use_data_table) {
+          df[, (new_col) := unname(lookup[x_chr])]
+        } else {
+          df[[new_col]] <- unname(lookup[x_chr])
+        }
 
         # Replace NA values with global target mean
-        global_mean <- mean(df[[target_col]], na.rm = TRUE)
-        df[[new_col]][is.na(df[[new_col]])] <- global_mean
+        if (use_data_table) {
+          df[is.na(get(new_col)), (new_col) := global_mean]
+        } else {
+          df[[new_col]][is.na(df[[new_col]])] <- global_mean
+        }
       }
     }
 
@@ -167,15 +233,15 @@ encode_data_csv <- function(
   # Apply encoding based on method
   encoded_df <- tryCatch({
     if (method == "label") {
-      label_encode(df, cat_cols)
+      label_encode(data_obj, cat_cols)
     } else if (method == "onehot") {
-      onehot_encode(df, cat_cols)
+      onehot_encode(data_obj, cat_cols)
     } else if (method == "ordinal") {
-      ordinal_encode(df, cat_cols)
+      ordinal_encode(data_obj, cat_cols)
     } else if (method == "frequency") {
-      frequency_encode(df, cat_cols)
+      frequency_encode(data_obj, cat_cols)
     } else if (method == "target") {
-      target_encode_all(df, cat_cols, target_columns)
+      target_encode_all(data_obj, cat_cols, target_columns)
     } else {
       stop(paste("Unknown encoding method:", method))
     }
@@ -185,7 +251,7 @@ encode_data_csv <- function(
 
   # Write output
   tryCatch({
-    write_csv(encoded_df, output_csv)
+    write_csv_fast(encoded_df, output_csv)
   }, error = function(e) {
     stop(paste("Failed to write output CSV:", e$message))
   })

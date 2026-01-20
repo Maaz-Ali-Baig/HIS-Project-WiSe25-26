@@ -12,7 +12,6 @@ interface MultiColumnSelectorProps {
   onAddColumn: (column: string) => void;
   onRemoveColumn: (column: string) => void;
   minColumns?: number;
-  maxColumns?: number;
 }
 
 export const MultiColumnSelector: React.FC<MultiColumnSelectorProps> = ({
@@ -21,22 +20,21 @@ export const MultiColumnSelector: React.FC<MultiColumnSelectorProps> = ({
   onAddColumn,
   onRemoveColumn,
   minColumns = 3,
-  maxColumns = 10,
 }) => {
   const handleChange = (newSelectedColumns: string[]) => {
     // Check if a column was added or removed
     if (newSelectedColumns.length > selectedColumns.length) {
       // Column was added
       const addedColumn = newSelectedColumns.find(
-        (col) => !selectedColumns.includes(col)
+        (col) => !selectedColumns.includes(col),
       );
-      if (addedColumn && newSelectedColumns.length <= maxColumns) {
+      if (addedColumn) {
         onAddColumn(addedColumn);
       }
     } else {
       // Column was removed
       const removedColumn = selectedColumns.find(
-        (col) => !newSelectedColumns.includes(col)
+        (col) => !newSelectedColumns.includes(col),
       );
       if (removedColumn) {
         onRemoveColumn(removedColumn);
@@ -48,7 +46,7 @@ export const MultiColumnSelector: React.FC<MultiColumnSelectorProps> = ({
     <div className="space-y-4">
       <div>
         <Label className="mb-2 block text-sm font-medium">
-          Select Columns (minimum {minColumns}, maximum {maxColumns})
+          Select Columns (minimum {minColumns})
         </Label>
 
         <MultiSelect
@@ -58,12 +56,6 @@ export const MultiColumnSelector: React.FC<MultiColumnSelectorProps> = ({
           placeholder="Select multiple columns..."
           className="w-full"
         />
-
-        {selectedColumns.length >= maxColumns && (
-          <p className="text-sm text-amber-600 mt-2">
-            Maximum of {maxColumns} columns reached
-          </p>
-        )}
 
         {selectedColumns.length > 0 && selectedColumns.length < minColumns && (
           <p className="text-sm text-muted-foreground mt-2">

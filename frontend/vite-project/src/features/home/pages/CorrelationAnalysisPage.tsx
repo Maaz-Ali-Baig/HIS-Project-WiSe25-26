@@ -103,17 +103,17 @@ export const CorrelationAnalysisPage: React.FC = () => {
         missingData.columnsInfo,
         missingData.hasMissing,
       );
-      
+
       // Set default nominal configuration for newly selected columns
       const currentConfigs = { ...store.variableConfigs };
-      
+
       // Remove configs for deselected columns
       Object.keys(currentConfigs).forEach((col) => {
         if (!store.selectedColumns.includes(col)) {
           delete currentConfigs[col];
         }
       });
-      
+
       // Add default nominal config for columns without configuration
       store.selectedColumns.forEach((col) => {
         if (!currentConfigs[col]) {
@@ -126,15 +126,18 @@ export const CorrelationAnalysisPage: React.FC = () => {
           };
         }
       });
-      
+
       // Update all configs in store
       Object.keys(currentConfigs).forEach((col) => {
         store.setVariableConfig(col, currentConfigs[col]);
       });
-      
+
       store.setCurrentStep("configure");
     } catch (error: any) {
-      const errorMsg = error.response?.data?.detail || error.message || "Failed to check missing values";
+      const errorMsg =
+        error.response?.data?.detail ||
+        error.message ||
+        "Failed to check missing values";
       store.setError(`Error checking missing values: ${errorMsg}`);
     } finally {
       store.setLoading(false);
@@ -183,7 +186,7 @@ export const CorrelationAnalysisPage: React.FC = () => {
       store.setCurrentStep("results");
     } catch (error: any) {
       let errorMsg = "Analysis failed";
-      
+
       if (error.response?.data?.detail) {
         errorMsg = error.response.data.detail;
       } else if (error.response?.data?.message) {
@@ -191,12 +194,13 @@ export const CorrelationAnalysisPage: React.FC = () => {
       } else if (error.message) {
         errorMsg = error.message;
       }
-      
+
       // Add helpful context
-      if (errorMsg.toLowerCase().includes('r')) {
-        errorMsg += ". Please ensure R is properly installed and the required packages are available.";
+      if (errorMsg.toLowerCase().includes("r")) {
+        errorMsg +=
+          ". Please ensure R is properly installed and the required packages are available.";
       }
-      
+
       store.setError(`Correlation Analysis Error: ${errorMsg}`);
     } finally {
       store.setLoading(false);
@@ -323,10 +327,15 @@ export const CorrelationAnalysisPage: React.FC = () => {
           <Card className="border-destructive/50 bg-destructive/5">
             <CardContent className="py-4">
               <div className="flex items-start gap-3">
-                <AlertCircle className="text-destructive mt-0.5 flex-shrink-0" size={20} />
+                <AlertCircle
+                  className="text-destructive mt-0.5 flex-shrink-0"
+                  size={20}
+                />
                 <div className="flex-1 space-y-2">
                   <h4 className="font-semibold text-destructive">Error</h4>
-                  <p className="text-sm text-destructive/90 leading-relaxed whitespace-pre-wrap">{store.error}</p>
+                  <p className="text-sm text-destructive/90 leading-relaxed whitespace-pre-wrap">
+                    {store.error}
+                  </p>
                   <Button
                     onClick={() => store.setError(null)}
                     variant="outline"
@@ -353,7 +362,6 @@ export const CorrelationAnalysisPage: React.FC = () => {
                   onAddColumn={store.addColumn}
                   onRemoveColumn={store.removeColumn}
                   minColumns={2}
-                  maxColumns={10}
                 />
 
                 <div className="flex justify-between">

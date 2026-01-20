@@ -24,9 +24,53 @@ invisible(suppressMessages({
   }, error = function(e) {})
 }))
 
+# Optional fast backend
+use_data_table <- requireNamespace("data.table", quietly = TRUE)
+
 # Helper function to create error response
 create_error <- function(message) {
   list(error = message)
+}
+
+# Fast mode calculation with optional data.table backend
+fast_mode <- function(x, missing_mask = NULL) {
+  if (!is.null(missing_mask)) {
+    x <- x[!missing_mask]
+  }
+  if (length(x) == 0) {
+    return(NA_character_)
+  }
+  if (use_data_table) {
+    dt <- data.table::data.table(val = x)
+    mode_val <- dt[, .N, by = val][order(-N)][1L, val]
+    return(as.character(mode_val))
+  }
+  tab <- table(x)
+  if (length(tab) == 0) {
+    return(NA_character_)
+  }
+  names(tab)[which.max(tab)]
+}
+
+unique_n <- function(x) {
+  if (use_data_table) {
+    return(data.table::uniqueN(x))
+  }
+  length(unique(x))
+}
+
+make_contingency_table <- function(x, y) {
+  valid <- !is.na(x) & !is.na(y)
+  x <- x[valid]
+  y <- y[valid]
+  if (use_data_table) {
+    dt <- data.table::data.table(x = x, y = y)
+    counts <- dt[, .N, by = .(x, y)]
+    cast <- data.table::dcast(counts, x ~ y, value.var = "N", fill = 0)
+    rownames(cast) <- cast[[1L]]
+    return(as.matrix(cast[, -1, with = FALSE]))
+  }
+  table(x, y)
 }
 
 # Helper function to handle missing values based on specified method
@@ -49,11 +93,11 @@ handle_missing_values <- function(data1, data2, method = "remove", var1_type = N
   else if (method == "mode") {
     # Impute with mode (most frequent value)
     if (any(missing1)) {
-      mode_val1 <- names(sort(table(data1[!missing1]), decreasing = TRUE))[1]
+      mode_val1 <- fast_mode(data1, missing1)
       data1[missing1] <- mode_val1
     }
     if (any(missing2)) {
-      mode_val2 <- names(sort(table(data2[!missing2]), decreasing = TRUE))[1]
+      mode_val2 <- fast_mode(data2, missing2)
       data2[missing2] <- mode_val2
     }
     return(list(
@@ -69,22 +113,22 @@ handle_missing_values <- function(data1, data2, method = "remove", var1_type = N
     if (any(missing1)) {
       if (!is.null(var1_type) && var1_type == "ordinal" && !is.null(var1_ordering)) {
         # Map to numeric, find median, map back to category
-        numeric_vals <- sapply(data1[!missing1], function(x) {
-          if (x %in% names(var1_ordering)) var1_ordering[[x]] else NA
-        })
+        ordering_map <- unlist(var1_ordering, use.names = TRUE)
+        numeric_vals <- ordering_map[as.character(data1[!missing1])]
         median_val <- median(numeric_vals, na.rm = TRUE)
         # Find closest category
-        closest_cat <- names(var1_ordering)[which.min(abs(unlist(var1_ordering) - median_val))]
+        ordering_vals <- as.numeric(ordering_map)
+        closest_cat <- names(ordering_map)[which.min(abs(ordering_vals - median_val))]
         data1[missing1] <- closest_cat
       } else {
         # Fall back to mode for nominal
-        mode_val1 <- names(sort(table(data1[!missing1]), decreasing = TRUE))[1]
+        mode_val1 <- fast_mode(data1, missing1)
         data1[missing1] <- mode_val1
       }
     }
     if (any(missing2)) {
       # For data2, always use mode (we don't have var2_type/ordering in this function)
-      mode_val2 <- names(sort(table(data2[!missing2]), decreasing = TRUE))[1]
+      mode_val2 <- fast_mode(data2, missing2)
       data2[missing2] <- mode_val2
     }
     return(list(
@@ -163,18 +207,9 @@ apply_ordering <- function(data, ordering) {
   }
 
   # Create ordered factor based on provided ordering
-  ordered_data <- sapply(data, function(x) {
-    if (x %in% names(ordering)) {
-      return(ordering[[x]])
-    } else {
-      # If value not in ordering, return NA (will be handled later)
-      return(NA)
-    }
-  })
-  
-  # Convert to numeric
-  numeric_data <- as.numeric(ordered_data)
-  
+  ordering_map <- unlist(ordering, use.names = TRUE)
+  numeric_data <- as.numeric(ordering_map[as.character(data)])
+
   # Check if we have NAs from unmapped values
   if (any(is.na(numeric_data))) {
     # Get unique values not in ordering
@@ -188,7 +223,7 @@ apply_ordering <- function(data, ordering) {
 # Chi-square test of independence
 chi_square_test <- function(data1, data2) {
   tryCatch({
-    contingency_table <- table(data1, data2)
+    contingency_table <- make_contingency_table(data1, data2)
     test_result <- chisq.test(contingency_table)
 
     # Calculate Cramer's V as effect size
@@ -220,19 +255,20 @@ chi_square_test <- function(data1, data2) {
 # Phi coefficient
 phi_coefficient <- function(data1, data2) {
   tryCatch({
-    contingency_table <- table(data1, data2)
+    contingency_table <- make_contingency_table(data1, data2)
 
     # Check if 2x2 table
     if (nrow(contingency_table) != 2 || ncol(contingency_table) != 2) {
       return(create_error("Phi coefficient requires a 2x2 contingency table"))
     }
 
-    chi_sq <- chisq.test(contingency_table)$statistic
+    test_result <- chisq.test(contingency_table)
+    chi_sq <- test_result$statistic
     n <- sum(contingency_table)
     phi <- sqrt(chi_sq / n)
 
     # Calculate p-value from chi-square
-    p_value <- chisq.test(contingency_table)$p.value
+    p_value <- test_result$p.value
 
     list(
       method_name = "Phi coefficient",
@@ -257,13 +293,14 @@ phi_coefficient <- function(data1, data2) {
 # Cramer's V
 cramers_v <- function(data1, data2) {
   tryCatch({
-    contingency_table <- table(data1, data2)
-    chi_sq <- chisq.test(contingency_table)$statistic
+    contingency_table <- make_contingency_table(data1, data2)
+    test_result <- chisq.test(contingency_table)
+    chi_sq <- test_result$statistic
     n <- sum(contingency_table)
     min_dim <- min(nrow(contingency_table) - 1, ncol(contingency_table) - 1)
 
     cramers_v_value <- sqrt(chi_sq / (n * min_dim))
-    p_value <- chisq.test(contingency_table)$p.value
+    p_value <- test_result$p.value
 
     list(
       method_name = "Cramer's V",
@@ -293,17 +330,17 @@ spearman_correlation <- function(data1, data2) {
     valid_indices <- !is.na(data1) & !is.na(data2)
     data1_clean <- data1[valid_indices]
     data2_clean <- data2[valid_indices]
-    
+
     # Check if we have enough data
     if (length(data1_clean) < 3) {
       return(create_error("Insufficient data for Spearman correlation (need at least 3 valid observations)"))
     }
-    
+
     # Check if there's any variation in the data
-    if (length(unique(data1_clean)) < 2 || length(unique(data2_clean)) < 2) {
+    if (unique_n(data1_clean) < 2 || unique_n(data2_clean) < 2) {
       return(create_error("Insufficient variation in data (need at least 2 distinct values in each variable)"))
     }
-    
+
     test_result <- cor.test(data1_clean, data2_clean, method = "spearman", exact = FALSE)
 
     list(
@@ -357,7 +394,49 @@ kendall_tau <- function(data1, data2) {
 # Somers' D
 somers_d <- function(data1, data2) {
   tryCatch({
-    # Somers' D implementation using concordant and discordant pairs
+    n <- length(data1)
+    if (n < 2) {
+      return(create_error("Insufficient data for Somers' D (need at least 2 observations)"))
+    }
+
+    if (requireNamespace("DescTools", quietly = TRUE)) {
+      res <- tryCatch(DescTools::SomersDelta(data1, data2), error = function(e) NULL)
+      if (!is.null(res)) {
+        somers_d_value <- if (!is.null(res$estimate)) {
+          as.numeric(res$estimate)
+        } else if (!is.null(res$delta)) {
+          as.numeric(res$delta)
+        } else if (!is.null(res$statistic)) {
+          as.numeric(res$statistic)
+        } else {
+          as.numeric(res)
+        }
+        p_value <- if (!is.null(res$p.value)) as.numeric(res$p.value) else NA_real_
+        se <- sqrt((4 * n + 10) / (9 * n * (n - 1)))
+        z_value <- if (se > 0) somers_d_value / se else 0
+        if (is.na(p_value)) {
+          p_value <- 2 * pnorm(-abs(z_value))
+        }
+        return(list(
+          method_name = "Somers' D",
+          result = list(
+            statistic = as.numeric(somers_d_value),
+            p_value = as.numeric(p_value),
+            effect_size = as.numeric(somers_d_value),
+            effect_size_name = "Somers' D",
+            interpretation = paste0(
+              "Somers' D = ", round(somers_d_value, 3), ". ",
+              ifelse(abs(somers_d_value) < 0.3, "Weak",
+                     ifelse(abs(somers_d_value) < 0.7, "Moderate", "Strong")),
+              " asymmetric association. ",
+              ifelse(p_value < 0.05, "Significant (p < 0.05)", "Not significant (p >= 0.05)")
+            )
+          )
+        ))
+      }
+    }
+
+    # Somers' D implementation using concordant and discordant pairs (fallback)
     n <- length(data1)
     concordant <- 0
     discordant <- 0

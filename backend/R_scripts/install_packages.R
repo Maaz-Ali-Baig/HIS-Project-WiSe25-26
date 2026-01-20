@@ -9,6 +9,7 @@ options(repos = c(CRAN = "https://cran.r-project.org"))
 # List of required packages
 required_packages <- c(
   "jsonlite",      # JSON parsing (used in multiple scripts)
+  "data.table",    # Fast IO + vectorized ops (performance optimizations)
   "FactoMineR",    # Dimensionality reduction (MCA/FAMD)
   "dplyr",         # Data manipulation (encoding)
   "readr",         # CSV reading (encoding)
@@ -34,7 +35,7 @@ if (length(to_install) == 0) {
   cat("Installing missing packages:\n")
   cat(paste("  -", to_install), sep = "\n")
   cat("\n")
-  
+
   # Install missing packages
   for (pkg in to_install) {
     cat(sprintf("Installing %s...\n", pkg))

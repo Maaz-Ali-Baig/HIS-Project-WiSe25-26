@@ -66,7 +66,7 @@ export function UploadSurface({
         toast.error("Please select a CSV file");
         return false;
       }
-      if (file.size > 10 * 1024 * 1024) {
+      if (file.size > 10000 * 1024 * 1024) {
         toast.error("File size must be less than 10MB");
         return false;
       }

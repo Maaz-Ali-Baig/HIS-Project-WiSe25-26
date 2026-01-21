@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Literal, Optional
 import pandas as pd
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
+from files.history import log_history  
 
 from .r_executor import check_r_installation, execute_r_script
 from ordinal_scales import analyze_dataframe_columns, get_column_order
@@ -361,7 +362,18 @@ async def analyze_correlation(request: CorrelationRequest):
         result["variable1_name"] = request.variable1.columnName
         result["variable2_name"] = request.variable2.columnName
         result["method"] = request.method
-
+        try:
+            file_dir = FILES_DIR / request.userId / request.fileId
+            log_history(
+                file_dir,
+                action="Correlation Analysis",
+                method=request.method,
+                input_cols=[request.variable1.columnName, request.variable2.columnName],
+                output_cols=[],
+                params={"method": request.method}
+            )
+        except Exception as e:
+            print(f"Logging failed: {e}")
         return result
 
     except HTTPException:
@@ -559,8 +571,21 @@ async def analyze_correlation_matrix(request: MatrixAnalysisRequest):
                             "is_diagonal": False,
                         }
                     )
-            matrix.append(row)
-
+            matrix.append(row)     
+        # --- PASTE THIS BLOCK HERE ---
+        try:
+            file_dir = FILES_DIR / request.userId / request.fileId
+            log_history(
+                file_dir,
+                action="Correlation Analysis",
+                method="Matrix",
+                input_cols=request.columns,
+                output_cols=[],
+                params={"type": "matrix", "methods": request.methodsByPairType}
+            )
+        except Exception as e:
+            print(f"Logging failed: {e}")
+        # -----------------------------
         return {
             "matrix": matrix,
             "columns": request.columns,

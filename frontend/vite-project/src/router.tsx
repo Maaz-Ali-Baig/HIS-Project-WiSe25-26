@@ -8,6 +8,10 @@ import { VisualizationPageNew } from "./features/home/pages/VisualizationPageNew
 import { ProtectedRoute } from "./features/auth/components/ProtectedRoute";
 import { MainLayout } from "./components/layout/MainLayout";
 import { RootLayout } from "./components/layout/RootLayout";
+import { ReportPage } from "./features/home/pages/ReportPage";
+
+
+
 
 export const router = createBrowserRouter(
   [
@@ -54,6 +58,12 @@ export const router = createBrowserRouter(
               path: ":fileId/visualization",
               element: <VisualizationPageNew />,
             },
+            {
+              path: ":fileId/report",
+              element: <ReportPage />,
+            },
+            //
+
           ],
         },
       ],

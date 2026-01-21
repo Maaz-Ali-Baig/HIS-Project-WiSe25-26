@@ -57,7 +57,7 @@ const getItems = (fileId?: string) => [
   },
   {
     title: "Report",
-    url: "/report",
+    url: fileId ? `/${fileId}/report` : "/report",
     icon: FileText,
     disabled: !fileId,
   },

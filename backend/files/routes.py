@@ -20,6 +20,174 @@ from database.db import (
 from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
 from pydantic import BaseModel, Field
 
+from fastapi.responses import FileResponse
+from .history import log_history
+import pandas as pd
+import numpy as np
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+import seaborn as sns
+from pathlib import Path
+import json
+import io
+import base64
+import datetime
+
+
+def get_base64_plot(plt_obj):
+    """Converts a Matplotlib plot to a Base64 string for HTML embedding."""
+    buf = io.BytesIO()
+    plt_obj.savefig(buf, format='png', bbox_inches='tight')
+    buf.seek(0)
+    data = base64.b64encode(buf.read()).decode('utf-8')
+    plt_obj.close()
+    return f"data:image/png;base64,{data}"
+
+def generate_html_report(processed_path: Path, original_path: Path, output_dir: Path) -> Path:
+    # 1. Load Data
+    try:
+        df = pd.read_csv(processed_path)
+    except:
+        df = pd.DataFrame()
+
+    # 2. Load History
+    history_file = processed_path.parent / "history.json"
+    history = []
+    if history_file.exists():
+        try:
+            with open(history_file, 'r') as f:
+                history = json.load(f)
+        except: pass
+
+    # --- HTML HEADER & CSS ---
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>DataPrepHIS Report</title>
+        <style>
+            body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6; max_width: 1000px; margin: 0 auto; padding: 40px; background: #f9f9f9; }}
+            .container {{ background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+            h1 {{ color: #E95420; border-bottom: 2px solid #E95420; padding-bottom: 10px; }}
+            h2 {{ color: #E95420; margin-top: 40px; border-left: 5px solid #E95420; padding-left: 10px; }}
+            table {{ width: 100%; border-collapse: collapse; margin: 20px 0; }}
+            th, td {{ padding: 12px; border: 1px solid #ddd; text-align: left; }}
+            th {{ background-color: #f2f2f2; color: #E95420; }}
+            tr:nth-child(even) {{ background-color: #f9f9f9; }}
+            .img-container {{ text-align: center; margin: 30px 0; }}
+            .img-container img {{ max-width: 100%; border: 1px solid #ddd; padding: 5px; border-radius: 4px; }}
+            .metric-box {{ display: inline-block; background: #E95420; color: white; padding: 15px; border-radius: 8px; margin-right: 15px; min-width: 150px; text-align: center; }}
+            .metric-val {{ font-size: 24px; font-weight: bold; display: block; }}
+            .metric-label {{ font-size: 14px; opacity: 0.9; }}
+        </style>
+    </head>
+    <body>
+    <div class="container">
+        <h1>📊 DataPrepHIS Analysis Report</h1>
+        <p><strong>Date:</strong> {datetime.date.today().strftime('%B %d, %Y')}</p>
+        
+        <h2>1. Dataset Overview</h2>
+        <div>
+            <div class="metric-box">
+                <span class="metric-val">{len(df):,}</span>
+                <span class="metric-label">Total Rows</span>
+            </div>
+            <div class="metric-box">
+                <span class="metric-val">{len(df.columns)}</span>
+                <span class="metric-label">Total Columns</span>
+            </div>
+        </div>
+    """
+
+    # --- AUDIT TRAIL ---
+    html += "<h2>2. Preprocessing Audit Trail</h2>"
+    
+    # Filter processing actions
+    audit_actions = ["Imputation", "Binning", "Encoding", "Dimensionality Reduction", "Text Transformation"]
+    audit_logs = [h for h in history if h.get('action') in audit_actions]
+
+    if audit_logs:
+        html += "<table><thead><tr><th>Operation</th><th>Input</th><th>Result</th><th>Method</th></tr></thead><tbody>"
+        for item in audit_logs:
+            inputs = ", ".join(item.get('inputs', []))
+            outputs = ", ".join(item.get('outputs', []))
+            html += f"<tr><td>{item.get('action')}</td><td>{inputs}</td><td>{outputs}</td><td>{item.get('method')}</td></tr>"
+        html += "</tbody></table>"
+    else:
+        html += "<p>No preprocessing operations recorded.</p>"
+
+    # --- VISUALIZATIONS (User Intent) ---
+    viz_logs = [h for h in history if h.get('action') == 'Visualization']
+    if viz_logs:
+        html += "<h2>3. User-Selected Visualizations</h2>"
+        for item in viz_logs:
+            chart_type = item.get('method')
+            params = item.get('params', {})
+            x = params.get('x')
+            y = params.get('y')
+            
+            if x and x in df.columns:
+                plt.figure(figsize=(10, 5))
+                try:
+                    title = f"{chart_type.title()}: {x}"
+                    if y: title += f" vs {y}"
+                    
+                    if chart_type in ["bar", "topn_bar"]:
+                        if y and y in df.columns: sns.barplot(data=df, x=x, y=y, palette="Oranges_r")
+                        else: 
+                            top_n = df[x].value_counts().head(15)
+                            sns.barplot(x=top_n.values, y=top_n.index, palette="Oranges_r")
+                    elif chart_type == "histogram":
+                        sns.histplot(data=df, x=x, kde=True, color='#E95420')
+                    elif chart_type == "scatter" and y in df.columns:
+                        sns.scatterplot(data=df, x=x, y=y, color='#E95420')
+                    elif chart_type == "box":
+                        if y: sns.boxplot(data=df, x=x, y=y, palette="Oranges_r")
+                        else: sns.boxplot(data=df, x=x, color='#E95420')
+                    
+                    plt.title(title)
+                    img_data = get_base64_plot(plt)
+                    html += f'<div class="img-container"><h3>{title}</h3><img src="{img_data}"></div>'
+                except:
+                    plt.close()
+
+    # --- CORRELATIONS ---
+    corr_logs = [h for h in history if h.get('action') == 'Correlation Analysis']
+    if corr_logs:
+        html += "<h2>4. Correlation Analysis</h2>"
+        for item in corr_logs:
+            cols = item.get('inputs', [])
+            valid_cols = [c for c in cols if c in df.columns]
+            num_cols = df[valid_cols].select_dtypes(include=[np.number])
+            
+            if len(num_cols.columns) > 1:
+                plt.figure(figsize=(8, 6))
+                sns.heatmap(num_cols.corr(), annot=True, cmap='coolwarm', fmt=".2f")
+                plt.title(f"Correlation: {item.get('method')}")
+                img_data = get_base64_plot(plt)
+                html += f'<div class="img-container"><img src="{img_data}"></div>'
+
+    # --- GENERAL STATS (Fallback) ---
+    if not viz_logs and not corr_logs:
+        html += "<h2>3. Data Distributions</h2>"
+        num_cols = df.select_dtypes(include=[np.number]).columns[:6]
+        for col in num_cols:
+            plt.figure(figsize=(10, 3))
+            sns.histplot(df[col], kde=True, color='#E95420')
+            plt.title(f"Distribution: {col}")
+            img_data = get_base64_plot(plt)
+            html += f'<div class="img-container"><img src="{img_data}"></div>'
+
+    html += "</div></body></html>"
+    
+    # Save
+    output_path = output_dir / "DataPrepHIS_Report.html"
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(html)
+        
+    return output_path
+
 from .r_integration import (
     handle_binning,
     handle_data_reduction,
@@ -793,6 +961,8 @@ async def handle_missing_values_endpoint(request: HandleMissingValuesRequest):
     # Execute R script to handle missing values
     try:
         handle_missing_values(selected_path, selected_columns, r_method)
+        file_dir = FILES_DIR / user_id / file_id
+        log_history(file_dir, "Imputation", method, selected_columns, selected_columns)
     except HTTPException:
         raise  # Re-raise HTTPExceptions from r_integration
     except Exception as e:
@@ -907,7 +1077,7 @@ async def handle_encoding_endpoint(request: HandleEncodingRequest):
     try:
         async with aiofiles.open(selected_path, "r", encoding="utf-8") as f:
             content = await f.read()
-
+        
         csv_reader = csv.DictReader(io.StringIO(content))
         current_columns = list(csv_reader.fieldnames) if csv_reader.fieldnames else []
 
@@ -962,10 +1132,18 @@ async def handle_encoding_endpoint(request: HandleEncodingRequest):
         async with aiofiles.open(selected_path, "r", encoding="utf-8") as f:
             updated_content = await f.read()
 
+        
+
         updated_reader = csv.DictReader(io.StringIO(updated_content))
         updated_columns = (
             list(updated_reader.fieldnames) if updated_reader.fieldnames else []
         )
+        file_dir = FILES_DIR / user_id / file_id
+        new_cols = list(set(updated_columns) - set(current_columns))
+        # If new columns exist (One-Hot), record them. If not (Label), output is same as input.
+        final_outputs = new_cols if new_cols else selected_columns
+        
+        log_history(file_dir, "Encoding", method, selected_columns, final_outputs)
         updated_rows = list(updated_reader)
 
         # Get updated metadata
@@ -1102,6 +1280,15 @@ async def handle_text_transformation_endpoint(
             list(updated_reader.fieldnames) if updated_reader.fieldnames else []
         )
         updated_rows = list(updated_reader)
+
+
+        new_cols = list(set(updated_columns) - set(current_columns))
+        
+        # 2. Log it
+        file_dir = FILES_DIR / user_id / file_id
+        method_desc = f"Sentence Embeddings (k={k})" if k else "Auto-detected Themes"
+        log_history(file_dir, "Text Transformation", method_desc, selected_columns, new_cols)
+        # --- PHASE 3 LOGGING END ---
 
         # Get updated metadata
         metadata_updated = get_file_metadata(user_id, file_id)
@@ -1316,6 +1503,11 @@ async def handle_data_reduction_endpoint(
             sample_size,
             dr_table_path,
         )
+        if summary:
+            file_dir = FILES_DIR / user_id / file_id
+            # Get the generated column names from the summary
+            dr_out_cols = summary.get("drColumnNames", [])
+            log_history(file_dir, "Dimensionality Reduction", method, selected_columns, dr_out_cols) 
     except HTTPException:
         raise
     except Exception as e:
@@ -1789,6 +1981,12 @@ async def handle_binning_endpoint(request: HandleBinningRequest):
         updated_columns = (
             list(updated_reader.fieldnames) if updated_reader.fieldnames else []
         )
+        file_dir = FILES_DIR / user_id / file_id
+        new_cols = list(set(updated_columns) - set(current_columns))
+        # Binning usually adds columns, but might replace.
+        final_outputs = new_cols if new_cols else selected_columns
+        
+        log_history(file_dir, "Binning", method, selected_columns, final_outputs)
         updated_rows = list(updated_reader)
 
         # Get updated metadata
@@ -2009,11 +2207,88 @@ async def get_file_stats(
         )
 
 
+# =========================================================================
+# PHASE 3: REPORT GENERATION ENDPOINT (HTML VERSION)
+# =========================================================================
 
-
-
-
-
-
-
-
+@router.get("/report/download")
+async def download_report_html(userId: str, fileId: str):
+    """
+    Generate and download an HTML report using R Markdown.
+    
+    Endpoint: GET /api/files/report/download?userId=xxx&fileId=yyy
+    Returns: HTML file download
+    """
+    import subprocess
+    from datetime import datetime
+    
+    try:
+        # 1. Locate user file directory
+        file_dir = FILES_DIR / userId / fileId
+        
+        if not file_dir.exists():
+            raise HTTPException(status_code=404, detail=f"File directory not found for fileId: {fileId}")
+        
+        # 2. Check required files
+        selected_csv = file_dir / "selected.csv"
+        original_csv = file_dir / "original.csv"
+        history_json = file_dir / "history.json"
+        
+        if not selected_csv.exists():
+            raise HTTPException(status_code=404, detail="Processed data file (selected.csv) not found")
+        
+        if not original_csv.exists():
+            raise HTTPException(status_code=404, detail="Original data file not found")
+        
+        # 3. Define output file path
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_file = file_dir / f"DataPrepHIS_Report_{timestamp}.html"
+        
+        # 4. Call R script to generate report
+        r_script_path = Path(__file__).parent.parent / "R_scripts" / "generate_report.R"
+        
+        if not r_script_path.exists():
+            raise HTTPException(status_code=500, detail=f"Report generation script not found: {r_script_path}")
+        
+        # Run Rscript command
+        cmd = [
+            "Rscript",
+            str(r_script_path),
+            str(selected_csv),
+            str(original_csv),
+            str(history_json),
+            str(output_file)
+        ]
+        
+        print(f"Executing R report generation: {' '.join(cmd)}")
+        
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=300  # 300 second timeout
+        )
+        
+        if result.returncode != 0:
+            error_msg = f"R script failed with return code {result.returncode}\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
+            print(error_msg)
+            raise HTTPException(status_code=500, detail=f"Report generation failed: {result.stderr}")
+        
+        print(f"R script output:\n{result.stdout}")
+        
+        # 5. Verify output file was created
+        if not output_file.exists():
+            raise HTTPException(status_code=500, detail="Report file was not generated")
+        
+        # 6. Return the HTML file
+        return FileResponse(
+            path=str(output_file),
+            media_type="text/html",
+            filename="DataPrepHIS_Report.html"
+        )
+        
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=504, detail="Report generation timed out")
+    except Exception as e:
+        print(f"Error generating report: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error generating report: {str(e)}")

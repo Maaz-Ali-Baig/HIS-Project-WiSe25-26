@@ -1,0 +1,711 @@
+---
+title: "📊 Data Pre-Processing Platform Analysis Report"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 4
+    toc_float: 
+      collapsed: false
+      smooth_scroll: true
+    number_sections: true
+    theme: united
+    code_folding: hide
+    df_print: paged
+    self_contained: true
+    css: |
+      .main-container {
+        max-width: 1200px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      h1, h2, h3, h4 {
+        margin-top: 24px;
+        margin-bottom: 16px;
+        font-weight: 600;
+        line-height: 1.25;
+      }
+      ul, ol {
+        padding-left: 2em;
+        margin-bottom: 16px;
+      }
+      li {
+        margin-bottom: 8px;
+        display: list-item;
+      }
+      li ul, li ol {
+        margin-top: 8px;
+        margin-left: 1em;
+      }
+      ul li {
+        list-style-type: disc;
+      }
+      ul li li {
+        list-style-type: circle;
+      }
+      ul li li li {
+        list-style-type: square;
+      }
+      ol li {
+        list-style-type: decimal;
+      }
+      ol li li {
+        list-style-type: lower-alpha;
+      }
+      ol li li li {
+        list-style-type: lower-roman;
+      }
+      p {
+        margin-bottom: 16px;
+      }
+      pre {
+        margin-bottom: 16px;
+      }
+      .table-container {
+        overflow-x: auto;
+        margin-bottom: 20px;
+      }
+
+params:
+  processed_data: NULL
+  original_data: NULL
+  filename: NULL
+  preprocessing_history: NULL
+  numeric_vars: NULL
+  categorical_vars: NULL
+  script_dir: NULL
+  include_plots: TRUE
+  include_stats: TRUE
+  include_preprocessing: TRUE
+  include_correlation: TRUE
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE, results = "asis")
+
+# Load required libraries
+suppressMessages({
+  library(ggplot2)
+  library(dplyr)
+  library(knitr)
+  library(kableExtra)
+  library(jsonlite)
+})
+
+# Webapp color palette (matching VisualizationDisplay.tsx)
+webapp_colors <- c(
+  "#2563eb", "#16a34a", "#f97316", "#0ea5e9", "#ef4444",
+  "#8b5cf6", "#14b8a6", "#f59e0b", "#06b6d4", "#ec4899"
+)
+```
+
+# Data Pre-Processing and Visualization Report
+
+This report provides a detailed analysis of the data preprocessing steps and visualizations for the **Data Pre-Processing Platform** tool.
+
+## Dataset Overview
+
+### Dataset Information
+
+```{r results="asis"}
+# Display dataset name
+if (!is.null(params$filename)) {
+  cat("<p><strong>Dataset Name:</strong>", params$filename, "</p>")
+} else {
+  cat("<p><strong>Dataset Name:</strong> Not specified</p>")
+}
+
+# Add analysis date
+cat("<p><strong>Analysis Date:</strong>", format(Sys.Date(), "%B %d, %Y"), "</p>")
+```
+
+### Data Preview
+
+```{r}
+# Display first 10 rows of processed data
+if (!is.null(params$processed_data) && nrow(params$processed_data) > 0) {
+  kable(head(params$processed_data, 10),
+    caption = "First 10 rows of dataset"
+  ) %>%
+    kable_styling(
+      bootstrap_options = c("striped", "hover", "condensed"),
+      full_width = TRUE
+    ) %>%
+    scroll_box(width = "100%", height = "300px")
+} else {
+  cat("<p>No data available to display.</p>")
+}
+```
+
+### Dataset Structure
+
+```{r results="asis"}
+# Display data dimensions
+if (!is.null(params$processed_data) && ncol(params$processed_data) > 0) {
+  cat(
+    "<p><strong>Dataset Dimensions:</strong>",
+    format(nrow(params$processed_data), big.mark = ","),
+    "rows ×", ncol(params$processed_data), "columns</p>\n\n"
+  )
+}
+```
+
+## Data Preprocessing
+
+### Preprocessing Operations
+
+```{r}
+# Display preprocessing operations from history
+if (params$include_preprocessing && !is.null(params$preprocessing_history)) {
+  # Handle case where preprocessing_history might be a list or data frame
+  history_list <- if (is.data.frame(params$preprocessing_history)) {
+    # Convert data frame rows to list if needed
+    lapply(1:nrow(params$preprocessing_history), function(i) as.list(params$preprocessing_history[i, ]))
+  } else {
+    params$preprocessing_history
+  }
+
+  if (length(history_list) > 0) {
+    # Extract preprocessing operations
+    prep_ops <- data.frame(
+      Operation = character(),
+      Input = character(),
+      Result = character(),
+      Method = character(),
+      stringsAsFactors = FALSE
+    )
+
+    for (i in seq_along(history_list)) {
+      op <- history_list[[i]]
+
+      # Access list elements safely
+      action <- if (!is.null(op$action)) op$action else if (!is.null(op[["action"]])) op[["action"]] else NA
+
+      if (!is.na(action) && action %in% c("Imputation", "Encoding", "Binning", "Data Reduction", "Text Transformation")) {
+        inputs <- if (!is.null(op$inputs)) paste(op$inputs, collapse = ", ") else "-"
+        outputs <- if (!is.null(op$outputs)) paste(op$outputs, collapse = ", ") else "-"
+        method <- if (!is.null(op$method)) op$method else "-"
+
+        prep_ops <- rbind(prep_ops, data.frame(
+          Operation = action,
+          Input = inputs,
+          Result = outputs,
+          Method = method,
+          stringsAsFactors = FALSE
+        ))
+      }
+    }
+
+    if (nrow(prep_ops) > 0) {
+      kable(prep_ops, caption = "Applied Preprocessing Operations") %>%
+        kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+    } else {
+      cat("No preprocessing operations were recorded.")
+    }
+  } else {
+    cat("No preprocessing operations were recorded.")
+  }
+} else {
+  cat("No preprocessing operations were recorded.")
+}
+```
+
+### Missing Values Analysis
+
+```{r}
+# Check for missing values
+if (params$include_stats && !is.null(params$processed_data)) {
+  missing_counts <- sapply(params$processed_data, function(x) sum(is.na(x)))
+  missing_counts <- missing_counts[missing_counts > 0]
+
+  if (length(missing_counts) > 0) {
+    cat("#### Columns with Missing Values\n\n")
+    for (col_name in names(missing_counts)) {
+      missing_count <- missing_counts[col_name]
+      missing_pct <- round(100 * missing_count / nrow(params$processed_data), 2)
+      cat("*", col_name, ":", missing_count, "values (", missing_pct, "%)\n\n", sep = " ")
+    }
+  } else {
+    cat("**No missing values** found in the dataset.\n\n")
+  }
+}
+```
+
+## Data Exploration
+
+### Summary Statistics
+
+```{r}
+if (params$include_stats && !is.null(params$processed_data) && ncol(params$processed_data) > 0) {
+  # Create summary statistics table
+  summary_df <- data.frame(
+    Column = names(params$processed_data),
+    Class = sapply(params$processed_data, function(x) {
+      if (is.numeric(x)) "Numerical" else "Categorical"
+    }),
+    Missing = sapply(params$processed_data, function(x) sum(is.na(x))),
+    Missing_Percent = sapply(params$processed_data, function(x) {
+      sprintf("%.1f%%", (sum(is.na(x)) / length(x)) * 100)
+    }),
+    Min = sapply(params$processed_data, function(x) {
+      if (is.numeric(x)) round(min(x, na.rm = TRUE), 2) else "-"
+    }),
+    Median = sapply(params$processed_data, function(x) {
+      if (is.numeric(x)) round(median(x, na.rm = TRUE), 2) else "-"
+    }),
+    Max = sapply(params$processed_data, function(x) {
+      if (is.numeric(x)) round(max(x, na.rm = TRUE), 2) else "-"
+    }),
+    Mean = sapply(params$processed_data, function(x) {
+      if (is.numeric(x)) sprintf("%.3f", mean(x, na.rm = TRUE)) else "-"
+    }),
+    SD = sapply(params$processed_data, function(x) {
+      if (is.numeric(x)) sprintf("%.3f", sd(x, na.rm = TRUE)) else "-"
+    }),
+    Unique_Values = sapply(params$processed_data, function(x) {
+      if (!is.numeric(x)) length(unique(na.omit(x))) else "-"
+    }),
+    stringsAsFactors = FALSE
+  )
+
+  # Replace NA/NaN with dash
+  summary_df[] <- lapply(summary_df, function(x) {
+    ifelse(is.na(x) | x == "NaN", "-", as.character(x))
+  })
+
+  kable(summary_df, caption = "Data Summary", align = "c") %>%
+    kable_styling(
+      bootstrap_options = c("striped", "hover", "condensed"),
+      full_width = TRUE
+    ) %>%
+    scroll_box(width = "100%", height = "400px")
+} else {
+  cat("No data available for summary statistics.")
+}
+```
+
+## User-Generated Visualizations
+
+```{r fig.width=10, fig.height=6}
+# Generate visualizations from history
+if (params$include_plots && !is.null(params$preprocessing_history) &&
+  !is.null(params$processed_data)) {
+  # Handle list structure
+  history_list <- if (is.data.frame(params$preprocessing_history)) {
+    lapply(1:nrow(params$preprocessing_history), function(i) as.list(params$preprocessing_history[i, ]))
+  } else {
+    params$preprocessing_history
+  }
+
+  # Filter visualization operations
+  viz_count <- 0
+  processed_viz_signatures <- c()
+  for (i in seq_along(history_list)) {
+    op <- history_list[[i]]
+    action <- if (!is.null(op$action)) op$action else if (!is.null(op[["action"]])) op[["action"]] else NA
+
+    if (!is.na(action) && action == "Visualization") {
+      viz_count <- viz_count + 1
+
+      chart_type <- if (!is.null(op$method)) op$method else NA
+      params_list <- if (!is.null(op$params)) op$params else if (!is.null(op[["params"]])) op[["params"]] else list()
+      x_var <- if (!is.null(params_list$x)) params_list$x else NA
+      y_var <- if (!is.null(params_list$y)) params_list$y else NA
+
+      # Create unique signature for deduplication
+      # Use a safe string representation for NA values in the signature
+      sig_x <- if (is.na(x_var)) "NA" else x_var
+      sig_y <- if (is.na(y_var)) "NA" else y_var
+      sig_type <- if (is.na(chart_type)) "NA" else chart_type
+
+      viz_sig <- paste(sig_type, sig_x, sig_y, sep = "|")
+
+      if (viz_sig %in% processed_viz_signatures) {
+        next
+      }
+      processed_viz_signatures <- c(processed_viz_signatures, viz_sig)
+
+      if (!is.na(x_var) && x_var %in% names(params$processed_data)) {
+        tryCatch(
+          {
+            # Bar chart (Simple, Top N, Ordered)
+            if (!is.na(chart_type) && chart_type %in% c("bar", "topn_bar", "ordered_bar")) {
+              p <- ggplot(params$processed_data, aes_string(x = x_var)) +
+                geom_bar(fill = webapp_colors[1]) +
+                theme_minimal() +
+                theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+                labs(title = paste("Bar Chart:", x_var), x = x_var, y = "Count")
+              print(p)
+            }
+
+            # Stacked bar 100%
+            else if (!is.na(chart_type) && chart_type == "stacked_bar_100" && !is.na(y_var) &&
+              y_var %in% names(params$processed_data)) {
+              ct <- as.data.frame(prop.table(table(
+                params$processed_data[[x_var]],
+                params$processed_data[[y_var]]
+              ), 1) * 100)
+              names(ct) <- c("x_cat", "y_cat", "percent")
+
+              p <- ggplot(ct, aes(x = x_cat, y = percent, fill = y_cat)) +
+                geom_bar(stat = "identity") +
+                scale_fill_manual(values = webapp_colors) +
+                theme_minimal() +
+                labs(
+                  title = paste("Stacked Bar 100%:", x_var, "vs", y_var),
+                  x = x_var, y = "Percentage (%)", fill = y_var
+                )
+              print(p)
+            }
+
+            # Grouped Bar
+            else if (!is.na(chart_type) && chart_type == "grouped_bar" && !is.na(y_var) &&
+              y_var %in% names(params$processed_data)) {
+              ct <- as.data.frame(prop.table(table(
+                params$processed_data[[x_var]],
+                params$processed_data[[y_var]]
+              ), 1) * 100)
+              names(ct) <- c("x_cat", "y_cat", "percent")
+
+              p <- ggplot(ct, aes(x = x_cat, y = percent, fill = y_cat)) +
+                geom_bar(stat = "identity", position = "dodge") +
+                scale_fill_manual(values = webapp_colors) +
+                theme_minimal() +
+                labs(
+                  title = paste("Grouped Bar Chart:", x_var, "vs", y_var),
+                  x = x_var, y = "Percentage (%)", fill = y_var
+                )
+              print(p)
+            }
+
+            # Histogram
+            else if (!is.na(chart_type) && chart_type == "histogram") {
+              p <- ggplot(params$processed_data, aes_string(x = x_var)) +
+                geom_histogram(fill = webapp_colors[1], bins = 30) +
+                theme_minimal() +
+                labs(title = paste("Histogram:", x_var), x = x_var, y = "Count")
+              print(p)
+            }
+
+            # Boxplot
+            else if (!is.na(chart_type) && chart_type == "boxplot") {
+              p <- if (!is.na(y_var) && y_var %in% names(params$processed_data)) {
+                ggplot(params$processed_data, aes_string(x = x_var, y = y_var)) +
+                  geom_boxplot(fill = webapp_colors[1]) +
+                  labs(title = paste("Boxplot:", x_var, "vs", y_var))
+              } else {
+                ggplot(params$processed_data, aes_string(y = x_var)) +
+                  geom_boxplot(fill = webapp_colors[1]) +
+                  labs(title = paste("Boxplot:", x_var))
+              }
+              p <- p + theme_minimal()
+              print(p)
+            }
+
+            # Pareto
+            else if (!is.na(chart_type) && chart_type == "pareto") {
+              counts <- table(params$processed_data[[x_var]])
+              counts <- sort(counts, decreasing = TRUE)
+              df <- data.frame(category = names(counts), count = as.numeric(counts))
+              df$category <- factor(df$category, levels = df$category)
+
+              p <- ggplot(df, aes(x = category, y = count)) +
+                geom_bar(stat = "identity", fill = webapp_colors[1]) +
+                theme_minimal() +
+                theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+                labs(title = paste("Pareto Chart:", x_var), x = x_var, y = "Count")
+              print(p)
+            }
+
+            # Cumulative Percent
+            else if (!is.na(chart_type) && chart_type == "cumulative_percent") {
+              counts <- table(params$processed_data[[x_var]])
+              df <- data.frame(category = names(counts), count = as.numeric(counts))
+              # Sort if needed, but usually cumulative implies ordinal or sorted
+              percents <- cumsum(prop.table(counts) * 100)
+              df$percent <- as.numeric(percents)
+
+              p <- ggplot(df, aes(x = category, y = percent, group = 1)) +
+                geom_line(color = webapp_colors[1], size = 1) +
+                geom_point(color = webapp_colors[1]) +
+                theme_minimal() +
+                theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+                labs(title = paste("Cumulative Percent:", x_var), y = "Cumulative %")
+              print(p)
+            }
+          },
+          error = function(e) {
+            cat("Could not generate chart:", e$message, "\n")
+          }
+        )
+      }
+    }
+  }
+
+  if (viz_count == 0) {
+    cat("No visualizations were generated.")
+  }
+} else {
+  cat("No visualizations available.")
+}
+```
+
+## Correlation Analysis
+
+```{r}
+# Display correlation analysis with statistical tests
+if (params$include_correlation && !is.null(params$preprocessing_history)) {
+  # Source the correlation analysis script
+  if (!is.null(params$script_dir)) {
+    corr_script_path <- file.path(params$script_dir, "correlation_analysis.R")
+    if (file.exists(corr_script_path)) {
+      source(corr_script_path, local = TRUE)
+    }
+  }
+
+  # Handle list structure
+  history_list <- if (is.data.frame(params$preprocessing_history)) {
+    lapply(1:nrow(params$preprocessing_history), function(i) as.list(params$preprocessing_history[i, ]))
+  } else {
+    params$preprocessing_history
+  }
+
+  corr_count <- 0
+  processed_signatures <- c()
+
+  for (i in seq_along(history_list)) {
+    op <- history_list[[i]]
+    action <- if (!is.null(op$action)) op$action else if (!is.null(op[["action"]])) op[["action"]] else NA
+
+    if (!is.na(action) && action == "Correlation Analysis") {
+      # Robustly extract inputs
+      cols_raw <- op$inputs
+      cols <- c()
+
+      if (is.list(cols_raw)) {
+        cols <- unlist(cols_raw)
+      } else if (is.character(cols_raw)) {
+        if (length(cols_raw) == 1 && grepl("^c\\(", cols_raw)) {
+          try(
+            {
+              cols <- eval(parse(text = cols_raw))
+            },
+            silent = TRUE
+          )
+        } else {
+          cols <- cols_raw
+        }
+      }
+
+      # Deduplication check: Sort and clean columns to create unique signature
+      if (length(cols) > 0) {
+        # Normalize columns: distinct, sorted, trimmed
+        cols <- sort(unique(trimws(as.character(cols))))
+
+        sig <- paste(cols, collapse = "|")
+        if (sig %in% processed_signatures) {
+          next
+        }
+        processed_signatures <- c(processed_signatures, sig)
+      }
+
+      corr_count <- corr_count + 1
+
+      method <- if (!is.null(op$method)) op$method else "Matrix"
+
+      if (length(cols) >= 2 && all(cols %in% names(params$processed_data))) {
+        cat("\n\n### Correlation Analysis: ", paste(cols, collapse = ", "), "\n\n")
+
+        # 1. Calculate Full Correlation Matrix
+        n_vars <- length(cols)
+        corr_matrix <- matrix(NA, nrow = n_vars, ncol = n_vars)
+        rownames(corr_matrix) <- cols
+        colnames(corr_matrix) <- cols
+
+        p_matrix <- matrix(NA, nrow = n_vars, ncol = n_vars) # Store p-values for significance stars
+
+        # Loop through all pairs
+        for (i in 1:n_vars) {
+          for (j in 1:n_vars) {
+            if (i == j) {
+              corr_matrix[i, j] <- 1.0
+              p_matrix[i, j] <- 0
+            } else {
+              col1 <- cols[i]
+              col2 <- cols[j]
+
+              var1 <- params$processed_data[[col1]]
+              var2 <- params$processed_data[[col2]]
+
+              # Determine types
+              type1 <- if (is.ordered(var1)) "ordinal" else "nominal"
+              type2 <- if (is.ordered(var2)) "ordinal" else "nominal"
+              type_pair <- paste(sort(c(type1, type2)), collapse = "-")
+
+              # Resolve method
+              target_method <- "cramers_v" # Default
+              op_params <- if (!is.null(op$params)) op$params else list()
+              if (!is.null(op_params$methods) && !is.null(op_params$methods[[type_pair]])) {
+                target_method <- op_params$methods[[type_pair]]
+              } else {
+                # Fallback defaults
+                if (type_pair == "ordinal-ordinal") {
+                  target_method <- "spearman"
+                } else if (type_pair == "nominal-ordinal") target_method <- "kruskal_wallis"
+              }
+
+              # Execute Test
+              stat_val <- 0
+              p_val <- 1
+
+              valid_idx <- !is.na(var1) & !is.na(var2) & var1 != "" & var2 != ""
+              d1 <- var1[valid_idx]
+              d2 <- var2[valid_idx]
+
+              if (length(d1) > 0) {
+                tryCatch(
+                  {
+                    if (exists(target_method) && is.function(get(target_method))) {
+                      # Handle arg order for directional tests
+                      res <- if (target_method %in% c("kruskal_wallis", "anova_eta") && type1 == "nominal" && type2 == "ordinal") {
+                        do.call(target_method, list(d1, d2))
+                      } else if (target_method %in% c("kruskal_wallis", "anova_eta")) {
+                        do.call(target_method, list(d2, d1))
+                      } else {
+                        do.call(target_method, list(d1, d2))
+                      }
+
+                      if (!is.null(res) && !is.null(res$result)) {
+                        # Use effect size as correlation value
+                        stat_val <- if (!is.null(res$result$effect_size)) res$result$effect_size else res$result$statistic
+                        p_val <- res$result$p_value
+                      }
+                    }
+                  },
+                  error = function(e) {}
+                )
+              }
+
+              corr_matrix[i, j] <- stat_val
+              p_matrix[i, j] <- p_val
+            }
+          }
+        }
+
+        # 2. Visualize Matrix (Matching Frontend Colors)
+
+        # Convert to long format for ggplot
+        corr_data <- as.data.frame(as.table(corr_matrix))
+        names(corr_data) <- c("Var1", "Var2", "Correlation")
+
+        # Add p-values for significance stars
+        p_data <- as.data.frame(as.table(p_matrix))
+        corr_data$PValue <- p_data$Freq
+
+        # Add significance stars
+        corr_data$Stars <- ifelse(corr_data$PValue < 0.001, "***",
+          ifelse(corr_data$PValue < 0.01, "**",
+            ifelse(corr_data$PValue < 0.05, "*", "")
+          )
+        )
+        corr_data$Stars[corr_data$Var1 == corr_data$Var2] <- "" # No stars on diagonal
+
+        # Define Color Categories matching Frontend
+        # >= 0.7: Red (#EF4444)
+        # >= 0.5: Orange (#FB923C)
+        # >= 0.3: Yellow (#FDE047)
+        # >= 0.1: Green (#BBF7D0)
+        # < 0.1: Blue (#DBEAFE)
+
+        corr_data$ColorGroup <- cut(abs(corr_data$Correlation),
+          breaks = c(-1, 0.1, 0.3, 0.5, 0.7, 2),
+          labels = c("Negligible", "Very Weak", "Weak", "Moderate", "Strong")
+        )
+
+        # Define colors manually
+        frontend_colors <- c(
+          "Negligible" = "#DBEAFE", # Blue-100
+          "Very Weak" = "#BBF7D0", # Green-200
+          "Weak" = "#FDE047", # Yellow-300
+          "Moderate" = "#FB923C", # Orange-400
+          "Strong" = "#EF4444" # Red-500
+        )
+
+        # Diagonal is gray
+        corr_data$FillColor <- frontend_colors[corr_data$ColorGroup]
+        corr_data$FillColor[corr_data$Var1 == corr_data$Var2] <- "#E5E7EB" # Gray-200
+
+        # Create Heatmap
+        p <- ggplot(corr_data, aes(x = Var1, y = Var2)) +
+          geom_tile(aes(fill = ColorGroup), color = "white") +
+          geom_text(aes(label = sprintf("%.3f", Correlation)), fontface = "bold", size = 3.5) +
+          geom_text(aes(label = Stars), vjust = 2, size = 3) +
+          scale_fill_manual(values = frontend_colors, name = "Correlation Strength") +
+          scale_y_discrete(limits = rev(levels(corr_data$Var2))) + # Reverse Y axis to match matrix order
+          labs(
+            x = NULL, y = NULL, title = "Correlation Matrix Heatmap",
+            caption = "* p<0.05, ** p<0.01, *** p<0.001"
+          ) +
+          theme_minimal() +
+          theme(
+            axis.text.x = element_text(angle = 45, hjust = 1, face = "bold"),
+            axis.text.y = element_text(face = "bold"),
+            panel.grid = element_blank()
+          )
+
+        print(p)
+        cat("\n\n")
+
+        # Legend Description
+        cat("**Legend:**\n")
+        cat("* **Strong (≥ 0.7):** Red\n")
+        cat("* **Moderate (0.5 - 0.7):** Orange\n")
+        cat("* **Weak (0.3 - 0.5):** Yellow\n")
+        cat("* **Very Weak (0.1 - 0.3):** Green\n")
+        cat("* **Negligible (< 0.1):** Blue\n\n")
+      }
+    }
+  }
+
+  if (corr_count == 0) {
+    cat("No correlation analysis was performed.")
+  }
+} else {
+  cat("No correlation analysis available.")
+}
+```
+
+## Executive Summary
+
+```{r}
+if (!is.null(params$processed_data) && nrow(params$processed_data) > 0) {
+  cat("### Key Dataset Metrics\n\n")
+
+  # Calculate metrics
+  num_rows <- nrow(params$processed_data)
+  num_cols <- ncol(params$processed_data)
+  data_size <- format(object.size(params$processed_data), units = "auto")
+
+  missing_cells <- sum(sapply(params$processed_data, function(x) sum(is.na(x))))
+  total_cells <- num_rows * num_cols
+  missing_pct <- round((missing_cells / total_cells) * 100, 2)
+
+  num_numeric <- length(params$numeric_vars)
+  num_categorical <- length(params$categorical_vars)
+
+  summary_table <- data.frame(
+    Metric = c(
+      "Rows", "Columns", "Data Size", "Missing Data",
+      "Numeric Variables", "Categorical Variables"
+    ),
+    Value = c(
+      num_rows, num_cols, data_size, paste0(missing_pct, "%"),
+      num_numeric, num_categorical
+    )
+  )
+
+  kable(summary_table, caption = "Dataset Overview") %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"))
+} else {
+  cat("No data available for executive summary.")
+}
+```

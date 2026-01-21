@@ -3,8 +3,7 @@ handle_missing_values_csv <- function(
     output_csv,
     columns,
     method = c("row_deletion", "mode", "median", "missing_category", "model_based"),
-    k = 5
-) {
+    k = 5) {
   method <- match.arg(method)
 
   # model_based = KNN, so we need VIM
@@ -27,8 +26,10 @@ handle_missing_values_csv <- function(
   if (length(columns) == 0) {
     available_cols <- paste(names(df), collapse = ", ")
     requested_cols <- paste(columns, collapse = ", ")
-    stop(paste0("No valid columns provided. Available columns: [", available_cols, 
-                "]. Requested columns: [", requested_cols, "]"))
+    stop(paste0(
+      "No valid columns provided. Available columns: [", available_cols,
+      "]. Requested columns: [", requested_cols, "]"
+    ))
   }
 
   # 1. Row Deletion
@@ -58,17 +59,17 @@ handle_missing_values_csv <- function(
     for (v in columns) {
       x <- df[[v]]
       mask <- is_missing(x)
-      
+
       if (!any(mask)) {
-        next  # No missing values, skip this column
+        next # No missing values, skip this column
       }
-      
+
       # Try to convert to numeric (handles string columns with numeric values)
       x_non_missing <- x[!mask]
-      
+
       # Check if values can be converted to numeric
       x_numeric <- suppressWarnings(as.numeric(x_non_missing))
-      
+
       if (any(!is.na(x_numeric))) {
         # Column has numeric values, apply median imputation
         x_all_numeric <- suppressWarnings(as.numeric(x))
@@ -100,32 +101,42 @@ handle_missing_values_csv <- function(
     return(df)
   }
 
-  # 5. Model Based (KNN)
 
+  # 5. Model Based (Fast Random Forest via missRanger)
   if (method == "model_based") {
+    if (!requireNamespace("missRanger", quietly = TRUE)) {
+      stop("Package 'missRanger' is required for fast model-based imputation. Please run install.packages('missRanger')")
+    }
 
-    # Keep an exact copy of untouched columns
+
     other_cols <- setdiff(names(df), columns)
     df_other_original <- df[other_cols]
 
-    # Convert missing tokens to NA ONLY in target columns
+
     for (col in columns) {
       mask <- is_missing(df[[col]])
       df[[col]][mask] <- NA
+
+
+      if (is.character(df[[col]])) {
+        df[[col]] <- as.factor(df[[col]])
+      }
     }
 
-    # (Optional but usually good) factorize ONLY target columns if they are character
-    for (col in columns) {
-      if (is.character(df[[col]])) df[[col]] <- as.factor(df[[col]])
-    }
 
-    # Run KNN only on requested columns
-    df_knn <- VIM::kNN(df, variable = columns, k = k, imp_var = FALSE)
+    df_imputed <- missRanger::missRanger(
+      df,
+      formula = as.formula(paste(paste(columns, collapse = "+"), "~ .")),
+      pmm.k = 3, # Note: The function argument 'k' is currently ignored here
+      num.trees = 100,
+      verbose = 0,
+      seed = 123
+    )
 
-    # Restore other columns EXACTLY as they were
-    df_knn[other_cols] <- df_other_original
 
-    write.csv(df_knn, output_csv, row.names = FALSE, na = "")
-    return(df_knn)
+    df_imputed[other_cols] <- df_other_original
+
+    write.csv(df_imputed, output_csv, row.names = FALSE, na = "")
+    return(df_imputed)
   }
 }

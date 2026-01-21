@@ -87,7 +87,9 @@ export const CorrelationMatrixDisplay: React.FC<
                       }
                     >
                       <div className="text-sm font-semibold">
-                        {cell.correlation.toFixed(3)}
+                        {typeof cell.correlation === 'number' 
+                          ? cell.correlation.toFixed(3) 
+                          : cell.correlation || 'N/A'}
                       </div>
                       {!cell.is_diagonal && significance && (
                         <div className="text-xs font-bold">{significance}</div>

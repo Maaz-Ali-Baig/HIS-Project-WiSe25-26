@@ -22,7 +22,7 @@ import { TextTransformationPanel } from "../components/TextTransformationPanel";
 import { DataReductionPanel } from "../components/DataReductionPanel";
 import { DataReductionSummaryView } from "../components/DataReductionSummaryView";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../../components/ui/tabs";
-import { filterAnalysisColumns } from "../../../lib/columnFilters";
+import { filterAnalysisColumns, isDateTimeColumn } from "../../../lib/columnFilters";
 
 export function PreProcessingPage() {
   const navigate = useNavigate();
@@ -282,7 +282,15 @@ export function PreProcessingPage() {
               
               <TabsContent value="pre-processed" className="mt-4 border rounded-lg flex-1 min-h-0 overflow-auto">
                 <DataTable
-                  columns={fileData.columns.filter(col => !col.match(/^DR\d+$/))}
+                  columns={fileData.columns
+                    .filter(col => !col.match(/^DR\d+$/))
+                    .filter(col => {
+                      // Filter out id column
+                      if (col.toLowerCase() === 'id') return false;
+                      // Filter out datetime columns using the same logic
+                      return !isDateTimeColumn(col, fileData.rows);
+                    })
+                  }
                   rows={fileData.rows}
                   readOnly={true}
                   modifiedCells={modifiedCells}

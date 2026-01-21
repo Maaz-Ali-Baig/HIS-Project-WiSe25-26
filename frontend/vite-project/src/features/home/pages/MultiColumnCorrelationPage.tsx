@@ -13,20 +13,23 @@ import { PairTypeMethodSelector } from '../components/PairTypeMethodSelector';
 import { CorrelationMatrixDisplay } from '../components/CorrelationMatrixDisplay';
 import { CorrelationDetailModal } from '../components/CorrelationDetailModal';
 import { getColumns, checkHealth } from '../api/correlation';
+import type { MatrixCell } from '../api/correlation';
 
 export function MultiColumnCorrelationPage() {
+  const store = useMultiCorrelationStore();
   const {
     currentStep,
     error: analysisError,
-    setFileContext,
+    setDataSource,
     setAvailableColumns,
     setError,
     reset,
-  } = useMultiCorrelationStore();
+  } = store;
 
   const { userId, fileId } = useFileStore();
 
   const [isInitializing, setIsInitializing] = useState(true);
+  const [selectedCell, setSelectedCell] = useState<MatrixCell | null>(null);
   const [healthCheck, setHealthCheck] = useState<{
     checked: boolean;
     healthy: boolean;
@@ -50,7 +53,7 @@ export function MultiColumnCorrelationPage() {
         }
 
         // Set file context in store
-        setFileContext(userId, fileId);
+        setDataSource(userId, fileId);
 
         // Check if R is installed
         try {
@@ -98,7 +101,7 @@ export function MultiColumnCorrelationPage() {
     return () => {
       reset();
     };
-  }, [userId, fileId, setFileContext, setAvailableColumns, setError, reset]);
+  }, [userId, fileId, setDataSource, setAvailableColumns, setError, reset]);
 
   if (isInitializing) {
     return (
@@ -242,11 +245,42 @@ export function MultiColumnCorrelationPage() {
 
           {/* Main Content Area */}
           <div className="space-y-4">
-            {currentStep === 'select' && <MultiColumnSelector />}
-            {currentStep === 'configure' && <BatchVariableConfigurator />}
-            {currentStep === 'missing' && <MissingValueHandler />}
-            {currentStep === 'methods' && <PairTypeMethodSelector />}
-            {currentStep === 'results' && <CorrelationMatrixDisplay />}
+            {currentStep === 'select' && (
+              <MultiColumnSelector
+                availableColumns={store.availableColumns}
+                selectedColumns={store.selectedColumns}
+                onAddColumn={store.addColumn}
+                onRemoveColumn={store.removeColumn}
+              />
+            )}
+            {currentStep === 'configure' && (
+              <BatchVariableConfigurator
+                columns={store.selectedColumns}
+                categories={store.columnCategories}
+                variableConfigs={store.variableConfigs}
+                onConfigChange={store.setVariableConfig}
+              />
+            )}
+            {currentStep === 'missing' && (
+              <MissingValueHandler
+                missingValueInfo={store.missingValueInfo}
+                hasMissing={store.hasMissingValues}
+                selectedMethod={store.selectedMissingValueMethod}
+                onMethodChange={store.setMissingValueMethod}
+              />
+            )}
+            {currentStep === 'methods' && (
+              <PairTypeMethodSelector
+                methodsByPairType={store.methodsByPairType}
+                onMethodChange={store.setMethodForPairType}
+              />
+            )}
+            {currentStep === 'results' && store.matrixResult && (
+              <CorrelationMatrixDisplay 
+                result={store.matrixResult}
+                onCellClick={setSelectedCell}
+              />
+            )}
           </div>
 
           {/* Info Alert */}
@@ -273,7 +307,19 @@ export function MultiColumnCorrelationPage() {
       </main>
 
       {/* Detail Modal */}
-      <CorrelationDetailModal />
+      {selectedCell && store.matrixResult && (
+        <CorrelationDetailModal
+          result={
+            store.matrixResult.pairDetails[
+              `${selectedCell.row_name}::${selectedCell.col_name}`
+            ] ||
+            store.matrixResult.pairDetails[
+              `${selectedCell.col_name}::${selectedCell.row_name}`
+            ]
+          }
+          onClose={() => setSelectedCell(null)}
+        />
+      )}
     </div>
   );
 }

@@ -18,8 +18,25 @@ handle_missing_values_csv <- function(
   # Use check.names = FALSE to preserve original column names exactly
   df <- read.csv(input_csv, stringsAsFactors = FALSE, na.strings = character(0), check.names = FALSE)
 
+  # Vectorized function to check for missing values
   is_missing <- function(x) {
-    is.na(x) | x == "" | x == "NA" | x == "NULL"
+    # Initialize result vector
+    result <- rep(FALSE, length(x))
+    
+    # Check for standard R NA
+    result <- result | is.na(x)
+    
+    # Check for empty strings and common string representations
+    if (is.character(x)) {
+      # Trim whitespace and convert to lowercase for comparison
+      x_trimmed <- tolower(trimws(x))
+      # Check against common missing value representations
+      missing_tokens <- c("", "na", "n/a", "nan", "none", "null", "nil", 
+                          "#n/a", "#na", "missing", "n.a.", "<na>")
+      result <- result | (x_trimmed %in% missing_tokens)
+    }
+    
+    return(result)
   }
 
   # Filter columns

@@ -1,0 +1,47 @@
+=== INPUT DEBUG ===
+Method: kruskal_wallis
+Var1 type: nominal | columnName: Sex
+Var1 ordering is.null: TRUE | class: NULL
+Var2 type: ordinal | columnName: SibSp
+Var2 ordering is.null: FALSE | class: list
+Var2 ordering length: 7
+Var2 ordering names: 0, 1, 2
+Var2 ordering values: 1, 2, 3
+Sample var1 data: male, female, female
+Sample var2 data: 1, 1, 0
+=============Main DebMain Debug - Before apply_ordering var2 - data2_clean sample: 1, 1, 0
+=== APPLY_ORDERING DEBUG ===
+Input data length: 891
+Input data class: character
+Sample input data: 1, 1, 0
+Ordering is.null: FALSE
+Ordering class: list
+Ordering length: 7
+Ordering names sample: 0Output -Output - is.numeric: TRUE
+Sample output: 2, 2, 1
+============================
+Main Debug - After apply_ordering var2 - is.numeric: TRUE
+Main Debug - After apply_ordering var2 - class: numeric
+Main Debug - After apply_ordering var2 - typeof: double
+Main Debug - After apply_ordering var2 - sample: 2, 2, 1
+
+f: double
+Main Debug - After apply_ordering var1 - sample: 2, 2, 1
+Main Debug - Before apply_ordering var2 - data2_clean sample: 0, 0, 0
+=== APPLY_ORDERING DEBUG ===
+Input data length: 891
+Input data class: character
+Sample input data: 0, 0, 0
+Ordering is.null: FALSE
+Ordering class: list
+Ordering length: 7
+Ordering names sample: 0, 1, 2
+Output - is.numeric: TRUE
+Sample output: 1, 1, 1
+============================
+Main Debug - After apply_ordering var2 - is.numeric: TRUE
+Main Debug - After apply_ordering var2 - class: numeric
+Main Debug - After apply_ordering var2 - typeof: double
+Main Debug - After apply_ordering var2 - sample: 1, 1, 1
+ain Debug - After apply_ordering var2 - sample: 3, 3, 2
+

@@ -62,25 +62,25 @@ ORDINAL_PRESETS <- list(
   numeric_10_0 = c("0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"),
   numeric_10_1 = c("1", "2", "3", "4", "5", "6", "7", "8", "9", "10"),
   
-  # Progress/Status
+  # Progress/Status (chronological order)
   progress_3 = c("not started", "in progress", "completed"),
   progress_5 = c("not started", "started", "in progress", "nearly done", "completed"),
   ticket_4 = c("open", "in progress", "resolved", "closed"),
   phase_5 = c("planning", "design", "development", "testing", "deployment"),
   
-  # Priority
+  # Priority (low to high)
   priority_3 = c("low", "medium", "high"),
-  priority_p_levels = c("p4", "p3", "p2", "p1"),
+  priority_p_levels = c("p1", "p2", "p3", "p4"),  # P1 is lowest priority
   
-  # Education/Seniority
+  # Education/Seniority (lowest to highest level)
   education_6 = c("primary", "secondary", "high school", "bachelor", "master", "doctorate"),
   seniority_5 = c("junior", "mid", "senior", "lead", "principal"),
   experience_4 = c("beginner", "intermediate", "advanced", "expert"),
   
-  # Sizes
+  # Sizes (smallest to largest)
   sizes_6 = c("xs", "s", "m", "l", "xl", "xxl"),
   
-  # Star ratings
+  # Star ratings (worst to best)
   stars_5 = c("1 star", "2 stars", "3 stars", "4 stars", "5 stars")
 )
 
@@ -101,7 +101,7 @@ detect_numeric_scale <- function(values) {
     return(NULL)
   }
   
-  # Get unique sorted values
+  # Get unique sorted values (numerically sorted)
   unique_sorted <- sort(unique(numeric_values[!is.na(numeric_values)]))
   unique_count <- length(unique_sorted)
   
@@ -112,12 +112,14 @@ detect_numeric_scale <- function(values) {
   min_val <- min(unique_sorted)
   max_val <- max(unique_sorted)
   
-  # Check for continuous ranges
-  is_continuous <- (max_val - min_val == unique_count - 1)
+  # Check for continuous ranges (consecutive integers)
+  is_continuous <- all(diff(unique_sorted) == 1)
+  
+  # Always return numerically sorted values
+  ordered <- as.character(unique_sorted)
   
   if (is_continuous) {
-    ordered <- as.character(unique_sorted)
-    
+    # Match specific common scales
     if (unique_count == 3 && min_val == 1) {
       return(list(preset_name = "numeric_3", levels = ordered))
     } else if (unique_count == 4 && min_val == 1) {
@@ -131,11 +133,13 @@ detect_numeric_scale <- function(values) {
     } else if (unique_count == 11 && min_val == 0 && max_val == 10) {
       return(list(preset_name = "numeric_10_0", levels = ordered))
     } else {
+      # Any other continuous numeric range
       return(list(preset_name = "numeric_custom", levels = ordered))
     }
+  } else {
+    # Non-continuous but numeric (e.g., 1, 3, 5, 7, 9)
+    return(list(preset_name = "numeric_custom", levels = ordered))
   }
-  
-  NULL
 }
 
 detect_ordinal_preset <- function(values) {

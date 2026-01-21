@@ -334,12 +334,12 @@ async def get_file_data(
         # Extract columns from the selected/current file
         current_columns = list(csv_reader.fieldnames) if csv_reader.fieldnames else []
 
-        # Process rows and normalize empty cells
+        # Process rows - convert None to empty string only
         rows = []
         for row in csv_reader:
-            # Normalize empty cells to empty string
             normalized_row = {
-                key: value if value is not None else "" for key, value in row.items()
+                key: "" if value is None else value
+                for key, value in row.items()
             }
             rows.append(normalized_row)
 

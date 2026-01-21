@@ -1,40 +1,53 @@
 
+
 # Correlation Analysis R Script
 # This script performs various correlation analyses for nominal and ordinal variables
 # Input: JSON via stdin
 # Output: JSON to stdout
 
+
 # Suppress ALL warnings, messages, and output
 options(warn = -1)
 invisible(suppressMessages({
-  # Load required libraries
+  # Load only required library
   library(jsonlite)
-
-  # Try to load optional packages, continue if not available
-  tryCatch({
-    library(vcd)
-  }, error = function(e) {})
-
-  tryCatch({
-    library(DescTools)
-  }, error = function(e) {})
-
-  tryCatch({
-    library(psych)
-  }, error = function(e) {})
 }))
+
 
 # Helper function to create error response
 create_error <- function(message) {
   list(error = message)
 }
 
+
+# Helper function to check if a value is NA (including string representations)
+is_na_value <- function(x) {
+  # Check for standard R NA and NULL
+  if (is.na(x) || is.null(x)) {
+    return(TRUE)
+  }
+  
+  # Check for empty strings and common string representations of missing values
+  if (is.character(x)) {
+    # Trim whitespace and convert to lowercase for comparison
+    x_trimmed <- tolower(trimws(x))
+    # Check against common missing value representations
+    missing_tokens <- c("", "na", "n/a", "nan", "none", "null", "nil", 
+                        "#n/a", "#na", "missing", "n.a.", "<na>")
+    return(x_trimmed %in% missing_tokens)
+  }
+  
+  return(FALSE)
+}
+
+
 # Helper function to handle missing values based on specified method
 # Methods: "remove", "mode", "median", "missing_category"
 handle_missing_values <- function(data1, data2, method = "remove", var1_type = NULL, var1_ordering = NULL, var2_type = NULL, var2_ordering = NULL) {
-  # Identify missing values (NA and empty strings)
-  missing1 <- is.na(data1) | data1 == ""
-  missing2 <- is.na(data2) | data2 == ""
+  # Identify missing values (including empty strings and common string representations)
+  missing1 <- sapply(data1, is_na_value)
+  missing2 <- sapply(data2, is_na_value)
+
 
   if (method == "remove") {
     # Pairwise deletion: remove rows where EITHER column has missing values
@@ -45,6 +58,7 @@ handle_missing_values <- function(data1, data2, method = "remove", var1_type = N
       removed = sum(!valid_indices)
     ))
   }
+
 
   else if (method == "mode") {
     # Impute with mode (most frequent value)
@@ -62,6 +76,7 @@ handle_missing_values <- function(data1, data2, method = "remove", var1_type = N
       removed = 0
     ))
   }
+
 
   else if (method == "median") {
     # For ordinal: impute with median category
@@ -94,27 +109,33 @@ handle_missing_values <- function(data1, data2, method = "remove", var1_type = N
     ))
   }
 
+
   else if (method == "missing_category") {
     # Replace with "Missing" category
     missing_cat_count1 <- sum(missing1)
     missing_cat_count2 <- sum(missing2)
 
+
     if (any(missing1)) data1[missing1] <- "Missing"
     if (any(missing2)) data2[missing2] <- "Missing"
+
 
     # For ordinal variables, we need to remove rows with "Missing" category from analysis
     # but track how many were categorized as missing
     rows_with_missing_category <- rep(FALSE, length(data1))
+
 
     # If var1 is ordinal, mark rows with "Missing" for removal
     if (!is.null(var1_type) && var1_type == "ordinal" && any(missing1)) {
       rows_with_missing_category <- rows_with_missing_category | (data1 == "Missing")
     }
 
+
     # If var2 is ordinal, mark rows with "Missing" for removal
     if (!is.null(var2_type) && var2_type == "ordinal" && any(missing2)) {
       rows_with_missing_category <- rows_with_missing_category | (data2 == "Missing")
     }
+
 
     # Remove rows with "Missing" if either variable is ordinal
     if (any(rows_with_missing_category)) {
@@ -125,6 +146,7 @@ handle_missing_values <- function(data1, data2, method = "remove", var1_type = N
       removed_count <- 0
     }
 
+
     return(list(
       data1 = data1,
       data2 = data2,
@@ -132,6 +154,7 @@ handle_missing_values <- function(data1, data2, method = "remove", var1_type = N
       missing_category_count = missing_cat_count1 + missing_cat_count2
     ))
   }
+
 
   else {
     # Default to remove
@@ -144,26 +167,41 @@ handle_missing_values <- function(data1, data2, method = "remove", var1_type = N
   }
 }
 
-# Helper function to remove rows with missing values in both columns (DEPRECATED - use handle_missing_values)
-# Only removes actual NA/NaN and empty strings, not string literals like "NA"
-clean_data <- function(data1, data2) {
-  valid_indices <- !is.na(data1) & !is.na(data2) & data1 != "" & data2 != ""
-  list(
-    data1 = data1[valid_indices],
-    data2 = data2[valid_indices],
-    removed = sum(!valid_indices)
-  )
-}
 
 # Helper function to apply ordinal ordering
 apply_ordering <- function(data, ordering) {
-  if (is.null(ordering) || length(ordering) == 0) {
+  write("=== APPLY_ORDERING DEBUG ===", stderr())
+  write(paste("Input data length:", length(data)), stderr())
+  write(paste("Input data class:", class(data)[1]), stderr())
+  write(paste("Sample input data:", paste(head(data, 3), collapse=", ")), stderr())
+  write(paste("Ordering is.null:", is.null(ordering)), stderr())
+  
+  # Handle NULL, empty list, or empty named list
+  if (is.null(ordering) || length(ordering) == 0 || (is.list(ordering) && length(names(ordering)) == 0)) {
+    write("No ordering provided, creating natural ordering", stderr())
     # If no ordering provided, create natural ordering from unique values
-    return(as.numeric(factor(data)))
+    # Filter out NA/NULL values before creating the ordering
+    non_na_data <- data[!sapply(data, is_na_value)]
+    unique_vals <- sort(unique(non_na_data))
+    factor_data <- factor(data, levels = unique_vals)
+    result <- as.numeric(factor_data)
+    write(paste("Output - is.numeric:", is.numeric(result)), stderr())
+    write(paste("Sample output:", paste(head(result, 3), collapse=", ")), stderr())
+    write("============================", stderr())
+    return(result)
   }
+
+  write(paste("Ordering class:", class(ordering)[1]), stderr())
+  write(paste("Ordering length:", length(ordering)), stderr())
+  write(paste("Ordering names sample:", paste(names(ordering)[1:min(3, length(ordering))], collapse=", ")), stderr())
 
   # Create ordered factor based on provided ordering
   ordered_data <- sapply(data, function(x) {
+    # Check if it's an NA value first
+    if (is_na_value(x)) {
+      return(NA)
+    }
+    
     if (x %in% names(ordering)) {
       return(ordering[[x]])
     } else {
@@ -171,19 +209,23 @@ apply_ordering <- function(data, ordering) {
       return(NA)
     }
   })
-  
+ 
   # Convert to numeric
   numeric_data <- as.numeric(ordered_data)
-  
+ 
   # Check if we have NAs from unmapped values
   if (any(is.na(numeric_data))) {
     # Get unique values not in ordering
     unmapped_vals <- unique(data[is.na(numeric_data)])
-    warning(paste("Some values not found in ordering:", paste(unmapped_vals, collapse = ", ")))
+    write(paste("WARNING: Some values not found in ordering:", paste(unmapped_vals, collapse=", ")), stderr())
   }
 
+  write(paste("Output - is.numeric:", is.numeric(numeric_data)), stderr())
+  write(paste("Sample output:", paste(head(numeric_data, 3), collapse=", ")), stderr())
+  write("============================", stderr())
   return(numeric_data)
 }
+
 
 # Chi-square test of independence
 chi_square_test <- function(data1, data2) {
@@ -191,11 +233,13 @@ chi_square_test <- function(data1, data2) {
     contingency_table <- table(data1, data2)
     test_result <- chisq.test(contingency_table)
 
+
     # Calculate Cramer's V as effect size
     chi_sq <- test_result$statistic
     n <- sum(contingency_table)
     min_dim <- min(nrow(contingency_table) - 1, ncol(contingency_table) - 1)
     cramers_v_value <- sqrt(chi_sq / (n * min_dim))
+
 
     list(
       method_name = "Chi-square test of independence",
@@ -217,22 +261,27 @@ chi_square_test <- function(data1, data2) {
   })
 }
 
+
 # Phi coefficient
 phi_coefficient <- function(data1, data2) {
   tryCatch({
     contingency_table <- table(data1, data2)
+
 
     # Check if 2x2 table
     if (nrow(contingency_table) != 2 || ncol(contingency_table) != 2) {
       return(create_error("Phi coefficient requires a 2x2 contingency table"))
     }
 
+
     chi_sq <- chisq.test(contingency_table)$statistic
     n <- sum(contingency_table)
     phi <- sqrt(chi_sq / n)
 
+
     # Calculate p-value from chi-square
     p_value <- chisq.test(contingency_table)$p.value
+
 
     list(
       method_name = "Phi coefficient",
@@ -254,6 +303,7 @@ phi_coefficient <- function(data1, data2) {
   })
 }
 
+
 # Cramer's V
 cramers_v <- function(data1, data2) {
   tryCatch({
@@ -262,8 +312,10 @@ cramers_v <- function(data1, data2) {
     n <- sum(contingency_table)
     min_dim <- min(nrow(contingency_table) - 1, ncol(contingency_table) - 1)
 
+
     cramers_v_value <- sqrt(chi_sq / (n * min_dim))
     p_value <- chisq.test(contingency_table)$p.value
+
 
     list(
       method_name = "Cramer's V",
@@ -286,6 +338,7 @@ cramers_v <- function(data1, data2) {
   })
 }
 
+
 # Spearman's rank correlation
 spearman_correlation <- function(data1, data2) {
   tryCatch({
@@ -293,18 +346,19 @@ spearman_correlation <- function(data1, data2) {
     valid_indices <- !is.na(data1) & !is.na(data2)
     data1_clean <- data1[valid_indices]
     data2_clean <- data2[valid_indices]
-    
+   
     # Check if we have enough data
     if (length(data1_clean) < 3) {
       return(create_error("Insufficient data for Spearman correlation (need at least 3 valid observations)"))
     }
-    
+   
     # Check if there's any variation in the data
     if (length(unique(data1_clean)) < 2 || length(unique(data2_clean)) < 2) {
       return(create_error("Insufficient variation in data (need at least 2 distinct values in each variable)"))
     }
-    
+   
     test_result <- cor.test(data1_clean, data2_clean, method = "spearman", exact = FALSE)
+
 
     list(
       method_name = "Spearman's rank correlation",
@@ -327,10 +381,12 @@ spearman_correlation <- function(data1, data2) {
   })
 }
 
+
 # Kendall's tau-b
 kendall_tau <- function(data1, data2) {
   tryCatch({
     test_result <- cor.test(data1, data2, method = "kendall")
+
 
     list(
       method_name = "Kendall's tau-b",
@@ -354,33 +410,36 @@ kendall_tau <- function(data1, data2) {
   })
 }
 
+
 # Somers' D
 somers_d <- function(data1, data2) {
   tryCatch({
-    # Somers' D implementation using concordant and discordant pairs
+    # Optimized Somers' D using vectorized operations
     n <- length(data1)
+   
+    # Convert to numeric ranks for faster comparison
+    rank_x <- as.numeric(factor(data1))
+    rank_y <- as.numeric(factor(data2))
+   
+    # Vectorized concordance calculation (much faster than nested loops)
     concordant <- 0
     discordant <- 0
-    ties_x <- 0
     ties_y <- 0
-
-    for (i in 1:(n-1)) {
-      for (j in (i+1):n) {
-        x_diff <- sign(data1[i] - data1[j])
-        y_diff <- sign(data2[i] - data2[j])
-
-        if (x_diff * y_diff > 0) {
-          concordant <- concordant + 1
-        } else if (x_diff * y_diff < 0) {
-          discordant <- discordant + 1
-        } else if (x_diff == 0 && y_diff != 0) {
-          ties_x <- ties_x + 1
-        } else if (y_diff == 0 && x_diff != 0) {
-          ties_y <- ties_y + 1
-        }
-      }
-    }
-
+   
+    # Use outer subtraction for vectorization
+    x_outer <- outer(rank_x, rank_x, "-")
+    y_outer <- outer(rank_y, rank_y, "-")
+   
+    # Count concordant, discordant, and ties
+    # Only consider upper triangle (i < j)
+    upper_tri <- upper.tri(x_outer)
+    x_upper <- x_outer[upper_tri]
+    y_upper <- y_outer[upper_tri]
+   
+    concordant <- sum(sign(x_upper) == sign(y_upper) & sign(x_upper) != 0)
+    discordant <- sum(sign(x_upper) != sign(y_upper) & sign(x_upper) != 0 & sign(y_upper) != 0)
+    ties_y <- sum(x_upper != 0 & y_upper == 0)
+   
     # Somers' D (asymmetric: d(Y|X))
     denominator <- concordant + discordant + ties_y
     somers_d_value <- if (denominator > 0) {
@@ -389,11 +448,13 @@ somers_d <- function(data1, data2) {
       0
     }
 
+
     # Approximate p-value using normal approximation
     n_pairs <- n * (n - 1) / 2
     se <- sqrt((4 * n + 10) / (9 * n * (n - 1)))
     z_value <- somers_d_value / se
     p_value <- 2 * pnorm(-abs(z_value))
+
 
     list(
       method_name = "Somers' D",
@@ -416,10 +477,12 @@ somers_d <- function(data1, data2) {
   })
 }
 
+
 # Pearson correlation on ordinal scores
 pearson_ordinal <- function(data1, data2) {
   tryCatch({
     test_result <- cor.test(data1, data2, method = "pearson")
+
 
     list(
       method_name = "Pearson correlation on ordinal scores",
@@ -443,69 +506,231 @@ pearson_ordinal <- function(data1, data2) {
   })
 }
 
+
 # One-way ANOVA with eta squared
 anova_eta <- function(nominal_data, ordinal_data) {
   tryCatch({
-    # Create data frame
+    # Debug: Log input types
+    write(paste("ANOVA Debug - Nominal data type:", class(nominal_data)[1], 
+                "| Ordinal data type:", class(ordinal_data)[1]), stderr())
+    write(paste("ANOVA Debug - Nominal is.numeric:", is.numeric(nominal_data), 
+                "| Ordinal is.numeric:", is.numeric(ordinal_data)), stderr())
+    write(paste("ANOVA Debug - Sample nominal values:", paste(head(nominal_data, 3), collapse=", ")), stderr())
+    write(paste("ANOVA Debug - Sample ordinal values:", paste(head(ordinal_data, 3), collapse=", ")), stderr())
+    
+    # Step 1: Ensure we have vectors (not lists)
+    # Unlist but preserve numeric type for ordinal data
+    if (is.numeric(ordinal_data)) {
+      ordinal_data <- as.numeric(ordinal_data)
+    } else {
+      ordinal_data <- as.numeric(unlist(ordinal_data))
+    }
+    
+    if (is.character(nominal_data) || is.factor(nominal_data)) {
+      nominal_data <- as.character(nominal_data)
+    } else {
+      nominal_data <- as.character(unlist(nominal_data))
+    }
+    
+    write(paste("ANOVA Debug - After unlist/conversion - Ordinal is.numeric:", is.numeric(ordinal_data)), stderr())
+    write(paste("ANOVA Debug - After unlist/conversion - Nominal is.character:", is.character(nominal_data)), stderr())
+    
+    # Step 2: Remove NA values (check for both R NA and empty strings)
+    valid_nom <- !is.na(nominal_data)
+    if (is.character(nominal_data)) {
+      valid_nom <- valid_nom & nchar(trimws(nominal_data)) > 0
+    }
+    
+    valid_ord <- !is.na(ordinal_data)
+    
+    valid_indices <- valid_nom & valid_ord
+    nominal_data <- nominal_data[valid_indices]
+    ordinal_data <- ordinal_data[valid_indices]
+    
+    # Step 3: Check we have enough data
+    if (length(nominal_data) < 2 || length(ordinal_data) < 2) {
+      return(create_error("Insufficient data after removing NA values (need at least 2 observations)"))
+    }
+    
+    write(paste("ANOVA Debug - After NA removal - lengths:", length(nominal_data), length(ordinal_data)), stderr())
+    write(paste("ANOVA Debug - Ordinal still numeric?", is.numeric(ordinal_data)), stderr())
+    
+    # Step 4: Final validation - ensure ordinal is truly numeric
+    if (!is.numeric(ordinal_data)) {
+      return(create_error(paste0(
+        "Ordinal data is not numeric after processing. ",
+        "Type: ", class(ordinal_data)[1], ". ",
+        "This is a bug in the data pipeline."
+      )))
+    }
+    
+    # Step 5: Validate we have variation
+    if (length(unique(nominal_data)) < 2) {
+      return(create_error("Nominal variable has less than 2 unique groups"))
+    }
+    
+    # Check for sufficient replication within groups
+    group_counts <- table(nominal_data)
+    groups_with_replication <- sum(group_counts > 1)
+    total_groups <- length(group_counts)
+    
+    write(paste("ANOVA Debug - Total groups:", total_groups), stderr())
+    write(paste("ANOVA Debug - Groups with >1 observation:", groups_with_replication), stderr())
+    write(paste("ANOVA Debug - Average observations per group:", mean(group_counts)), stderr())
+    
+    # If most groups have only 1 observation, ANOVA is inappropriate
+    if (groups_with_replication < 2) {
+      return(create_error(paste0(
+        "ANOVA is not appropriate: nominal variable has ", total_groups, 
+        " groups but only ", groups_with_replication, 
+        " groups have multiple observations. ",
+        "ANOVA requires replication within groups to estimate within-group variance."
+      )))
+    }
+    
+    # Warn if there are many groups with single observations
+    if (groups_with_replication / total_groups < 0.5) {
+      write(paste("ANOVA Warning - Over half of the groups have only 1 observation. Results may be unreliable."), stderr())
+    }
+    
+    # Convert nominal to factor
+    nominal_data <- as.factor(nominal_data)
+    
+    write(paste("ANOVA Debug - Creating dataframe..."), stderr())
+    
+    # Step 6: Create data frame
     df <- data.frame(
-      group = factor(nominal_data),
-      value = ordinal_data
+      group = nominal_data,
+      value = ordinal_data,
+      stringsAsFactors = FALSE
     )
-
-    # Perform ANOVA
+    
+    write(paste("ANOVA Debug - DataFrame created. Running ANOVA..."), stderr())
+    
+    # Step 7: Perform ANOVA
     anova_result <- aov(value ~ group, data = df)
     anova_summary <- summary(anova_result)
-
-    # Calculate eta squared
-    ss_between <- anova_summary[[1]]$"Sum Sq"[1]
-    ss_total <- sum(anova_summary[[1]]$"Sum Sq")
-    eta_squared <- ss_between / ss_total
-
-    # Get F-statistic and p-value
-    f_statistic <- anova_summary[[1]]$"F value"[1]
-    p_value <- anova_summary[[1]]$"Pr(>F)"[1]
-
+    
+    write(paste("ANOVA Debug - ANOVA completed successfully"), stderr())
+    write(paste("ANOVA Debug - Summary structure:"), stderr())
+    write(paste("ANOVA Debug - Number of summary elements:", length(anova_summary)), stderr())
+    write(paste("ANOVA Debug - First element class:", class(anova_summary[[1]])[1]), stderr())
+    write(paste("ANOVA Debug - Column names:", paste(names(anova_summary[[1]]), collapse=", ")), stderr())
+    write(paste("ANOVA Debug - Number of rows:", nrow(anova_summary[[1]])), stderr())
+    
+    # Check if F value and Pr(>F) columns exist
+    has_f_value <- "F value" %in% names(anova_summary[[1]])
+    has_pr_f <- "Pr(>F)" %in% names(anova_summary[[1]])
+    
+    write(paste("ANOVA Debug - Has 'F value' column:", has_f_value), stderr())
+    write(paste("ANOVA Debug - Has 'Pr(>F)' column:", has_pr_f), stderr())
+    
+    if (!has_f_value || !has_pr_f) {
+      return(create_error(paste0(
+        "ANOVA summary is incomplete. This may occur when there is no within-group variation. ",
+        "Available columns: ", paste(names(anova_summary[[1]]), collapse=", ")
+      )))
+    }
+    
+    # Step 8: Calculate eta squared
+    ss_between <- as.numeric(anova_summary[[1]][1, "Sum Sq"])
+    ss_total <- as.numeric(sum(anova_summary[[1]][, "Sum Sq"]))
+    eta_squared <- as.numeric(ss_between / ss_total)
+    
+    write(paste("ANOVA Debug - Eta squared calculated:", eta_squared), stderr())
+    
+    # Step 9: Extract statistics  
+    f_statistic <- as.numeric(anova_summary[[1]][1, "F value"])
+    p_value <- as.numeric(anova_summary[[1]][1, "Pr(>F)"])
+    df_between <- as.numeric(anova_summary[[1]][1, "Df"])
+    df_within <- as.numeric(anova_summary[[1]][2, "Df"])
+    
+    write(paste("ANOVA Debug - f_statistic:", f_statistic, "| p_value:", p_value), stderr())
+    write(paste("ANOVA Debug - df_between:", df_between, "| df_within:", df_within), stderr())
+    
+    # Check for invalid values
+    if (is.na(f_statistic) || is.na(p_value) || is.na(df_between) || is.na(df_within)) {
+      return(create_error("ANOVA produced invalid statistics (NA values detected)"))
+    }
+    
+    if (length(f_statistic) == 0 || length(p_value) == 0 || length(df_between) == 0 || length(df_within) == 0) {
+      return(create_error("ANOVA produced empty statistics (length zero detected)"))
+    }
+    
+    write(paste("ANOVA Debug - Statistics extracted and validated"), stderr())
+    
+    # Step 10: Determine effect size category
+    if (eta_squared < 0.06) {
+      effect_category <- "small"
+    } else if (eta_squared < 0.14) {
+      effect_category <- "medium"
+    } else {
+      effect_category <- "large"
+    }
+    
+    # Determine significance message
+    if (p_value < 0.05) {
+      sig_message <- "Significant group differences detected (p < 0.05)"
+    } else {
+      sig_message <- "No significant group differences (p >= 0.05)"
+    }
+    
+    write(paste("ANOVA Debug - Building interpretation string"), stderr())
+    
+    # Step 11: Build interpretation
+    interpretation_text <- paste0(
+      "F(", df_between, ", ", df_within, ") = ",
+      round(f_statistic, 2), ", p = ", round(p_value, 4), ". ",
+      "η² = ", round(eta_squared, 3), " (",
+      effect_category, " effect size). ",
+      sig_message
+    )
+    
+    write(paste("ANOVA Debug - Interpretation built successfully"), stderr())
+    
+    # Step 12: Return results
     list(
       method_name = "One-way ANOVA with eta squared",
       result = list(
-        statistic = as.numeric(f_statistic),
-        f_statistic = as.numeric(f_statistic),
-        p_value = as.numeric(p_value),
-        eta_squared = as.numeric(eta_squared),
-        effect_size = as.numeric(eta_squared),
+        statistic = f_statistic,
+        f_statistic = f_statistic,
+        p_value = p_value,
+        eta_squared = eta_squared,
+        effect_size = eta_squared,
         effect_size_name = "η²",
-        df = as.numeric(anova_summary[[1]]$Df[1]),
-        df_between = as.numeric(anova_summary[[1]]$Df[1]),
-        df_within = as.numeric(anova_summary[[1]]$Df[2]),
-        interpretation = paste0(
-          "F(", anova_summary[[1]]$Df[1], ", ", anova_summary[[1]]$Df[2], ") = ",
-          round(f_statistic, 2), ", p = ", round(p_value, 4), ". ",
-          "η² = ", round(eta_squared, 3), " (",
-          ifelse(eta_squared < 0.06, "small",
-                 ifelse(eta_squared < 0.14, "medium", "large")),
-          " effect size). ",
-          ifelse(p_value < 0.05,
-                 "Significant group differences detected (p < 0.05)",
-                 "No significant group differences (p >= 0.05)")
-        )
+        df = df_between,
+        df_between = df_between,
+        df_within = df_within,
+        interpretation = interpretation_text
       )
     )
   }, error = function(e) {
+    write(paste("ANOVA Debug - ERROR:", e$message), stderr())
     create_error(paste("ANOVA calculation failed:", e$message))
   })
 }
 
+
 # Kruskal-Wallis test with epsilon squared
 kruskal_wallis <- function(nominal_data, ordinal_data) {
   tryCatch({
+    # Ensure we have vectors (not lists)
+    nominal_data <- unlist(nominal_data)
+    ordinal_data <- unlist(ordinal_data)
+    
+    # CRITICAL: Ensure ordinal_data is numeric
+    ordinal_data <- as.numeric(ordinal_data)
+    
     # Create data frame
     df <- data.frame(
       group = factor(nominal_data),
       value = ordinal_data
     )
 
+
     # Perform Kruskal-Wallis test
     kw_result <- kruskal.test(value ~ group, data = df)
+
 
     # Calculate epsilon squared (effect size)
     n <- length(ordinal_data)
@@ -513,8 +738,10 @@ kruskal_wallis <- function(nominal_data, ordinal_data) {
     h_statistic <- as.numeric(kw_result$statistic)
     epsilon_squared <- (h_statistic - k + 1) / (n - k)
 
+
     # Ensure epsilon squared is between 0 and 1
     epsilon_squared <- max(0, min(1, epsilon_squared))
+
 
     list(
       method_name = "Kruskal-Wallis test with epsilon squared",
@@ -544,17 +771,45 @@ kruskal_wallis <- function(nominal_data, ordinal_data) {
   })
 }
 
+
 # Main execution
 tryCatch({
+  # Open log file for debugging
+  log_file <- file("C:/Users/chris/Desktop/HIS-Project-WiSe25-26/backend/r_debug.log", open="wt")
+  sink(log_file, type="message")
+  
   # Read JSON input from stdin
   input_json <- readLines("stdin", warn = FALSE)
   input_data <- fromJSON(input_json)
+
 
   # Extract variables
   var1 <- input_data$variable1
   var2 <- input_data$variable2
   method <- input_data$method
   missing_method <- if (!is.null(input_data$missing_method)) input_data$missing_method else "remove"
+  
+  # Debug: Log received data
+  write("=== INPUT DEBUG ===", stderr())
+  write(paste("Method:", method), stderr())
+  write(paste("Var1 type:", var1$type, "| columnName:", var1$columnName), stderr())
+  write(paste("Var1 ordering is.null:", is.null(var1$ordering), "| class:", class(var1$ordering)[1]), stderr())
+  if (!is.null(var1$ordering)) {
+    write(paste("Var1 ordering length:", length(var1$ordering)), stderr())
+    write(paste("Var1 ordering names:", paste(names(var1$ordering)[1:min(3, length(var1$ordering))], collapse=", ")), stderr())
+    write(paste("Var1 ordering values:", paste(unlist(var1$ordering)[1:min(3, length(var1$ordering))], collapse=", ")), stderr())
+  }
+  write(paste("Var2 type:", var2$type, "| columnName:", var2$columnName), stderr())
+  write(paste("Var2 ordering is.null:", is.null(var2$ordering), "| class:", class(var2$ordering)[1]), stderr())
+  if (!is.null(var2$ordering)) {
+    write(paste("Var2 ordering length:", length(var2$ordering)), stderr())
+    write(paste("Var2 ordering names:", paste(names(var2$ordering)[1:min(3, length(var2$ordering))], collapse=", ")), stderr())
+    write(paste("Var2 ordering values:", paste(unlist(var2$ordering)[1:min(3, length(var2$ordering))], collapse=", ")), stderr())
+  }
+  write(paste("Sample var1 data:", paste(head(var1$data, 3), collapse=", ")), stderr())
+  write(paste("Sample var2 data:", paste(head(var2$data, 3), collapse=", ")), stderr())
+  write("===================", stderr())
+
 
   # Handle missing values using specified method
   cleaned <- handle_missing_values(var1$data, var2$data, missing_method, var1$type, var1$ordering, var2$type, var2$ordering)
@@ -562,6 +817,7 @@ tryCatch({
   data2_clean <- cleaned$data2
   removed_rows <- cleaned$removed
   missing_category_count <- if (!is.null(cleaned$missing_category_count)) cleaned$missing_category_count else 0
+
 
   # Update ordering if it was modified (e.g., by missing_category method)
   if (!is.null(cleaned$ordering1)) {
@@ -571,6 +827,7 @@ tryCatch({
     var2$ordering <- cleaned$ordering2
   }
 
+
   # Check if enough data remains
   if (length(data1_clean) < 3) {
     output <- create_error("Insufficient data after removing missing values (need at least 3 observations)")
@@ -578,9 +835,15 @@ tryCatch({
     quit(status = 1)
   }
 
+
   # Apply ordinal ordering if needed
   if (var1$type == "ordinal") {
+    write(paste("Main Debug - Before apply_ordering var1 - data1_clean sample:", paste(head(data1_clean, 3), collapse=", ")), stderr())
     data1_processed <- apply_ordering(data1_clean, var1$ordering)
+    write(paste("Main Debug - After apply_ordering var1 - is.numeric:", is.numeric(data1_processed)), stderr())
+    write(paste("Main Debug - After apply_ordering var1 - class:", class(data1_processed)[1]), stderr())
+    write(paste("Main Debug - After apply_ordering var1 - typeof:", typeof(data1_processed)), stderr())
+    write(paste("Main Debug - After apply_ordering var1 - sample:", paste(head(data1_processed, 3), collapse=", ")), stderr())
     # Check for NAs introduced by ordering
     if (any(is.na(data1_processed))) {
       na_count <- sum(is.na(data1_processed))
@@ -592,8 +855,14 @@ tryCatch({
     data1_processed <- data1_clean
   }
 
+
   if (var2$type == "ordinal") {
+    write(paste("Main Debug - Before apply_ordering var2 - data2_clean sample:", paste(head(data2_clean, 3), collapse=", ")), stderr())
     data2_processed <- apply_ordering(data2_clean, var2$ordering)
+    write(paste("Main Debug - After apply_ordering var2 - is.numeric:", is.numeric(data2_processed)), stderr())
+    write(paste("Main Debug - After apply_ordering var2 - class:", class(data2_processed)[1]), stderr())
+    write(paste("Main Debug - After apply_ordering var2 - typeof:", typeof(data2_processed)), stderr())
+    write(paste("Main Debug - After apply_ordering var2 - sample:", paste(head(data2_processed, 3), collapse=", ")), stderr())
     # Check for NAs introduced by ordering
     if (any(is.na(data2_processed))) {
       na_count <- sum(is.na(data2_processed))
@@ -604,6 +873,7 @@ tryCatch({
   } else {
     data2_processed <- data2_clean
   }
+
 
   # Execute the appropriate method
   result <- switch(method,
@@ -616,22 +886,37 @@ tryCatch({
     "pearson_ordinal" = pearson_ordinal(data1_processed, data2_processed),
     "anova_eta" = {
       # Determine which variable is nominal and which is ordinal
+      # ANOVA needs: nominal (categorical/factor) vs ordinal (numeric)
+      write(paste("Main Debug - var1 type:", var1$type, "| var2 type:", var2$type), stderr())
+      write(paste("Main Debug - data1_processed is.numeric:", is.numeric(data1_processed), 
+                  "| data2_processed is.numeric:", is.numeric(data2_processed)), stderr())
+      write(paste("Main Debug - data1_processed class:", class(data1_processed)[1], 
+                  "| data2_processed class:", class(data2_processed)[1]), stderr())
+      
       if (var1$type == "nominal" && var2$type == "ordinal") {
+        # data1_processed is nominal (non-numeric), data2_processed is ordinal (numeric)
+        write("Main Debug - Calling anova_eta(data1=nominal, data2=ordinal)", stderr())
         anova_eta(data1_processed, data2_processed)
       } else {
+        # data2_processed is nominal (non-numeric), data1_processed is ordinal (numeric)
+        write("Main Debug - Calling anova_eta(data2=nominal, data1=ordinal)", stderr())
         anova_eta(data2_processed, data1_processed)
       }
     },
     "kruskal_wallis" = {
       # Determine which variable is nominal and which is ordinal
+      # Kruskal-Wallis needs: nominal (categorical/factor) vs ordinal (numeric)
       if (var1$type == "nominal" && var2$type == "ordinal") {
+        # data1_processed is nominal (non-numeric), data2_processed is ordinal (numeric)
         kruskal_wallis(data1_processed, data2_processed)
       } else {
+        # data2_processed is nominal (non-numeric), data1_processed is ordinal (numeric)
         kruskal_wallis(data2_processed, data1_processed)
       }
     },
     create_error(paste("Unknown method:", method))
   )
+
 
   # Add metadata to result
   if (!"error" %in% names(result)) {
@@ -640,12 +925,27 @@ tryCatch({
     result$missing_category_rows <- missing_category_count
   }
 
+
   # Output result as JSON
   cat(toJSON(result, auto_unbox = TRUE))
+  
+  # Close log file
+  sink(type="message")
+  close(log_file)
 
 }, error = function(e) {
   # Handle any unexpected errors
   error_output <- create_error(paste("Unexpected error:", e$message))
   cat(toJSON(error_output, auto_unbox = TRUE))
+  
+  # Close log file if open
+  tryCatch({
+    sink(type="message")
+    if (exists("log_file")) close(log_file)
+  }, error = function(e2) {})
+  
   quit(status = 1)
 })
+
+
+

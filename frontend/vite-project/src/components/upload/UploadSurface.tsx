@@ -66,8 +66,8 @@ export function UploadSurface({
         toast.error("Please select a CSV file");
         return false;
       }
-      if (file.size > 10000 * 1024 * 1024) {
-        toast.error("File size must be less than 10MB");
+      if (file.size > 10 * 1024 * 1024 * 1024) {
+        toast.error("File size must be less than 10GB");
         return false;
       }
       setSelectedFile(file);
@@ -204,7 +204,7 @@ export function UploadSurface({
               <>
                 <UploadIcon className="h-5 w-5 text-white/70" />
                 <p className="text-xs text-white/70">Upload new file</p>
-                <p className="text-xs text-white/50">CSV • Max 10MB</p>
+                <p className="text-xs text-white/50">CSV • Max 10GB</p>
               </>
             )}
           </div>
@@ -314,7 +314,7 @@ export function UploadSurface({
             </p>
             <p className="text-base text-gray-500">or click to browse</p>
             <p className="text-sm text-gray-400 pt-2">
-              CSV files only • Max 10MB
+              CSV files only • Max 10GB
             </p>
           </div>
         )}

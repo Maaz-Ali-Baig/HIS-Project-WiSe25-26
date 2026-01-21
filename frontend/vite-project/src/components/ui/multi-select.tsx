@@ -100,6 +100,40 @@ export function MultiSelect({
                 autoFocus
               />
 
+              {/* Select All / Deselect All Buttons */}
+              <div className="flex gap-1 mb-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    // Select all filtered options
+                    const newValue = [...new Set([...value, ...filteredOptions])];
+                    onChange(newValue);
+                  }}
+                  className="h-7 text-xs flex-1"
+                  disabled={filteredOptions.length === 0}
+                >
+                  Select All
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    // Deselect all filtered options
+                    const newValue = value.filter(
+                      (v) => !filteredOptions.includes(v)
+                    );
+                    onChange(newValue);
+                  }}
+                  className="h-7 text-xs flex-1"
+                  disabled={value.length === 0}
+                >
+                  Deselect All
+                </Button>
+              </div>
+
               {/* Options List */}
               <ScrollArea className="h-48">
                 <div className="space-y-0.5">

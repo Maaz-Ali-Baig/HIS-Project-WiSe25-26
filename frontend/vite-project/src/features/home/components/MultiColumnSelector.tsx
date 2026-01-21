@@ -12,6 +12,7 @@ interface MultiColumnSelectorProps {
   onAddColumn: (column: string) => void;
   onRemoveColumn: (column: string) => void;
   minColumns?: number;
+  maxColumns?: number;
 }
 
 export const MultiColumnSelector: React.FC<MultiColumnSelectorProps> = ({
@@ -20,25 +21,29 @@ export const MultiColumnSelector: React.FC<MultiColumnSelectorProps> = ({
   onAddColumn,
   onRemoveColumn,
   minColumns = 3,
+  maxColumns,
 }) => {
   const handleChange = (newSelectedColumns: string[]) => {
-    // Check if a column was added or removed
+    // Check if columns were added or removed
     if (newSelectedColumns.length > selectedColumns.length) {
-      // Column was added
-      const addedColumn = newSelectedColumns.find(
-        (col) => !selectedColumns.includes(col),
+      // Column(s) were added - handle bulk additions (like Select All)
+      const addedColumns = newSelectedColumns.filter(
+        (col) => !selectedColumns.includes(col)
       );
-      if (addedColumn) {
-        onAddColumn(addedColumn);
+      
+      // Check max limit before adding
+      if (!maxColumns || newSelectedColumns.length <= maxColumns) {
+        // Add all columns at once by calling onAddColumn for each
+        addedColumns.forEach((col) => onAddColumn(col));
       }
-    } else {
-      // Column was removed
-      const removedColumn = selectedColumns.find(
-        (col) => !newSelectedColumns.includes(col),
+    } else if (newSelectedColumns.length < selectedColumns.length) {
+      // Column(s) were removed - handle bulk removals (like Deselect All)
+      const removedColumns = selectedColumns.filter(
+        (col) => !newSelectedColumns.includes(col)
       );
-      if (removedColumn) {
-        onRemoveColumn(removedColumn);
-      }
+      
+      // Remove all columns by calling onRemoveColumn for each
+      removedColumns.forEach((col) => onRemoveColumn(col));
     }
   };
 
@@ -46,7 +51,7 @@ export const MultiColumnSelector: React.FC<MultiColumnSelectorProps> = ({
     <div className="space-y-4">
       <div>
         <Label className="mb-2 block text-sm font-medium">
-          Select Columns (minimum {minColumns})
+          Select Columns (minimum {minColumns}{maxColumns ? `, maximum ${maxColumns}` : ""})
         </Label>
 
         <MultiSelect
@@ -56,6 +61,12 @@ export const MultiColumnSelector: React.FC<MultiColumnSelectorProps> = ({
           placeholder="Select multiple columns..."
           className="w-full"
         />
+
+        {maxColumns && selectedColumns.length >= maxColumns && (
+          <p className="text-sm text-amber-600 mt-2">
+            Maximum of {maxColumns} columns reached
+          </p>
+        )}
 
         {selectedColumns.length > 0 && selectedColumns.length < minColumns && (
           <p className="text-sm text-muted-foreground mt-2">

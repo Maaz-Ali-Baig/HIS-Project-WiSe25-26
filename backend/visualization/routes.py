@@ -8,7 +8,7 @@ from typing import Any, Dict, Literal, Optional
 import pandas as pd
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-
+from files.history import log_history  
 from correlation.r_executor import check_r_installation, execute_r_script
 from ordinal_scales import analyze_dataframe_columns, get_column_order
 
@@ -139,6 +139,27 @@ async def create_plot(request: PlotRequest):
     result = execute_r_script(r_script_path, r_input, timeout=timeout)
     if "error" in result:
         raise HTTPException(status_code=500, detail=result["error"])
+    
+    try:
+        file_dir = FILES_DIR / request.userId / request.fileId
+        cols_used = []
+        if request.xColumn: cols_used.append(request.xColumn)
+        if request.yColumn: cols_used.append(request.yColumn)
+
+        log_history(
+            file_dir,
+            action="Visualization",
+            method=request.chartType,
+            input_cols=cols_used,
+            output_cols=[],
+            params={
+                "x": request.xColumn,
+                "y": request.yColumn,
+                "options": request.options or {}
+            }
+        )
+    except Exception as e:
+        print(f"Logging failed: {e}")
 
     return result
 

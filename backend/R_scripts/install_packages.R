@@ -8,16 +8,21 @@ options(repos = c(CRAN = "https://cran.r-project.org"))
 
 # List of required packages
 required_packages <- c(
-  "jsonlite",      # JSON parsing (used in multiple scripts)
-  "FactoMineR",    # Dimensionality reduction (MCA/FAMD)
-  "dplyr",         # Data manipulation (encoding)
-  "readr",         # CSV reading (encoding)
-  "VIM",           # Missing value imputation
-  "vcd",           # Categorical data analysis (correlation)
-  "DescTools",     # Descriptive statistics (correlation)
-  "psych",         # Psychological statistics (correlation)
-  "reticulate",    # Python integration (text transformation)
-  "cluster"        # Clustering algorithms (text transformation)
+  "jsonlite", # JSON parsing (used in multiple scripts)
+  "FactoMineR", # Dimensionality reduction (MCA/FAMD)
+  "dplyr", # Data manipulation (encoding)
+  "readr", # CSV reading (encoding)
+  "VIM", # Missing value imputation
+  "vcd", # Categorical data analysis (correlation)
+  "DescTools", # Descriptive statistics (correlation)
+  "psych", # Psychological statistics (correlation)
+  "reticulate", # Python integration (text transformation)
+  "cluster", # Clustering algorithms (text transformation)
+  "rmarkdown", # Report generation
+  "knitr", # Dynamic report generation
+  "kableExtra", # Table styling in reports
+  "ggplot2", # Data visualization in reports
+  "missRanger" # Model-based imputation (Random Forest)
 )
 
 cat("Required packages:\n")
@@ -34,16 +39,19 @@ if (length(to_install) == 0) {
   cat("Installing missing packages:\n")
   cat(paste("  -", to_install), sep = "\n")
   cat("\n")
-  
+
   # Install missing packages
   for (pkg in to_install) {
     cat(sprintf("Installing %s...\n", pkg))
-    tryCatch({
-      install.packages(pkg, dependencies = TRUE, quiet = FALSE)
-      cat(sprintf("  ✓ %s installed successfully\n\n", pkg))
-    }, error = function(e) {
-      cat(sprintf("  ✗ Failed to install %s: %s\n\n", pkg, e$message))
-    })
+    tryCatch(
+      {
+        install.packages(pkg, dependencies = TRUE, quiet = FALSE)
+        cat(sprintf("  ✓ %s installed successfully\n\n", pkg))
+      },
+      error = function(e) {
+        cat(sprintf("  ✗ Failed to install %s: %s\n\n", pkg, e$message))
+      }
+    )
   }
 }
 

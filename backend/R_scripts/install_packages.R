@@ -3,14 +3,19 @@
 
 cat("Installing required R packages for HIS Project...\n\n")
 
-# CRAN mirror
-options(repos = c(CRAN = "https://cran.r-project.org"))
+# CRAN mirror + download method (use libcurl for better proxy/TLS handling)
+options(
+  repos = c(CRAN = "https://cloud.r-project.org"),
+  download.file.method = "libcurl",
+  url.method = "libcurl"
+)
 
 # List of required packages
 required_packages <- c(
   "jsonlite", # JSON parsing (used in multiple scripts)
   "FactoMineR", # Dimensionality reduction (MCA/FAMD)
   "dplyr", # Data manipulation (encoding)
+  "data.table", # High-performance data frames (core dependency across scripts)
   "readr", # CSV reading (encoding)
   "VIM", # Missing value imputation
   "vcd", # Categorical data analysis (correlation)
@@ -18,6 +23,7 @@ required_packages <- c(
   "psych", # Psychological statistics (correlation)
   "reticulate", # Python integration (text transformation)
   "cluster", # Clustering algorithms (text transformation)
+  "stringdist", # String distance calculations (similarity binning)
   "rmarkdown", # Report generation
   "knitr", # Dynamic report generation
   "kableExtra", # Table styling in reports

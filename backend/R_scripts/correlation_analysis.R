@@ -676,9 +676,13 @@ kruskal_wallis <- function(nominal_data, ordinal_data) {
 # ==============================================================================
 
 tryCatch({
-  # Open log file for debugging
-  log_file <- file("C:/Users/chris/Desktop/HIS-Project-WiSe25-26/backend/r_debug.log", open="wt")
-  sink(log_file, type="message")
+  # Open log file for debugging (use script directory to avoid hard-coded paths)
+  script_args <- commandArgs(trailingOnly = FALSE)
+  script_path <- sub("--file=", "", script_args[grep("--file=", script_args)])
+  script_dir <- if (length(script_path) > 0) dirname(script_path) else getwd()
+  log_file_path <- file.path(script_dir, "r_debug.log")
+  log_file <- file(log_file_path, open = "wt")
+  sink(log_file, type = "message")
 
   # Read JSON input from stdin
   input_json <- readLines("stdin", warn = FALSE)

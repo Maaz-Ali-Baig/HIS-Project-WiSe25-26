@@ -38,6 +38,7 @@ HIS-Project-WiSe25-26/
 - Node.js (v18+)
 - Python (v3.9+)
 - R (v4.0+) - [Download from CRAN](https://cran.r-project.org/)
+- Pandoc (v1.12.3+) - [Download from Pandoc](https://pandoc.org/installing.html) or install via `winget install --id JohnMacFarlane.Pandoc`
 
 #### Option 1: Install All Dependencies at Once (Recommended)
 

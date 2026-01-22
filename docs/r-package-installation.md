@@ -2,9 +2,12 @@
 
 ## Prerequisites
 
-Make sure you have R installed on your system:
+Make sure you have R and Pandoc installed on your system:
 - **Download R**: https://cran.r-project.org/
 - **Verify installation**: Run `R --version` in your terminal
+- **Download Pandoc**: https://pandoc.org/installing.html
+- **Verify Pandoc**: Run `pandoc --version` in your terminal
+- **Install Pandoc (Windows)**: `winget install --id JohnMacFarlane.Pandoc`
 
 ## Installation Methods
 
@@ -80,6 +83,40 @@ The following packages will be installed automatically:
 # Add to ~/.bashrc or ~/.zshrc
 export PATH="/usr/local/bin/R:$PATH"
 ```
+
+### "Pandoc not found" or Report Generation Fails
+
+**Problem**: Error message stating "pandoc version 1.12.3 or higher is required"
+
+**Solution**: Install Pandoc (required for R Markdown report generation)
+
+**Windows:**
+```bash
+# Using winget
+winget install --id JohnMacFarlane.Pandoc
+
+# Or using Chocolatey
+choco install pandoc
+
+# Or download installer from https://pandoc.org/installing.html
+```
+
+**Linux:**
+```bash
+# Ubuntu/Debian
+sudo apt-get install pandoc
+
+# Fedora
+sudo dnf install pandoc
+```
+
+**Mac:**
+```bash
+# Using Homebrew
+brew install pandoc
+```
+
+**After installation**: Restart your terminal and VS Code to ensure Pandoc is in your PATH.
 
 ### Package Installation Fails
 

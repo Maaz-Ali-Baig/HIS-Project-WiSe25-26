@@ -174,33 +174,3 @@ async def execute_r_script_async(
         )
     return result
 
-
-
-
-async def execute_r_script_async(
-    script_path: Path, input_data: Dict[str, Any], timeout: int = 60
-) -> Dict[str, Any]:
-    """
-    Execute R script asynchronously using thread pool
-   
-    Args:
-        script_path: Path to the R script file
-        input_data: Dictionary to pass as JSON to R script
-        timeout: Maximum execution time in seconds
-   
-    Returns:
-        Dictionary parsed from R script's JSON output
-    """
-    loop = asyncio.get_event_loop()
-    with ThreadPoolExecutor(max_workers=8) as executor:
-        result = await loop.run_in_executor(
-            executor,
-            execute_r_script,
-            script_path,
-            input_data,
-            timeout
-        )
-    return result
-
-
-

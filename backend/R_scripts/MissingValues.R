@@ -122,7 +122,13 @@ handle_missing_values_csv <- function(
   # 5. Model Based (Fast Random Forest via missRanger)
   if (method == "model_based") {
     if (!requireNamespace("missRanger", quietly = TRUE)) {
-      stop("Package 'missRanger' is required for fast model-based imputation. Please run install.packages('missRanger')")
+      message("Package 'missRanger' not found. Installing now...")
+      tryCatch({
+        install.packages("missRanger", repos = "https://cran.r-project.org", dependencies = TRUE, quiet = TRUE)
+        message("missRanger installed successfully!")
+      }, error = function(e) {
+        stop(paste0("Failed to install missRanger: ", e$message, ". Please run manually: install.packages('missRanger')"))
+      })
     }
 
 

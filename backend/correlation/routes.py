@@ -16,7 +16,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 from files.history import log_history  
 
-from .r_executor import check_r_installation, execute_r_script
+from .r_executor import check_r_installation, execute_r_script, execute_r_script_async
 from ordinal_scales import analyze_dataframe_columns, get_column_order
 
 
@@ -770,13 +770,26 @@ async def analyze_correlation_matrix(request: MatrixAnalysisRequest):
         # --- PASTE THIS BLOCK HERE ---
         try:
             file_dir = FILES_DIR / request.userId / request.fileId
+            # Save variable configs for report generation
+            var_configs_dict = {}
+            for col_name, config in request.variableConfigs.items():
+                var_configs_dict[col_name] = {
+                    "type": config.type,
+                    "categories": config.categories,
+                    "ordering": config.ordering
+                }
+            
             log_history(
                 file_dir,
                 action="Correlation Analysis",
                 method="Matrix",
                 input_cols=request.columns,
                 output_cols=[],
-                params={"type": "matrix", "methods": request.methodsByPairType}
+                params={
+                    "type": "matrix", 
+                    "methods": request.methodsByPairType,
+                    "variableConfigs": var_configs_dict
+                }
             )
         except Exception as e:
             print(f"Logging failed: {e}")

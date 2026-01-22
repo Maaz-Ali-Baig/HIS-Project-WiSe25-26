@@ -511,6 +511,13 @@ if (params$include_correlation && !is.null(params$preprocessing_history)) {
       corr_count <- corr_count + 1
 
       method <- if (!is.null(op$method)) op$method else "Matrix"
+      
+      # Extract variable configurations from history params
+      var_configs <- if (!is.null(op$params) && !is.null(op$params$variableConfigs)) {
+        op$params$variableConfigs
+      } else {
+        list()
+      }
 
       if (length(cols) >= 2 && all(cols %in% names(params$processed_data))) {
         cat("\n\n### Correlation Analysis: ", paste(cols, collapse = ", "), "\n\n")
@@ -536,9 +543,23 @@ if (params$include_correlation && !is.null(params$preprocessing_history)) {
               var1 <- params$processed_data[[col1]]
               var2 <- params$processed_data[[col2]]
 
-              # Determine types
-              type1 <- if (is.ordered(var1)) "ordinal" else "nominal"
-              type2 <- if (is.ordered(var2)) "ordinal" else "nominal"
+              # Determine types and ordering from variable configs if available
+              if (!is.null(var_configs[[col1]])) {
+                type1 <- var_configs[[col1]]$type
+                ordering1 <- var_configs[[col1]]$ordering
+              } else {
+                type1 <- if (is.ordered(var1)) "ordinal" else "nominal"
+                ordering1 <- if (is.ordered(var1)) levels(var1) else NULL
+              }
+              
+              if (!is.null(var_configs[[col2]])) {
+                type2 <- var_configs[[col2]]$type
+                ordering2 <- var_configs[[col2]]$ordering
+              } else {
+                type2 <- if (is.ordered(var2)) "ordinal" else "nominal"
+                ordering2 <- if (is.ordered(var2)) levels(var2) else NULL
+              }
+              
               type_pair <- paste(sort(c(type1, type2)), collapse = "-")
 
               # Resolve method
@@ -564,14 +585,41 @@ if (params$include_correlation && !is.null(params$preprocessing_history)) {
               if (length(d1) > 0) {
                 tryCatch(
                   {
+                    # Apply ordering for ordinal variables before calling methods
+                    d1_processed <- d1
+                    d2_processed <- d2
+                    
+                    if (type1 == "ordinal" && !is.null(ordering1)) {
+                      # Convert ordering dict to level vector
+                      if (is.list(ordering1) && length(ordering1) > 0) {
+                        # Sort by values to get correct order
+                        order_vec <- names(ordering1)[order(unlist(ordering1))]
+                        d1_processed <- as.numeric(factor(d1, levels = order_vec, ordered = TRUE))
+                      } else {
+                        # Fallback: use unique values
+                        d1_processed <- as.numeric(factor(d1, ordered = TRUE))
+                      }
+                    }
+                    if (type2 == "ordinal" && !is.null(ordering2)) {
+                      # Convert ordering dict to level vector
+                      if (is.list(ordering2) && length(ordering2) > 0) {
+                        # Sort by values to get correct order
+                        order_vec <- names(ordering2)[order(unlist(ordering2))]
+                        d2_processed <- as.numeric(factor(d2, levels = order_vec, ordered = TRUE))
+                      } else {
+                        # Fallback: use unique values
+                        d2_processed <- as.numeric(factor(d2, ordered = TRUE))
+                      }
+                    }
+                    
                     if (exists(target_method) && is.function(get(target_method))) {
                       # Handle arg order for directional tests
                       res <- if (target_method %in% c("kruskal_wallis", "anova_eta") && type1 == "nominal" && type2 == "ordinal") {
-                        do.call(target_method, list(d1, d2))
+                        do.call(target_method, list(d1_processed, d2_processed))
                       } else if (target_method %in% c("kruskal_wallis", "anova_eta")) {
-                        do.call(target_method, list(d2, d1))
+                        do.call(target_method, list(d2_processed, d1_processed))
                       } else {
-                        do.call(target_method, list(d1, d2))
+                        do.call(target_method, list(d1_processed, d2_processed))
                       }
 
                       if (!is.null(res) && !is.null(res$result)) {

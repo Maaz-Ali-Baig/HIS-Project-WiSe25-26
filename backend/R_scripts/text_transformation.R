@@ -27,11 +27,41 @@ tryCatch({
   stop("Python package 'keybert' not found. Install it with: pip install keybert")
 })
 
-## 1. Get sentence embeddings ----------------------------------------------
-get_sentence_embeddings <- function(texts, model_name = "all-MiniLM-L6-v2") {
-  tryCatch({
+## Global cache for models to avoid reloading
+.text_transform_cache <- new.env()
+
+## Helper to get cached sentence transformer model
+get_cached_sentence_model <- function(model_name = "all-MiniLM-L6-v2") {
+  cache_key <- paste0("st_model_", model_name)
+  
+  if (!exists(cache_key, envir = .text_transform_cache)) {
+    message("Loading sentence transformer model (first time only)...")
     st <- reticulate::import("sentence_transformers")
     model <- st$SentenceTransformer(model_name)
+    assign(cache_key, model, envir = .text_transform_cache)
+  }
+  
+  get(cache_key, envir = .text_transform_cache)
+}
+
+## Helper to get cached KeyBERT model
+get_cached_keybert_model <- function(model_name = "all-MiniLM-L6-v2") {
+  cache_key <- paste0("kb_model_", model_name)
+  
+  if (!exists(cache_key, envir = .text_transform_cache)) {
+    message("Loading KeyBERT model (first time only)...")
+    kb <- reticulate::import("keybert")
+    model <- kb$KeyBERT(model_name)
+    assign(cache_key, model, envir = .text_transform_cache)
+  }
+  
+  get(cache_key, envir = .text_transform_cache)
+}
+
+## 1. Get sentence embeddings (with caching) ------------------------------
+get_sentence_embeddings <- function(texts, model_name = "all-MiniLM-L6-v2") {
+  tryCatch({
+    model <- get_cached_sentence_model(model_name)
     emb <- model$encode(texts, normalize_embeddings = TRUE, show_progress_bar = FALSE)
     emb <- as.matrix(emb)
     rownames(emb) <- NULL
@@ -45,48 +75,17 @@ get_sentence_embeddings <- function(texts, model_name = "all-MiniLM-L6-v2") {
   })
 }
 
-## 2. Find optimal K using silhouette score ---------------------------------
-find_optimal_k <- function(emb_matrix, k_min = 2L, k_max = 20L) {
+## 2. Find optimal K using fast heuristic ---------------------------------
+find_optimal_k <- function(emb_matrix, k_min = 2L, k_max = 15L) {
   n_rows <- nrow(emb_matrix)
   
-  # Adjust max_k based on data size
-  k_max <- min(k_max, floor(sqrt(n_rows / 2)))
-  k_max <- max(k_min, k_max)
-  k_min <- max(2L, min(3L, n_rows))
+  # Use simple heuristic: sqrt(n/2) - MUCH faster than testing multiple K
+  k <- ceiling(sqrt(n_rows / 2))
+  k <- max(k_min, min(k, k_max))
+  k <- min(k, n_rows)
   
-  if (k_max <= k_min) {
-    return(k_min)
-  }
-  
-  message("Finding optimal number of clusters (testing ", k_min, " to ", k_max, ")...")
-  
-  # Load cluster package for silhouette
-  if (!requireNamespace("cluster", quietly = TRUE)) {
-    warning("Package 'cluster' not installed. Using heuristic k = sqrt(n/2)")
-    return(ceiling(sqrt(n_rows / 2)))
-  }
-  
-  best_score <- -1
-  best_k <- k_min
-  
-  for (k in k_min:k_max) {
-    tryCatch({
-      set.seed(42)
-      km <- stats::kmeans(emb_matrix, centers = k, iter.max = 100, nstart = 10)
-      sil <- cluster::silhouette(km$cluster, stats::dist(emb_matrix))
-      score <- mean(sil[, 3])
-      
-      if (score > best_score) {
-        best_score <- score
-        best_k <- k
-      }
-    }, error = function(e) {
-      # Skip this k if it fails
-    })
-  }
-  
-  message("Optimal clusters: ", best_k, " (silhouette score: ", round(best_score, 3), ")")
-  best_k
+  message("Using ", k, " clusters (heuristic: sqrt(n/2))")
+  k
 }
 
 ## 3. K-means clustering on embeddings -------------------------------------
@@ -96,7 +95,8 @@ cluster_embeddings <- function(emb_matrix, k) {
   }
   
   set.seed(42)
-  km <- stats::kmeans(emb_matrix, centers = k, iter.max = 100, nstart = 10)
+  # Reduced iterations for speed: iter.max=50, nstart=3
+  km <- stats::kmeans(emb_matrix, centers = k, iter.max = 50, nstart = 3)
   list(cluster = km$cluster, centers = km$centers)
 }
 
@@ -122,11 +122,10 @@ build_cluster_texts <- function(text_clean, cluster_ids, max_docs = 100L) {
   cluster_texts
 }
 
-## 5. Keyphrase labels using KeyBERT ---------------------------------------
+## 5. Keyphrase labels using KeyBERT (with caching) -----------------------
 get_keyphrase_labels <- function(cluster_texts, max_words = 3, model_name = "all-MiniLM-L6-v2") {
   tryCatch({
-    kb <- reticulate::import("keybert")
-    kw_model <- kb$KeyBERT(model_name)
+    kw_model <- get_cached_keybert_model(model_name)
     
     K <- length(cluster_texts)
     labels <- character(K)
@@ -186,8 +185,16 @@ transform_text_column <- function(df, text_col, k = NULL, max_label_words = 3,
   
   text_vec <- df[[text_col]]
   
-  # Identify missing values
-  na_mask <- is.na(text_vec) | text_vec == "" | text_vec == "NA"
+  # Define missing value tokens (consistent with MissingValues.R)
+  missing_tokens <- c("", "na", "n/a", "nan", "none", "null", "nil", 
+                      "#n/a", "#na", "missing", "n.a.", "<na>")
+  
+  # Identify missing values using comprehensive check
+  na_mask <- is.na(text_vec)
+  if (is.character(text_vec)) {
+    text_trimmed <- tolower(trimws(text_vec))
+    na_mask <- na_mask | (text_trimmed %in% missing_tokens)
+  }
   
   if (all(na_mask)) {
     stop(paste0("Column '", text_col, "' contains only empty/missing values"))
@@ -237,22 +244,156 @@ transform_text_column <- function(df, text_col, k = NULL, max_label_words = 3,
   )
   
   # Map cluster labels back to original dataframe positions
-  # Keep missing values as-is (they'll be handled separately)
-  result_column <- df[[text_col]]
+  # Initialize result column - convert to character first
+  result_column <- as.character(df[[text_col]])
+  
+  # Only replace valid (non-missing) entries with theme labels
   for (i in seq_along(valid_indices)) {
     result_column[valid_indices[i]] <- theme_titles[cluster_ids[i]]
   }
   
+  # Convert all missing value positions back to NA
+  # This ensures they stay as missing and don't get theme labels
+  result_column[na_mask] <- NA
+  
   df[[text_col]] <- result_column
   
   message("Transformation complete: ", length(unique(theme_titles)), " unique themes created")
-  message("Processed ", length(valid_indices), " rows, skipped ", n_missing, " missing values")
-  message("Original column '", text_col, "' replaced with theme labels (missing values preserved)")
+  message("Processed ", length(valid_indices), " valid rows, preserved ", n_missing, " missing values as NA")
+  message("Original column '", text_col, "' replaced with theme labels (missing values = NA)")
   
   df
 }
 
-## 7. CSV-based function for backend integration ---------------------------
+## 7. Batch transformation for multiple columns (OPTIMIZED) ---------------
+transform_text_columns_batch <- function(df, text_cols, k = NULL, model_name = "all-MiniLM-L6-v2") {
+  
+  message("\n=== BATCH MODE: Processing ", length(text_cols), " columns together ===")
+  
+  # Define missing value tokens
+  missing_tokens <- c("", "na", "n/a", "nan", "none", "null", "nil", 
+                      "#n/a", "#na", "missing", "n.a.", "<na>")
+  
+  # Collect all texts from all columns
+  all_texts <- character()
+  text_origins <- list()  # Track which column and row each text came from
+  col_row_mapping <- list()
+  
+  for (col in text_cols) {
+    if (!col %in% names(df)) {
+      warning(paste0("Column '", col, "' not found, skipping"))
+      next
+    }
+    
+    text_vec <- as.character(df[[col]])
+    
+    # Identify missing values
+    na_mask <- is.na(text_vec)
+    if (is.character(text_vec)) {
+      text_trimmed <- tolower(trimws(text_vec))
+      na_mask <- na_mask | (text_trimmed %in% missing_tokens)
+    }
+    
+    # Store valid text indices for this column
+    valid_indices <- which(!na_mask)
+    
+    if (length(valid_indices) > 0) {
+      valid_texts <- text_vec[valid_indices]
+      
+      # Clean texts
+      valid_texts <- gsub("[\r\n]+", " ", valid_texts)
+      valid_texts <- gsub("\\s+", " ", valid_texts)
+      valid_texts <- trimws(valid_texts)
+      
+      # Store mapping
+      start_idx <- length(all_texts) + 1
+      end_idx <- start_idx + length(valid_texts) - 1
+      text_origins[[col]] <- list(
+        indices = start_idx:end_idx,
+        row_indices = valid_indices,
+        na_mask = na_mask
+      )
+      
+      all_texts <- c(all_texts, valid_texts)
+    } else {
+      text_origins[[col]] <- list(
+        indices = integer(0),
+        row_indices = integer(0),
+        na_mask = na_mask
+      )
+    }
+  }
+  
+  if (length(all_texts) == 0) {
+    stop("No valid text found in any of the selected columns")
+  }
+  
+  message("Total valid texts collected: ", length(all_texts))
+  
+  # Generate embeddings ONCE for all texts from all columns
+  message("Generating embeddings for all texts...")
+  emb <- get_sentence_embeddings(all_texts, model_name = model_name)
+  
+  # Find optimal K if not provided
+  if (is.null(k)) {
+    k <- find_optimal_k(emb, k_min = 2L, k_max = 15L)
+  } else {
+    message("Clustering into ", k, " themes...")
+  }
+  
+  k <- min(k, nrow(emb))
+  
+  # Perform clustering ONCE
+  message("Clustering all texts...")
+  cl <- cluster_embeddings(emb, k)
+  cluster_ids <- cl$cluster
+  
+  # Build cluster texts and get labels ONCE
+  cluster_texts <- build_cluster_texts(all_texts, cluster_ids, max_docs = 100L)
+  
+  message("Generating theme labels...")
+  theme_titles <- get_keyphrase_labels(cluster_texts, max_words = 3, model_name = model_name)
+  
+  message("\nApplying themes to individual columns...")
+  
+  # Map results back to each column
+  for (col in names(text_origins)) {
+    origin <- text_origins[[col]]
+    
+    if (length(origin$indices) == 0) {
+      # All missing in this column
+      df[[col]] <- NA
+      message("  ", col, ": All values were missing, set to NA")
+      next
+    }
+    
+    # Get cluster assignments for this column's texts
+    col_clusters <- cluster_ids[origin$indices]
+    col_themes <- theme_titles[col_clusters]
+    
+    # Initialize result column
+    result_column <- as.character(df[[col]])
+    
+    # Apply themes to valid rows
+    result_column[origin$row_indices] <- col_themes
+    
+    # Set missing values to NA
+    result_column[origin$na_mask] <- NA
+    
+    df[[col]] <- result_column
+    
+    n_valid <- length(origin$row_indices)
+    n_missing <- sum(origin$na_mask)
+    message("  ", col, ": ", n_valid, " rows themed, ", n_missing, " set to NA")
+  }
+  
+  message("\n=== BATCH TRANSFORMATION COMPLETE ===")
+  message("Created ", length(unique(theme_titles)), " unique themes across all columns")
+  
+  df
+}
+
+## 8. CSV-based function for backend integration ---------------------------
 transform_text_csv <- function(input_csv, output_csv, columns, k = NULL, model_name = "all-MiniLM-L6-v2") {
   
   # Read CSV
@@ -264,14 +405,22 @@ transform_text_csv <- function(input_csv, output_csv, columns, k = NULL, model_n
     stop(paste0("Columns not found: ", paste(invalid_cols, collapse = ", ")))
   }
   
-  # Apply transformation to each text column
-  for (col in columns) {
-    message("\n--- Processing column: ", col, " ---")
+  # Use batch processing for multiple columns (MUCH FASTER)
+  if (length(columns) > 1) {
+    df <- transform_text_columns_batch(
+      df, 
+      text_cols = columns,
+      k = k,
+      model_name = model_name
+    )
+  } else {
+    # Single column - use original method
+    message("\n--- Processing single column: ", columns[1], " ---")
     df <- transform_text_column(
       df, 
-      text_col = col, 
+      text_col = columns[1], 
       k = k, 
-      max_label_words = 3,  # Fixed at 3 words
+      max_label_words = 3,
       model_name = model_name,
       max_docs_per_cluster = 100L
     )
@@ -284,7 +433,7 @@ transform_text_csv <- function(input_csv, output_csv, columns, k = NULL, model_n
   invisible(df)
 }
 
-## 8. Example usage --------------------------------------------------------
+## 9. Example usage --------------------------------------------------------
 # df <- data.frame(
 #   id = 1:6,
 #   text = c(

@@ -38,6 +38,8 @@ export const CorrelationAnalysisPage: React.FC = () => {
   const store = useMultiCorrelationStore();
   const [rHealthy, setRHealthy] = useState<boolean | null>(null);
   const [selectedCell, setSelectedCell] = useState<MatrixCell | null>(null);
+  const [showOnlyCategorical, setShowOnlyCategorical] = useState<boolean>(false);
+  const [categoricalColumns, setCategoricalColumns] = useState<string[]>([]);
 
   // Redirect if no fileId or user
   useEffect(() => {
@@ -79,6 +81,15 @@ export const CorrelationAnalysisPage: React.FC = () => {
           // Backend already excludes datetime columns
           return true;
         });
+        
+        // Identify categorical columns (those with categories returned)
+        // These are columns with discrete values suitable for categorical analysis
+        const categorical = filteredColumns.filter(col => {
+          const categories = columnsData.categories[col] || [];
+          // Consider as categorical if it has categories or has < 50 unique values
+          return categories.length > 0 && categories.length < 50;
+        });
+        setCategoricalColumns(categorical);
         
         store.setAvailableColumns(filteredColumns, columnsData.categories);
       } catch (error: any) {
@@ -364,6 +375,9 @@ export const CorrelationAnalysisPage: React.FC = () => {
                   onAddColumn={store.addColumn}
                   onRemoveColumn={store.removeColumn}
                   minColumns={2}
+                  categoricalColumns={categoricalColumns}
+                  showOnlyCategorical={showOnlyCategorical}
+                  onToggleOnlyCategorical={setShowOnlyCategorical}
                 />
 
                 <div className="flex justify-between">

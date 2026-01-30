@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Slider } from "./ui/slider";
+import { Label } from "./ui/label";
+import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { X, Plus, RotateCcw } from "lucide-react";
 import { Alert, AlertDescription } from "./ui/alert";
 
@@ -11,10 +13,13 @@ interface ColumnRange {
   end: number;
 }
 
+export type ColumnTypeFilter = "all" | "categorical" | "numeric";
+
 interface ColumnSelectionPanelProps {
   totalColumns: number;
   currentRanges: Array<{ start: number; end: number }>;
-  onApply: (ranges: Array<{ start: number; end: number }>) => void;
+  currentColumnTypeFilter?: ColumnTypeFilter;
+  onApply: (ranges: Array<{ start: number; end: number }>, columnTypeFilter: ColumnTypeFilter) => void;
   onReset: () => void;
   isLoading?: boolean;
 }
@@ -22,12 +27,14 @@ interface ColumnSelectionPanelProps {
 export function ColumnSelectionPanel({
   totalColumns,
   currentRanges,
+  currentColumnTypeFilter = "all",
   onApply,
   onReset,
   isLoading = false,
 }: ColumnSelectionPanelProps) {
   const [ranges, setRanges] = useState<ColumnRange[]>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [columnTypeFilter, setColumnTypeFilter] = useState<ColumnTypeFilter>(currentColumnTypeFilter);
 
   // Initialize ranges from props or create default range
   useEffect(() => {
@@ -50,6 +57,11 @@ export function ColumnSelectionPanel({
       ]);
     }
   }, [currentRanges, totalColumns]);
+
+  // Update columnTypeFilter when prop changes
+  useEffect(() => {
+    setColumnTypeFilter(currentColumnTypeFilter);
+  }, [currentColumnTypeFilter]);
 
   const validateRanges = (rangesToValidate: ColumnRange[]): boolean => {
     if (rangesToValidate.length === 0) {
@@ -177,7 +189,7 @@ export function ColumnSelectionPanel({
       end: r.end,
     }));
 
-    onApply(apiRanges);
+    onApply(apiRanges, columnTypeFilter);
   };
 
   const handleReset = () => {
@@ -287,6 +299,38 @@ export function ColumnSelectionPanel({
           <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
           Reset
         </Button>
+      </div>
+
+      {/* Column Type Filter */}
+      <div className="pt-3 border-t space-y-2">
+        <Label className="text-xs font-medium">Filter Column Types</Label>
+        <RadioGroup
+          value={columnTypeFilter}
+          onValueChange={(value) => setColumnTypeFilter(value as ColumnTypeFilter)}
+          disabled={isLoading}
+        >
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="all" id="filter-all" />
+            <Label htmlFor="filter-all" className="text-xs font-normal cursor-pointer">
+              All Columns (Categorical + Numeric)
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="categorical" id="filter-categorical" />
+            <Label htmlFor="filter-categorical" className="text-xs font-normal cursor-pointer">
+              Categorical Only
+            </Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="numeric" id="filter-numeric" />
+            <Label htmlFor="filter-numeric" className="text-xs font-normal cursor-pointer">
+              Numeric Only
+            </Label>
+          </div>
+        </RadioGroup>
+        <p className="text-[10px] text-muted-foreground leading-tight">
+          This filter will be applied to all selected columns for preprocessing, correlation analysis, visualization, and report generation.
+        </p>
       </div>
 
       <div className="flex gap-2 pt-2 border-t">

@@ -189,6 +189,7 @@ def handle_binning(
         target_column: Name of target variable for target-based binning
         custom_mapping: Named dict mapping original categories to new groups
         similarity_threshold: Similarity threshold for grouping (0-1)
+        preserve_original: If True, creates new *_bin columns; if False, overwrites original
 
     Raises:
         HTTPException: If R execution fails or environment is invalid
@@ -219,7 +220,10 @@ def handle_binning(
         columns_r = StrVector(selected_columns)
 
         # Build arguments for R function based on method
-        # R function signature: bin_categorical_csv(input_csv, output_csv, columns, method, n_bins, min_freq, target_column, custom_mapping, similarity_threshold)
+        # R function signature: bin_categorical_csv(input_csv, output_csv, columns, method, n_bins, 
+        #                                           min_freq, target_column, custom_mapping, 
+        #                                           similarity_threshold, treat_numeric_as_categorical, 
+        #                                           max_numeric_categories)
         
         # Prepare target_column
         if target_column:
@@ -234,17 +238,17 @@ def handle_binning(
         else:
             custom_r = robjects.NULL
 
-        # Call R function
+        # Call R function with named parameters to ensure correct mapping
         result = bin_categorical_csv_r(
-            input_csv,
-            output_csv,
-            columns_r,
-            method,
-            n_bins,
-            min_freq,
-            target_r,
-            custom_r,
-            similarity_threshold,
+            input_csv=input_csv,
+            output_csv=output_csv,
+            columns=columns_r,
+            method=method,
+            n_bins=n_bins,
+            min_freq=min_freq,
+            target_column=target_r,
+            custom_mapping=custom_r,
+            similarity_threshold=similarity_threshold,
         )
 
     except ImportError:

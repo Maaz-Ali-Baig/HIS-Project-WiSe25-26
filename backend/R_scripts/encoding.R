@@ -5,6 +5,8 @@
 #' @param columns Vector of column names to apply encoding to (categorical columns)
 #' @param method Encoding method: "label", "onehot", "ordinal", "frequency", "target"
 #' @param target_columns Vector of target column names (only for target encoding)
+#' @param detect_numeric_categorical If TRUE, auto-detect low-cardinality numeric columns as categorical (default: TRUE)
+#' @param max_numeric_categories Maximum unique values for numeric column to be treated as categorical (default: 20)
 #'
 #' @return Data frame with encoded columns and writes to output_csv
 #'
@@ -19,12 +21,34 @@
 #' # Target encoding
 #' encode_data_csv("data.csv", "output.csv", c("category"), "target", target_columns = c("price"))
 #' }
+
+#' Comprehensive missing value detection
+#' Detects various representations of missing values
+is_missing_value <- function(x) {
+  if (is.null(x)) return(TRUE)
+  if (length(x) == 0) return(TRUE)
+  if (is.na(x)) return(TRUE)
+  
+  # For character/factor values, check common missing tokens
+  if (is.character(x) || is.factor(x)) {
+    x_lower <- tolower(trimws(as.character(x)))
+    missing_tokens <- c("", "na", "n/a", "nan", "none", "null", "nil", 
+                        "#n/a", "#na", "missing", "n.a.", "<na>", "<null>",
+                        "undefined", "n.a", "--", ".", "?")
+    return(x_lower %in% missing_tokens)
+  }
+  
+  return(FALSE)
+}
+
 encode_data_csv <- function(
     input_csv,
     output_csv,
     columns = NULL,
     method = c("label", "onehot", "ordinal", "frequency", "target"),
-    target_columns = NULL
+    target_columns = NULL,
+    detect_numeric_categorical = TRUE,
+    max_numeric_categories = 20
 ) {
   method <- match.arg(method)
 
@@ -51,11 +75,31 @@ encode_data_csv <- function(
   })
 
   # Detect categorical columns if not specified
-  is_cat_col <- function(x) is.character(x) || is.factor(x)
+  is_cat_col <- function(x) {
+    # Traditional categorical
+    if (is.character(x) || is.factor(x)) return(TRUE)
+    
+    # Low-cardinality numeric (e.g., ratings stored as floats)
+    if (detect_numeric_categorical && is.numeric(x)) {
+      unique_vals <- unique(x[!is.na(x)])
+      if (length(unique_vals) <= max_numeric_categories && length(unique_vals) >= 2) {
+        return(TRUE)
+      }
+    }
+    
+    return(FALSE)
+  }
 
   if (is.null(columns) || length(columns) == 0) {
-    # Auto-detect all categorical columns
+    # Auto-detect all categorical columns (including low-cardinality numeric)
     cat_cols <- names(df)[sapply(df, is_cat_col)]
+    
+    # Warn about numeric columns being treated as categorical
+    numeric_cats <- names(df)[sapply(df, function(x) is.numeric(x) && is_cat_col(x))]
+    if (length(numeric_cats) > 0) {
+      message("Note: Treating low-cardinality numeric columns as categorical: ", 
+              paste(numeric_cats, collapse = ", "))
+    }
   } else {
     # Use specified columns (filter to those that exist)
     cat_cols <- columns[columns %in% names(df)]
@@ -70,7 +114,23 @@ encode_data_csv <- function(
   # Label Encoding
   label_encode <- function(df, cat_cols) {
     for (col in cat_cols) {
-      df[[paste0(col, "_label")]] <- as.integer(as.factor(df[[col]]))
+      # Convert to character for consistent handling
+      col_data <- as.character(df[[col]])
+      
+      # Mark missing values
+      is_missing <- sapply(col_data, is_missing_value)
+      
+      # Create factor only from non-missing values
+      non_missing <- col_data[!is_missing]
+      if (length(non_missing) > 0) {
+        # Create factor levels from non-missing values
+        factor_levels <- sort(unique(non_missing))
+        encoded <- as.integer(factor(col_data, levels = factor_levels))
+      } else {
+        encoded <- rep(NA_integer_, length(col_data))
+      }
+      
+      df[[paste0(col, "_label")]] <- encoded
     }
     df
   }
@@ -142,22 +202,47 @@ encode_data_csv <- function(
         stop(paste("Target column", target_col, "not found in dataframe"))
       }
 
+      is_numeric_target <- is.numeric(df[[target_col]])
+
       # Loop over categorical columns
       for (col in cat_cols) {
-        means <- df %>%
-          group_by(.data[[col]]) %>%
-          summarize(mean_target = mean(.data[[target_col]], na.rm = TRUE),
-                    .groups = "drop")
-
-        lookup <- setNames(means$mean_target, as.character(means[[col]]))
+        # Convert to character for consistent grouping
+        col_char <- as.character(df[[col]])
+        
+        if (is_numeric_target) {
+          # Numeric target: compute mean
+          means <- df %>%
+            mutate(cat_col = col_char) %>%
+            group_by(cat_col) %>%
+            summarize(encoded_value = mean(.data[[target_col]], na.rm = TRUE),
+                      .groups = "drop")
+          
+          lookup <- setNames(means$encoded_value, means$cat_col)
+          global_fallback <- mean(df[[target_col]], na.rm = TRUE)
+        } else {
+          # Categorical target: compute mode (most frequent value)
+          mode_func <- function(x) {
+            x_clean <- x[!is.na(x)]
+            if (length(x_clean) == 0) return(NA)
+            ux <- unique(x_clean)
+            ux[which.max(tabulate(match(x_clean, ux)))]
+          }
+          
+          modes <- df %>%
+            mutate(cat_col = col_char) %>%
+            group_by(cat_col) %>%
+            summarize(encoded_value = mode_func(.data[[target_col]]),
+                      .groups = "drop")
+          
+          lookup <- setNames(modes$encoded_value, modes$cat_col)
+          global_fallback <- mode_func(df[[target_col]])
+        }
 
         new_col <- paste0(col, "_target_", target_col)
+        df[[new_col]] <- lookup[col_char]
 
-        df[[new_col]] <- lookup[as.character(df[[col]])]
-
-        # Replace NA values with global target mean
-        global_mean <- mean(df[[target_col]], na.rm = TRUE)
-        df[[new_col]][is.na(df[[new_col]])] <- global_mean
+        # Replace NA values with global fallback
+        df[[new_col]][is.na(df[[new_col]])] <- global_fallback
       }
     }
 
@@ -191,16 +276,27 @@ encode_data_csv <- function(
   })
 
   # Print summary
-  cat("Encoding completed successfully!\n")
+  cat("\n", rep("=", 60), "\n", sep = "")
+  cat("ENCODING COMPLETED SUCCESSFULLY!\n")
+  cat(rep("=", 60), "\n")
   cat("Input file:", input_csv, "\n")
   cat("Output file:", output_csv, "\n")
   cat("Method:", method, "\n")
   cat("Columns encoded:", paste(cat_cols, collapse = ", "), "\n")
+  
+  # Check which were numeric
+  numeric_cats <- cat_cols[sapply(df[cat_cols], is.numeric)]
+  if (length(numeric_cats) > 0) {
+    cat("  (including numeric rating columns:", paste(numeric_cats, collapse = ", "), ")\n")
+  }
+  
   new_cols <- setdiff(names(encoded_df), names(df))
   if (length(new_cols) > 0) {
-    cat("New columns created:\n")
+    cat("\nNew columns created (originals preserved):\n")
     cat(paste("  -", new_cols, collapse = "\n"), "\n")
   }
+  cat("\nOriginal columns retained: YES\n")
+  cat(rep("=", 60), "\n\n")
 
   invisible(encoded_df)
 }

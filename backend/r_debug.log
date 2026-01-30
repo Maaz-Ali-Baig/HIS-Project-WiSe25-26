@@ -1,9 +1,0 @@
-=== INPUT DEBUG ===
-Method: cramers_v
-Var1 type: nominal | columnName: Column447
-Var1 ordering is.null: TRUE | class: NULL
-Var2 type: nominal | columnName: Column449
-Var2 ordering is.null: TRUE | class: NULL
-Sample var1 data: Missing, val_e, val_c
-Sample var2 data: logout, submit, submit
-===================

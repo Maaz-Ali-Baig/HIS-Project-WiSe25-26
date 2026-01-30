@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { Loader2, AlertCircle, Save, X } from "lucide-react";
 import { ColumnSelectionPanel } from "../../../components/ColumnSelectionPanel";
+import type { ColumnTypeFilter } from "../../../components/ColumnSelectionPanel";
 import { FilePreviewPanel } from "../../../components/FilePreviewPanel";
 import { UploadSurface } from "../../../components/upload/UploadSurface";
 import { FileLayout } from "../../../components/layout/FileLayout";
@@ -41,6 +42,7 @@ export function HomePage() {
     updateColumnSelection: updateStoreColumnSelection,
     selectionRanges,
     totalColumns,
+    columnTypeFilter,
   } = useFileStore();
 
   // Fetch file data when fileId is present
@@ -71,6 +73,8 @@ export function HomePage() {
         fileData.updated_at,
         fileData.selectionRanges || [],
         fileData.totalColumns || fileData.columns.length,
+        fileData.modifiedCells || [],
+        fileData.columnTypeFilter || 'all',
       );
     }
   }, [fileData, fileId, user?.id, setFile]);
@@ -97,6 +101,7 @@ export function HomePage() {
         data.updated_at,
         data.selectionRanges,
         data.totalColumns,
+        data.columnTypeFilter || 'all',
       );
       refetchData();
     },
@@ -130,6 +135,7 @@ export function HomePage() {
 
   const handleApplyColumnSelection = (
     ranges: Array<{ start: number; end: number }>,
+    columnTypeFilter: ColumnTypeFilter,
   ) => {
     if (!user?.id || !fileId) return;
 
@@ -146,6 +152,7 @@ export function HomePage() {
       userId: user.id,
       fileId,
       ranges,
+      columnTypeFilter,
     });
   };
 
@@ -165,6 +172,7 @@ export function HomePage() {
       userId: user.id,
       fileId,
       ranges: [], // Empty array means "select all"
+      columnTypeFilter: 'all',
     });
   };
 
@@ -212,6 +220,7 @@ export function HomePage() {
         <ColumnSelectionPanel
           totalColumns={totalColumns}
           currentRanges={selectionRanges}
+          currentColumnTypeFilter={columnTypeFilter}
           onApply={handleApplyColumnSelection}
           onReset={handleResetColumnSelection}
           isLoading={columnSelectionMutation.isPending}

@@ -9,6 +9,8 @@
 #' @param target_column Name of target variable for target-based binning
 #' @param custom_mapping Named list mapping original categories to new groups
 #' @param similarity_threshold Similarity threshold for grouping (0-1)
+#' @param treat_numeric_as_categorical If TRUE, converts low-cardinality numeric to categorical (default: TRUE)
+#' @param max_numeric_categories Max unique values for numeric to be treated as categorical (default: 20)
 #'
 #' @return Data frame with binned columns and writes to output_csv
 #' 
@@ -22,6 +24,26 @@
 #' bin_categorical_csv("data.csv", "output.csv", c("category"), 
 #'                     "target_based", target_column = "response")
 #' }
+
+#' Comprehensive missing value detection
+#' Detects various representations of missing values
+is_missing_categorical <- function(x) {
+  if (is.null(x)) return(TRUE)
+  if (length(x) == 0) return(TRUE)
+  if (is.na(x)) return(TRUE)
+  
+  # For character/factor values, check common missing tokens
+  if (is.character(x) || is.factor(x)) {
+    x_lower <- tolower(trimws(as.character(x)))
+    missing_tokens <- c("", "na", "n/a", "nan", "none", "null", "nil", 
+                        "#n/a", "#na", "missing", "n.a.", "<na>", "<null>",
+                        "undefined", "n.a", "--", ".", "?", "unknown")
+    return(x_lower %in% missing_tokens)
+  }
+  
+  return(FALSE)
+}
+
 bin_categorical_csv <- function(
     input_csv,
     output_csv,
@@ -31,7 +53,9 @@ bin_categorical_csv <- function(
     min_freq = 10,
     target_column = NULL,
     custom_mapping = NULL,
-    similarity_threshold = 0.7
+    similarity_threshold = 0.7,
+    treat_numeric_as_categorical = TRUE,
+    max_numeric_categories = 20
 ) {
   method <- match.arg(method)
   
@@ -49,9 +73,20 @@ bin_categorical_csv <- function(
     stop("No valid columns provided. Available columns: ", paste(names(df), collapse = ", "))
   }
   
-  # Convert specified columns to character if not already
+  # Convert specified columns to character if not already (including numeric ratings)
   for (col in columns) {
-    if (!is.character(df[[col]]) && !is.factor(df[[col]])) {
+    if (is.numeric(df[[col]])) {
+      unique_vals <- length(unique(df[[col]][!is.na(df[[col]])]))
+      
+      if (treat_numeric_as_categorical && unique_vals <= max_numeric_categories && unique_vals >= 2) {
+        message("Column '", col, "' is numeric with ", unique_vals, 
+                " unique values - treating as categorical (rating scale)")
+        df[[col]] <- as.character(df[[col]])
+      } else if (!is.character(df[[col]]) && !is.factor(df[[col]])) {
+        warning("Column '", col, "' is numeric with many values. Converting to character, but binning may not be meaningful.")
+        df[[col]] <- as.character(df[[col]])
+      }
+    } else if (!is.character(df[[col]]) && !is.factor(df[[col]])) {
       warning("Column '", col, "' is not character/factor. Converting to character.")
       df[[col]] <- as.character(df[[col]])
     }
@@ -61,16 +96,12 @@ bin_categorical_csv <- function(
     }
   }
   
-  # Handle missing values in categorical data
-  is_missing_cat <- function(x) {
-    is.na(x) | x == "" | x == "NA" | x == "NULL" | x == "null" | x == "Missing"
-  }
-  
   # 1. Frequency-Based Binning (Lump infrequent categories)
   if (method == "frequency") {
     for (col in columns) {
-      # Calculate frequencies
-      freq_table <- table(df[[col]])
+      # Calculate frequencies (excluding missing values)
+      non_missing <- !sapply(df[[col]], is_missing_categorical)
+      freq_table <- table(df[[col]][non_missing])
       freq_df <- data.frame(
         category = names(freq_table),
         frequency = as.numeric(freq_table),
@@ -81,31 +112,44 @@ bin_categorical_csv <- function(
       # Keep top n_bins-1 categories, lump others
       if (nrow(freq_df) <= n_bins) {
         # No binning needed if categories <= n_bins
-        warning("Column '", col, "' has only ", nrow(freq_df), 
-                " categories. No binning applied.")
+        message("Column '", col, "' has only ", nrow(freq_df), 
+                " categories. Keeping all categories.")
+        binned_values <- as.character(df[[col]])
       } else {
-        # Get categories to keep
-        categories_to_keep <- freq_df$category[1:(n_bins - 1)]
+        # Determine which to keep vs lump
+        categories_to_keep <- character(0)
+        categories_for_other <- character(0)
         
-        # Replace original column with binned values
-        df[[col]] <- ifelse(
+        for (i in 1:nrow(freq_df)) {
+          cat_name <- freq_df$category[i]
+          cat_freq <- freq_df$frequency[i]
+          
+          # Priority: keep top categories OR those above min_freq (up to n_bins-1)
+          if (length(categories_to_keep) < (n_bins - 1)) {
+            if (is.null(min_freq) || cat_freq >= min_freq) {
+              categories_to_keep <- c(categories_to_keep, cat_name)
+            } else {
+              categories_for_other <- c(categories_for_other, cat_name)
+            }
+          } else {
+            categories_for_other <- c(categories_for_other, cat_name)
+          }
+        }
+        
+        # Create binned column
+        binned_values <- ifelse(
           df[[col]] %in% categories_to_keep,
-          df[[col]],
+          as.character(df[[col]]),
           "Other"
         )
-        
-        # For categories below minimum frequency
-        if (!is.null(min_freq)) {
-          low_freq_cats <- freq_df$category[freq_df$frequency < min_freq]
-          df[[col]][df[[col]] %in% low_freq_cats] <- "Low_Frequency"
-        }
       }
       
       # Handle missing values
-      df[[col]][is_missing_cat(df[[col]])] <- "Missing"
+      missing_mask <- sapply(df[[col]], is_missing_categorical)
+      binned_values[missing_mask] <- "Missing"
       
-      # Convert to factor
-      df[[col]] <- as.factor(df[[col]])
+      # Overwrite original column
+      df[[col]] <- as.factor(binned_values)
     }
   }
   
@@ -116,8 +160,9 @@ bin_categorical_csv <- function(
     }
     
     for (col in columns) {
-      # Calculate target statistics for each category
-      unique_cats <- unique(na.omit(df[[col]]))
+      # Calculate target statistics for each category (excluding missing)
+      non_missing <- !sapply(df[[col]], is_missing_categorical)
+      unique_cats <- unique(df[[col]][non_missing])
       
       if (length(unique_cats) == 0) {
         warning("Column '", col, "' has no valid categories. Skipping.")
@@ -129,32 +174,29 @@ bin_categorical_csv <- function(
         category = character(),
         count = numeric(),
         target_mean = numeric(),
-        target_sd = numeric(),
+        target_mode = character(),
         stringsAsFactors = FALSE
       )
       
       # Calculate statistics for each category
       for (cat in unique_cats) {
-        if (is_missing_cat(cat)) next
-        
-        mask <- df[[col]] == cat & !is_missing_cat(df[[col]])
+        mask <- df[[col]] == cat & non_missing
         if (sum(mask) > 0) {
           if (is.numeric(df[[target_column]])) {
-            target_mean <- mean(df[[target_column]][mask], na.rm = TRUE)
-            target_sd <- sd(df[[target_column]][mask], na.rm = TRUE)
+            target_stat <- mean(df[[target_column]][mask], na.rm = TRUE)
+            mode_val <- NA
           } else {
             # For categorical target, use mode
             target_tab <- table(df[[target_column]][mask])
-            target_mean <- names(target_tab)[which.max(target_tab)]
-            target_sd <- NA
+            target_stat <- NA
+            mode_val <- names(target_tab)[which.max(target_tab)]
           }
           
           cat_stats <- rbind(cat_stats, data.frame(
             category = cat,
             count = sum(mask),
-            target_mean = ifelse(is.numeric(target_mean), target_mean, NA),
-            target_sd = target_sd,
-            target_mode = ifelse(!is.numeric(target_mean), as.character(target_mean), NA),
+            target_mean = target_stat,
+            target_mode = ifelse(is.na(mode_val), "", as.character(mode_val)),
             stringsAsFactors = FALSE
           ))
         }
@@ -169,31 +211,29 @@ bin_categorical_csv <- function(
       
       # Create bins based on sorted categories
       n_cats <- nrow(cat_stats)
+      binned_values <- rep("Other", nrow(df))
+      
       if (n_cats <= n_bins) {
-        # Map each category to its own bin - no change needed
+        # Keep original categories
+        binned_values <- as.character(df[[col]])
       } else {
         # Group categories into n_bins
-        bin_size <- ceiling(n_cats / n_bins)
         bin_assignments <- cut(1:n_cats, breaks = n_bins, labels = FALSE)
         
         # Create mapping
-        mapping <- list()
         for (i in 1:n_bins) {
           cats_in_bin <- cat_stats$category[bin_assignments == i]
-          mapping[[paste0("Bin", i)]] <- cats_in_bin
-        }
-        
-        # Apply mapping - replace original column
-        temp_col <- "Other"
-        for (bin_name in names(mapping)) {
-          mask <- df[[col]] %in% mapping[[bin_name]]
-          df[[col]][mask] <- bin_name
+          mask <- df[[col]] %in% cats_in_bin
+          binned_values[mask] <- paste0("TargetBin_", i)
         }
       }
       
       # Handle missing values
-      df[[col]][is_missing_cat(df[[col]])] <- "Missing"
-      df[[col]] <- as.factor(df[[col]])
+      missing_mask <- sapply(df[[col]], is_missing_categorical)
+      binned_values[missing_mask] <- "Missing"
+      
+      # Overwrite original column
+      df[[col]] <- as.factor(binned_values)
     }
   }
   
@@ -219,9 +259,9 @@ bin_categorical_csv <- function(
     }
     
     for (col in columns) {
-      # Get unique categories
-      unique_cats <- unique(na.omit(df[[col]]))
-      unique_cats <- unique_cats[!is_missing_cat(unique_cats)]
+      # Get unique categories (exclude missing values)
+      non_missing <- !sapply(df[[col]], is_missing_categorical)
+      unique_cats <- unique(df[[col]][non_missing])
       
       if (length(unique_cats) <= 1) {
         next
@@ -270,14 +310,20 @@ bin_categorical_csv <- function(
         }
       }
       
-      # Apply grouping - replace original column
+      # Apply grouping
+      binned_values <- as.character(df[[col]])
+      
       for (group_name in names(groups)) {
         mask <- df[[col]] %in% groups[[group_name]]
-        df[[col]][mask] <- group_name
+        binned_values[mask] <- group_name
       }
       
-      # Convert to factor
-      df[[col]] <- as.factor(df[[col]])
+      # Handle missing
+      missing_mask <- sapply(df[[col]], is_missing_categorical)
+      binned_values[missing_mask] <- "Missing"
+      
+      # Overwrite original column
+      df[[col]] <- as.factor(binned_values)
     }
   }
   
@@ -332,32 +378,38 @@ bin_categorical_csv <- function(
       }
       
       # Apply domain mapping if detected
+      binned_values <- rep("Other", nrow(df))
+      
       if (!is.null(detected_domain) && detected_domain %in% names(domain_mappings)) {
         mapping <- domain_mappings[[detected_domain]]
-        temp_col <- rep("Other", nrow(df))
         
         for (group_name in names(mapping)) {
           # Check for partial matches
           for (pattern in mapping[[group_name]]) {
             mask <- grepl(pattern, df[[col]], ignore.case = TRUE)
-            temp_col[mask] <- group_name
+            binned_values[mask] <- group_name
           }
         }
-        df[[col]] <- temp_col
       } else {
         # If no domain detected, use frequency-based as fallback
-        warning("No domain mapping detected for column '", col, 
+        message("No domain mapping detected for column '", col, 
                 "'. Using frequency-based binning as fallback.")
-        freq_table <- table(df[[col]])
+        non_missing <- !sapply(df[[col]], is_missing_categorical)
+        freq_table <- table(df[[col]][non_missing])
         top_cats <- names(sort(freq_table, decreasing = TRUE))[1:min(n_bins, length(freq_table))]
-        df[[col]] <- ifelse(
+        binned_values <- ifelse(
           df[[col]] %in% top_cats,
-          df[[col]],
+          as.character(df[[col]]),
           "Other"
         )
       }
       
-      df[[col]] <- as.factor(df[[col]])
+      # Handle missing
+      missing_mask <- sapply(df[[col]], is_missing_categorical)
+      binned_values[missing_mask] <- "Missing"
+      
+      # Overwrite original column
+      df[[col]] <- as.factor(binned_values)
     }
   }
   
@@ -368,22 +420,28 @@ bin_categorical_csv <- function(
     }
     
     for (col in columns) {
-      # Apply custom mapping - replace original column
-      temp_col <- rep("Other", nrow(df))  # Default
+      # Apply custom mapping
+      binned_values <- rep("Other", nrow(df))  # Default
       
       for (group_name in names(custom_mapping)) {
         mask <- df[[col]] %in% custom_mapping[[group_name]]
-        temp_col[mask] <- group_name
+        binned_values[mask] <- group_name
       }
       
-      # Check if any categories weren't mapped
-      unmapped <- !(df[[col]] %in% unlist(custom_mapping))
+      # Check if any categories weren't mapped (excluding missing)
+      non_missing <- !sapply(df[[col]], is_missing_categorical)
+      unmapped <- non_missing & !(df[[col]] %in% unlist(custom_mapping))
       if (any(unmapped)) {
         warning(sum(unmapped), " values in column '", col, 
                 "' were not mapped and assigned to 'Other'")
       }
       
-      df[[col]] <- as.factor(temp_col)
+      # Handle missing
+      missing_mask <- sapply(df[[col]], is_missing_categorical)
+      binned_values[missing_mask] <- "Missing"
+      
+      # Overwrite original column
+      df[[col]] <- as.factor(binned_values)
     }
   }
   
@@ -402,21 +460,15 @@ bin_categorical_csv <- function(
   # Show binning results summary
   cat("Binning Results Summary:\n")
   for (col in columns) {
-    bin_col <- paste0(col, "_", switch(method,
-      "frequency" = "freq_bin",
-      "target_based" = "target_bin",
-      "similarity" = "sim_bin",
-      "domain" = "domain_bin",
-      "custom" = "custom_bin"
-    ))
-    
-    if (bin_col %in% names(df)) {
-      cat("\nColumn: ", col, " -> ", bin_col, "\n", sep = "")
-      print(table(df[[bin_col]], useNA = "always"))
-      cat("Original categories: ", length(unique(na.omit(df[[col]]))), 
-          " -> Binned categories: ", length(unique(na.omit(df[[bin_col]]))), "\n", sep = "")
+    if (col %in% names(df)) {
+      cat("\nColumn: ", col, " (overwritten)\n", sep = "")
+      print(table(df[[col]], useNA = "ifany"))
+      
+      binned_unique <- length(unique(df[[col]][df[[col]] != "Missing"]))
+      cat("Binned categories: ", binned_unique, "\n", sep = "")
     }
   }
+  cat("\n", rep("=", 60), "\n\n", sep = "")
   
   invisible(df)
 }
@@ -432,14 +484,19 @@ get_bin_summary <- function(binned_data, original_col) {
   bin_cols <- grep(paste0("^", original_col, "_.*_bin$"), names(binned_data), value = TRUE)
   
   if (length(bin_cols) == 0) {
+    # Check if original was overwritten
+    if (original_col %in% names(binned_data) && is.factor(binned_data[[original_col]])) {
+      message("Original column '", original_col, "' appears to have been overwritten (no *_bin column found)")
+      return(list(table(binned_data[[original_col]], useNA = "ifany")))
+    }
     stop("No bin columns found for: ", original_col)
   }
   
   summary_list <- list()
   
   for (bin_col in bin_cols) {
-    if (is.factor(binned_data[[bin_col]])) {
-      summary_list[[bin_col]] <- table(binned_data[[bin_col]], useNA = "always")
+    if (is.factor(binned_data[[bin_col]]) || is.character(binned_data[[bin_col]])) {
+      summary_list[[bin_col]] <- table(binned_data[[bin_col]], useNA = "ifany")
     }
   }
   

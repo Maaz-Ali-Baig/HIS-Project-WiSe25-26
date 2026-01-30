@@ -2,7 +2,7 @@
  * MultiColumnSelector Component
  * Allows users to select multiple columns for correlation matrix analysis
  */
-import React from "react";
+import React, { useState } from "react";
 import { MultiSelect } from "@/components/ui/multi-select";
 import { Label } from "@/components/ui/label";
 
@@ -13,6 +13,9 @@ interface MultiColumnSelectorProps {
   onRemoveColumn: (column: string) => void;
   minColumns?: number;
   maxColumns?: number;
+  categoricalColumns?: string[];
+  showOnlyCategorical?: boolean;
+  onToggleOnlyCategorical?: (value: boolean) => void;
 }
 
 export const MultiColumnSelector: React.FC<MultiColumnSelectorProps> = ({
@@ -22,7 +25,15 @@ export const MultiColumnSelector: React.FC<MultiColumnSelectorProps> = ({
   onRemoveColumn,
   minColumns = 3,
   maxColumns,
+  categoricalColumns,
+  showOnlyCategorical = false,
+  onToggleOnlyCategorical,
 }) => {
+  // Filter columns based on categorical-only setting
+  const displayColumns = showOnlyCategorical && categoricalColumns
+    ? availableColumns.filter(col => categoricalColumns.includes(col))
+    : availableColumns;
+
   const handleChange = (newSelectedColumns: string[]) => {
     // Check if columns were added or removed
     if (newSelectedColumns.length > selectedColumns.length) {
@@ -54,8 +65,23 @@ export const MultiColumnSelector: React.FC<MultiColumnSelectorProps> = ({
           Select Columns (minimum {minColumns}{maxColumns ? `, maximum ${maxColumns}` : ""})
         </Label>
 
+        {onToggleOnlyCategorical && categoricalColumns && (
+          <div className="mb-3 flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="only-categorical"
+              checked={showOnlyCategorical}
+              onChange={(e) => onToggleOnlyCategorical(e.target.checked)}
+              className="h-4 w-4 accent-primary cursor-pointer"
+            />
+            <Label htmlFor="only-categorical" className="text-sm font-normal cursor-pointer">
+              Show only categorical columns ({categoricalColumns.length} of {availableColumns.length} columns)
+            </Label>
+          </div>
+        )}
+
         <MultiSelect
-          options={availableColumns}
+          options={displayColumns}
           value={selectedColumns}
           onChange={handleChange}
           placeholder="Select multiple columns..."

@@ -17,6 +17,10 @@ from pydantic import BaseModel, Field
 from files.history import log_history  
 
 from .r_executor import check_r_installation, execute_r_script, execute_r_script_async
+from .fast_correlation import (
+    compute_correlation_matrix_batch,
+    build_correlation_matrix
+)
 from ordinal_scales import analyze_dataframe_columns, get_column_order
 
 
@@ -594,6 +598,7 @@ async def check_missing_values(request: MissingValueCheckRequest):
 async def analyze_correlation_matrix(request: MatrixAnalysisRequest):
     """
     Perform correlation analysis on multiple columns (matrix)
+    OPTIMIZED VERSION: Uses vectorized operations and parallel processing
 
 
     Args:
@@ -604,11 +609,12 @@ async def analyze_correlation_matrix(request: MatrixAnalysisRequest):
         Correlation matrix and detailed pair results
     """
     try:
-        # Validate R installation
+        import time
+        start_time = time.time()
+        
+        # Validate R installation (still needed for fallback)
         if not check_r_installation():
-            raise HTTPException(
-                status_code=503, detail="R is not installed or not available in PATH"
-            )
+            print("⚠️  Warning: R not installed. Using Python-native implementations.")
 
 
         # Validate file exists
@@ -637,173 +643,77 @@ async def analyze_correlation_matrix(request: MatrixAnalysisRequest):
                 )
 
 
-        r_script_path = R_SCRIPT_DIR / "correlation_analysis.R"
-        pair_details: Dict[str, Any] = {}
-        pair_values: Dict[tuple, Dict[str, Any]] = {}
-
-
-        # Prepare all pair tasks for parallel execution
-        async def analyze_pair(i: int, j: int) -> tuple:
-            """Analyze a single pair asynchronously"""
-            col_i = request.columns[i]
-            col_j = request.columns[j]
-
-
-            cfg_i = request.variableConfigs[col_i]
-            cfg_j = request.variableConfigs[col_j]
-
-
-            pair_type = get_method_pair_type(cfg_i.type, cfg_j.type)
-            method = request.methodsByPairType.get(pair_type)
-            if not method:
-                return (i, j, col_i, col_j, {"error": f"No method configured for pair type '{pair_type}'"})
-
-
-            var1_payload = prepare_variable_payload(cfg_i, df)
-            var2_payload = prepare_variable_payload(cfg_j, df)
-
-
-            r_input = {
-                "file_path": str(file_path),
-                "variable1": var1_payload,
-                "variable2": var2_payload,
-                "method": method,
-                "missing_method": request.missingValueMethod,
-                "analysis_type": "matrix",
+        # Convert variable configs to dict format
+        variable_configs = {}
+        for col_name, config in request.variableConfigs.items():
+            variable_configs[col_name] = {
+                "type": config.type,
+                "categories": config.categories,
+                "ordering": config.ordering
             }
 
+        print(f"\n{'='*60}")
+        print(f"FAST CORRELATION ANALYSIS")
+        print(f"{'='*60}")
+        print(f"Columns: {len(request.columns)}")
+        print(f"Total pairs: {len(request.columns) * (len(request.columns) - 1) // 2}")
+        print(f"Methods: {request.methodsByPairType}")
+        print(f"{'='*60}\n")
 
-            result = await execute_r_script_async(r_script_path, r_input, timeout=120)
-            return (i, j, col_i, col_j, result, method, cfg_i, cfg_j)
+        # Use optimized batch correlation computation
+        pair_results = compute_correlation_matrix_batch(
+            df=df,
+            columns=request.columns,
+            variable_configs=variable_configs,
+            methods_by_pair_type=request.methodsByPairType,
+            missing_value_method=request.missingValueMethod
+        )
 
+        # Build matrix structure
+        matrix = build_correlation_matrix(pair_results, request.columns)
 
-        # Create tasks for all pairs
-        tasks = []
-        for i in range(len(request.columns)):
-            for j in range(i + 1, len(request.columns)):
-                tasks.append(analyze_pair(i, j))
+        elapsed_time = time.time() - start_time
+        print(f"\n{'='*60}")
+        print(f"✅ COMPLETED in {elapsed_time:.2f} seconds")
+        print(f"Average time per pair: {elapsed_time / len(pair_results):.4f} seconds")
+        print(f"{'='*60}\n")
 
-
-        # Execute all pairs in parallel
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
-
-        # Process results
-        for result_data in results:
-            if isinstance(result_data, Exception):
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"Error processing pair: {str(result_data)}"
-                )
-           
-            i, j, col_i, col_j, result, method, cfg_i, cfg_j = result_data
-           
-            if "error" in result:
-                error_detail = result['error']
-                var1_info = f"{col_i} (type: {cfg_i.type}, categories: {len(cfg_i.categories)})"
-                var2_info = f"{col_j} (type: {cfg_j.type}, categories: {len(cfg_j.categories)})"
-                raise HTTPException(
-                    status_code=500,
-                    detail=f"R error for pair {col_i} vs {col_j}:\n{error_detail}\n\nVariable 1: {var1_info}\nVariable 2: {var2_info}\nMethod: {method}",
-                )
-
-
-            res_body = result.get("result", {})
-            correlation_value = res_body.get("effect_size")
-            if correlation_value is None:
-                correlation_value = res_body.get("statistic")
-
-
-            pair_values[(i, j)] = {
-                "correlation": correlation_value,
-                "p_value": res_body.get("p_value"),
-                "method": method,
-            }
-
-
-            pair_details[f"{col_i}::{col_j}"] = {
-                "method": method,
-                "method_name": result.get("method_name", method),
-                "result": res_body,
-                "sample_size": result.get("sample_size"),
-                "removed_rows": result.get("removed_rows"),
-                "missing_category_rows": result.get("missing_category_rows"),
-                "variable1_name": col_i,
-                "variable2_name": col_j,
-            }
-
-
-        # Build symmetric matrix with diagonal
-        matrix = []
-        num_cols = len(request.columns)
-        for i in range(num_cols):
-            row = []
-            for j in range(num_cols):
-                if i == j:
-                    row.append(
-                        {
-                            "row": i,
-                            "col": j,
-                            "row_name": request.columns[i],
-                            "col_name": request.columns[j],
-                            "correlation": 1.0,
-                            "p_value": 0.0,
-                            "method": "self",
-                            "is_diagonal": True,
-                        }
-                    )
-                else:
-                    val = pair_values[(i, j)] if i < j else pair_values[(j, i)]
-                    row.append(
-                        {
-                            "row": i,
-                            "col": j,
-                            "row_name": request.columns[i],
-                            "col_name": request.columns[j],
-                            "correlation": val.get("correlation"),
-                            "p_value": val.get("p_value"),
-                            "method": val.get("method"),
-                            "is_diagonal": False,
-                        }
-                    )
-            matrix.append(row)     
-        # --- PASTE THIS BLOCK HERE ---
+        # Log to history
         try:
             file_dir = FILES_DIR / request.userId / request.fileId
-            # Save variable configs for report generation
-            var_configs_dict = {}
-            for col_name, config in request.variableConfigs.items():
-                var_configs_dict[col_name] = {
-                    "type": config.type,
-                    "categories": config.categories,
-                    "ordering": config.ordering
-                }
-            
             log_history(
                 file_dir,
-                action="Correlation Analysis",
-                method="Matrix",
+                action="Correlation Analysis (Fast)",
+                method="Matrix - Vectorized",
                 input_cols=request.columns,
                 output_cols=[],
                 params={
                     "type": "matrix", 
                     "methods": request.methodsByPairType,
-                    "variableConfigs": var_configs_dict
+                    "variableConfigs": variable_configs,
+                    "computation_time": f"{elapsed_time:.2f}s",
+                    "pairs_computed": len(pair_results)
                 }
             )
         except Exception as e:
             print(f"Logging failed: {e}")
-        # -----------------------------
+
         return {
             "matrix": matrix,
             "columns": request.columns,
-            "pairDetails": pair_details,
+            "pairDetails": pair_results,
+            "performance": {
+                "total_time_seconds": elapsed_time,
+                "pairs_computed": len(pair_results),
+                "avg_time_per_pair": elapsed_time / len(pair_results) if pair_results else 0
+            }
         }
-
 
     except HTTPException:
         raise
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Matrix analysis failed: {str(e)}")
 
 

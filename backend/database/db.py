@@ -56,6 +56,16 @@ def init_db():
         conn.commit()
         print("Migration complete: selected_columns column added")
     
+    # Migration: Add column_type_filter column if it doesn't exist
+    try:
+        cursor.execute("SELECT column_type_filter FROM files LIMIT 1")
+    except sqlite3.OperationalError:
+        # Column doesn't exist, add it
+        print("Migrating database: Adding column_type_filter column to files table")
+        cursor.execute("ALTER TABLE files ADD COLUMN column_type_filter TEXT DEFAULT 'all'")
+        conn.commit()
+        print("Migration complete: column_type_filter column added")
+    
     # Migration: Add column_highlights column if it doesn't exist
     try:
         cursor.execute("SELECT column_highlights FROM files LIMIT 1")
@@ -192,7 +202,7 @@ def get_user_by_id(user_id: str) -> Optional[dict]:
     return None
 
 
-def upsert_file_metadata(user_id: str, file_id: str, columns: list[str], selected_columns: Optional[list[dict]] = None) -> dict:
+def upsert_file_metadata(user_id: str, file_id: str, columns: list[str], selected_columns: Optional[list[dict]] = None, column_type_filter: str = "all") -> dict:
     """Insert or update file metadata."""
     import json
     conn = get_db_connection()
@@ -205,17 +215,17 @@ def upsert_file_metadata(user_id: str, file_id: str, columns: list[str], selecte
     try:
         # Try to update existing record
         cursor.execute(
-            """UPDATE files SET columns = ?, selected_columns = ?, updated_at = ?
+            """UPDATE files SET columns = ?, selected_columns = ?, column_type_filter = ?, updated_at = ?
                WHERE user_id = ? AND file_id = ?""",
-            (columns_json, selected_columns_json, now, user_id, file_id)
+            (columns_json, selected_columns_json, column_type_filter, now, user_id, file_id)
         )
 
         # If no rows updated, insert new record
         if cursor.rowcount == 0:
             cursor.execute(
-                """INSERT INTO files (user_id, file_id, columns, selected_columns, created_at, updated_at)
-                   VALUES (?, ?, ?, ?, ?, ?)""",
-                (user_id, file_id, columns_json, selected_columns_json, now, now)
+                """INSERT INTO files (user_id, file_id, columns, selected_columns, column_type_filter, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (user_id, file_id, columns_json, selected_columns_json, column_type_filter, now, now)
             )
 
         conn.commit()
@@ -224,6 +234,7 @@ def upsert_file_metadata(user_id: str, file_id: str, columns: list[str], selecte
             "file_id": file_id,
             "columns": columns,
             "selected_columns": selected_columns,
+            "column_type_filter": column_type_filter,
             "updated_at": now
         }
     finally:
@@ -237,16 +248,25 @@ def get_file_metadata(user_id: str, file_id: str) -> Optional[dict]:
     cursor = conn.cursor()
 
     cursor.execute(
-        "SELECT columns, selected_columns, created_at, updated_at FROM files WHERE user_id = ? AND file_id = ?",
+        "SELECT columns, selected_columns, column_type_filter, created_at, updated_at FROM files WHERE user_id = ? AND file_id = ?",
         (user_id, file_id)
     )
     row = cursor.fetchone()
     conn.close()
 
     if row:
+        # Handle column_type_filter which might not exist in older databases
+        column_type_filter = "all"
+        try:
+            if "column_type_filter" in row.keys():
+                column_type_filter = row["column_type_filter"] if row["column_type_filter"] else "all"
+        except Exception:
+            pass
+        
         return {
             "columns": json.loads(row["columns"]),
             "selected_columns": json.loads(row["selected_columns"]) if row["selected_columns"] else None,
+            "column_type_filter": column_type_filter,
             "created_at": row["created_at"],
             "updated_at": row["updated_at"]
         }

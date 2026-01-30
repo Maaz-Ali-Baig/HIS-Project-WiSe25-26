@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 
+export type ColumnTypeFilter = "all" | "categorical" | "numeric";
+
 export interface FileEdit {
   rowId: string;
   changes: Record<string, string>;
@@ -17,15 +19,16 @@ export interface FileState {
   selectionRanges: Array<{ start: number; end: number }>;
   totalColumns: number;
   modifiedCells: Array<{ rowId: string; column: string }>;
+  columnTypeFilter: ColumnTypeFilter;
 }
 
 interface FileActions {
-  setFile: (fileId: string, userId: string, columns: string[], rows: Array<Record<string, string>>, updatedAt: string, selectionRanges?: Array<{ start: number; end: number }>, totalColumns?: number, modifiedCells?: Array<{ rowId: string; column: string }>) => void;
+  setFile: (fileId: string, userId: string, columns: string[], rows: Array<Record<string, string>>, updatedAt: string, selectionRanges?: Array<{ start: number; end: number }>, totalColumns?: number, modifiedCells?: Array<{ rowId: string; column: string }>, columnTypeFilter?: ColumnTypeFilter) => void;
   startEditing: (rowId: string, column: string, initialValue: string) => void;
   applyEdit: (rowId: string, column: string, value: string) => void;
   discardEdits: () => void;
   markSaved: (rows: Array<Record<string, string>>, updatedAt: string) => void;
-  updateColumnSelection: (columns: string[], rows: Array<Record<string, string>>, updatedAt: string, selectionRanges: Array<{ start: number; end: number }>, totalColumns: number) => void;
+  updateColumnSelection: (columns: string[], rows: Array<Record<string, string>>, updatedAt: string, selectionRanges: Array<{ start: number; end: number }>, totalColumns: number, columnTypeFilter: ColumnTypeFilter) => void;
   setLoading: () => void;
   setSaving: () => void;
   reset: () => void;
@@ -45,12 +48,13 @@ const initialState: FileState = {
   selectionRanges: [],
   totalColumns: 0,
   modifiedCells: [],
+  columnTypeFilter: 'all',
 };
 
 export const useFileStore = create<FileStore>((set, get) => ({
   ...initialState,
 
-  setFile: (fileId, userId, columns, rows, updatedAt, selectionRanges = [], totalColumns = 0, modifiedCells = []) => {
+  setFile: (fileId, userId, columns, rows, updatedAt, selectionRanges = [], totalColumns = 0, modifiedCells = [], columnTypeFilter = 'all') => {
     set({
       fileId,
       userId,
@@ -63,6 +67,7 @@ export const useFileStore = create<FileStore>((set, get) => ({
       selectionRanges,
       totalColumns: totalColumns || columns.length,
       modifiedCells,
+      columnTypeFilter,
     });
   },
 
@@ -132,7 +137,7 @@ export const useFileStore = create<FileStore>((set, get) => ({
     set({ status: 'saving' });
   },
 
-  updateColumnSelection: (columns, rows, updatedAt, selectionRanges, totalColumns) => {
+  updateColumnSelection: (columns, rows, updatedAt, selectionRanges, totalColumns, columnTypeFilter) => {
     const state = get();
     set({
       columns,
@@ -140,6 +145,7 @@ export const useFileStore = create<FileStore>((set, get) => ({
       selectionRanges,
       totalColumns,
       updatedAt,
+      columnTypeFilter,
       pendingEdits: new Map(),
       status: 'clean',
       editingCell: null,

@@ -21,6 +21,7 @@ export interface FileDataResponse {
   totalColumns: number;
   modifiedCells?: Array<{ rowId: string; column: string }>;
   summary?: DataReductionSummary;
+  columnTypeFilter?: string;
 }
 
 export interface GetFileDataParams {
@@ -81,16 +82,18 @@ export interface UpdateColumnSelectionParams {
   userId: string;
   fileId: string;
   ranges: Array<{ start: number; end: number }>;
+  columnTypeFilter?: string;
 }
 
 export async function updateColumnSelection({
   userId,
   fileId,
   ranges,
+  columnTypeFilter = "all",
 }: UpdateColumnSelectionParams): Promise<FileDataResponse> {
   return apiFetch<FileDataResponse>("/api/files/selection", {
     method: "POST",
-    body: JSON.stringify({ userId, fileId, ranges }),
+    body: JSON.stringify({ userId, fileId, ranges, columnTypeFilter }),
   });
 }
 

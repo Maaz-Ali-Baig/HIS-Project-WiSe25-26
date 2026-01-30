@@ -225,6 +225,7 @@ class FileDataResponse(BaseModel):
     totalColumns: int = 0
     modifiedCells: List[Dict[str, str]] = []  # [{rowId, column}]
     summary: Optional[Dict[str, Any]] = None  # Data reduction summary if available
+    columnTypeFilter: str = "all"  # "all", "categorical", or "numeric"
     
     model_config = {"populate_by_name": True}
 
@@ -245,6 +246,7 @@ class ColumnSelectionRequest(BaseModel):
     ranges: List[
         Dict[str, int]
     ]  # Array of {start: int, end: int} (zero-based, inclusive)
+    columnTypeFilter: str = "all"  # "all", "categorical", or "numeric"
 
 
 def ensure_files_directory():
@@ -609,6 +611,7 @@ async def get_file_data(
             totalColumns=total_columns,
             modifiedCells=modified_cells,
             summary=summary,
+            columnTypeFilter=metadata.get("column_type_filter", "all") if metadata else "all",
         )
 
     except UnicodeDecodeError:
@@ -731,10 +734,11 @@ async def update_file_data(request: FileEditRequest):
 @router.post("/selection", response_model=FileDataResponse)
 async def update_column_selection(request: ColumnSelectionRequest):
     """
-    Update column selection by creating selected.csv from original.csv with specified column ranges.
+    Update column selection by creating selected.csv from original.csv with specified column ranges
+    and applying column type filter.
 
     Args:
-        request: ColumnSelectionRequest with userId, fileId, and ranges array
+        request: ColumnSelectionRequest with userId, fileId, ranges array, and columnTypeFilter
 
     Returns:
         FileDataResponse with selected columns and updated metadata
@@ -745,6 +749,7 @@ async def update_column_selection(request: ColumnSelectionRequest):
     user_id = request.userId
     file_id = request.fileId
     ranges = request.ranges
+    column_type_filter = request.columnTypeFilter
 
     # Attempt to migrate legacy file if necessary
     migrate_legacy_file(user_id, file_id)
@@ -777,7 +782,7 @@ async def update_column_selection(request: ColumnSelectionRequest):
 
             # Update metadata with empty selection (meaning all columns)
             upsert_file_metadata(
-                user_id, file_id, original_columns, selected_columns=[]
+                user_id, file_id, original_columns, selected_columns=[], column_type_filter=column_type_filter
             )
             update_file_timestamp(user_id, file_id)
 
@@ -793,6 +798,7 @@ async def update_column_selection(request: ColumnSelectionRequest):
                 selectionRanges=[],
                 totalColumns=total_columns,
                 modifiedCells=[],
+                columnTypeFilter=column_type_filter,
             )
 
         except Exception as e:
@@ -825,18 +831,65 @@ async def update_column_selection(request: ColumnSelectionRequest):
         if "id" in original_fieldnames:
             selected_columns_set.add("id")
 
-        # Add columns from ranges
+        # Get data columns (exclude 'id' column for range indexing)
+        data_columns = [col for col in original_fieldnames if col != "id"]
+
+        # Add columns from ranges (ranges are 0-based indices into data columns, not all columns)
         for range_obj in ranges:
             start = range_obj["start"]
             end = range_obj["end"]
             for idx in range(start, end + 1):
-                if idx < len(original_fieldnames):
-                    selected_columns_set.add(original_fieldnames[idx])
+                if idx < len(data_columns):
+                    selected_columns_set.add(data_columns[idx])
 
         # Preserve order from original columns
         selected_columns = [
             col for col in original_fieldnames if col in selected_columns_set
         ]
+
+        # Apply column type filter if not "all"
+        if column_type_filter != "all":
+            import pandas as pd
+            
+            print(f"🔍 Applying column type filter: {column_type_filter}")
+            print(f"📋 Selected columns before filter: {selected_columns}")
+            
+            # Read data to detect column types
+            df = pd.read_csv(original_path)
+            filtered_columns = []
+            
+            for col in selected_columns:
+                # Always include 'id' column
+                if col == "id":
+                    filtered_columns.append(col)
+                    continue
+                
+                # Skip if column not in dataframe
+                if col not in df.columns:
+                    continue
+                    
+                # Get non-null values for analysis
+                col_data = df[col].dropna()
+                if len(col_data) == 0:
+                    continue
+                
+                # Check if numeric (>= 80% numeric values)
+                try:
+                    numeric_count = col_data.apply(lambda x: pd.to_numeric(str(x).replace(',', ''), errors='coerce')).notna().sum()
+                    is_numeric = numeric_count / len(col_data) >= 0.8
+                    print(f"  Column '{col}': is_numeric={is_numeric} (numeric_count={numeric_count}/{len(col_data)})")
+                except Exception as e:
+                    print(f"  Column '{col}': Error checking numeric: {e}")
+                    is_numeric = False
+                
+                # Apply filter
+                if column_type_filter == "numeric" and is_numeric:
+                    filtered_columns.append(col)
+                elif column_type_filter == "categorical" and not is_numeric:
+                    filtered_columns.append(col)
+            
+            print(f"✅ Filtered columns after type filter: {filtered_columns}")
+            selected_columns = filtered_columns
 
         # Create new CSV with only selected columns
         output = io.StringIO()
@@ -853,7 +906,7 @@ async def update_column_selection(request: ColumnSelectionRequest):
 
         # Update metadata with selection ranges
         upsert_file_metadata(
-            user_id, file_id, original_columns, selected_columns=ranges
+            user_id, file_id, original_columns, selected_columns=ranges, column_type_filter=column_type_filter
         )
         update_file_timestamp(user_id, file_id)
 
@@ -874,6 +927,7 @@ async def update_column_selection(request: ColumnSelectionRequest):
             selectionRanges=ranges,
             totalColumns=total_columns,
             modifiedCells=[],
+            columnTypeFilter=column_type_filter,
         )
 
     except csv.Error as e:
